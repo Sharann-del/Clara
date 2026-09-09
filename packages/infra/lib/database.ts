@@ -50,7 +50,10 @@ export class Database extends Construct {
 
     this.instance = new DatabaseInstance(this, 'Postgres', {
       engine: DatabaseInstanceEngine.postgres({
-        version: PostgresEngineVersion.VER_16_4,
+        // Major version only ("16") — RDS picks the latest available 16.x minor
+        // in whatever region we deploy to. Pinning a specific minor (e.g. 16.4)
+        // breaks in regions that don't carry that exact build (e.g. eu-north-1).
+        version: PostgresEngineVersion.VER_16,
       }),
       vpc: props.vpc,
       vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS },
