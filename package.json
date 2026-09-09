@@ -1,0 +1,14 @@
+{
+  "name": "clara",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Clara — system design documentation tool (monorepo)",
+  "workspaces": [
+    "packages/infra"
+  ],
+  "scripts": {
+    "infra:synth": "npm run synth -w @clara/infra",
+    "infra:deploy": "npm run deploy -w @clara/infra",
+    "infra:test": "npm test -w @clara/infra"
+  }
+}
