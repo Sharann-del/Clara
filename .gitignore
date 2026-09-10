@@ -1,0 +1,15 @@
+node_modules/
+dist/
+build/
+*.log
+.DS_Store
+
+# CDK
+cdk.out/
+.cdk.staging/
+packages/infra/cdk.context.json
+
+# Env files with real (non-secret but env-specific) config — .env.example stays committed
+.env
+.env.local
+!.env.example
