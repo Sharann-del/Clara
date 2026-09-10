@@ -1,5 +1,6 @@
 import { CfnOutput, Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
+import { Api } from './api';
 import { Auth } from './auth';
 import { Compute } from './compute';
 import { Database } from './database';
@@ -35,7 +36,22 @@ export class ClaraStack extends Stack {
       clientSecurityGroup: network.appSecurityGroup,
     });
 
-    const auth = new Auth(this, 'Auth');
+    const frontendUrl = `https://${frontend.distribution.distributionDomainName}`;
+
+    const auth = new Auth(this, 'Auth', {
+      additionalUrls: [frontendUrl],
+    });
+
+    const api = new Api(this, 'Api', {
+      vpc: network.vpc,
+      securityGroup: network.appSecurityGroup,
+      dbSecret: database.instance.secret!,
+      dbInstance: database.instance,
+      dbName: 'clara',
+      userPoolId: auth.userPool.userPoolId,
+      userPoolClientId: auth.userPoolClient.userPoolClientId,
+      corsOrigins: [frontendUrl, 'http://localhost:5173'],
+    });
 
     // --- Outputs: everything the app packages need to wire themselves up ---
     new CfnOutput(this, 'VpcId', { value: network.vpc.vpcId });
@@ -74,5 +90,7 @@ export class ClaraStack extends Stack {
     new CfnOutput(this, 'UserPoolClientId', {
       value: auth.userPoolClient.userPoolClientId,
     });
+
+    new CfnOutput(this, 'ApiUrl', { value: api.httpApi.url! });
   }
 }

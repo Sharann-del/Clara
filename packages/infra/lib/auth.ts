@@ -17,12 +17,19 @@ import { config } from './config';
  * `UserPoolIdentityProviderGoogle` here once the secret exists in Secrets
  * Manager, then append `UserPoolClientIdentityProvider.GOOGLE` to the client.
  */
+export interface AuthProps {
+  /** Extra callback/logout URLs beyond localhost — the deployed CloudFront URL, typically. */
+  readonly additionalUrls?: string[];
+}
+
 export class Auth extends Construct {
   readonly userPool: UserPool;
   readonly userPoolClient: UserPoolClient;
 
-  constructor(scope: Construct, id: string) {
+  constructor(scope: Construct, id: string, props: AuthProps = {}) {
     super(scope, id);
+
+    const urls = ['http://localhost:5173', ...(props.additionalUrls ?? [])];
 
     this.userPool = new UserPool(this, 'UserPool', {
       userPoolName: 'clara',
@@ -57,9 +64,8 @@ export class Auth extends Construct {
       oAuth: {
         flows: { authorizationCodeGrant: true },
         scopes: [OAuthScope.EMAIL, OAuthScope.OPENID, OAuthScope.PROFILE],
-        // Filled in once the frontend has a real domain / local dev URL.
-        callbackUrls: ['http://localhost:5173'],
-        logoutUrls: ['http://localhost:5173'],
+        callbackUrls: urls,
+        logoutUrls: urls,
       },
       accessTokenValidity: Duration.hours(1),
       idTokenValidity: Duration.hours(1),

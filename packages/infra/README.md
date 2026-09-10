@@ -3,9 +3,9 @@
 AWS CDK (TypeScript) app that provisions Clara's cloud infrastructure, per
 section 6 of the [PRD](../../docs/clara-prd-aws.md).
 
-Right now this is an **empty skeleton** — it stands up the AWS resources with no
-application logic, so there's a real target to deploy to from day one and any
-AWS permission / networking problems surface early.
+Milestone 1 (core website) is deployed: the `Api` construct runs `@clara/api`
+as a Lambda behind an HTTP API Gateway, with a deploy-time trigger that applies
+the SQL migrations to RDS.
 
 ## What it provisions
 
@@ -13,18 +13,28 @@ AWS permission / networking problems surface early.
 | ---------------- | ----------------------------------------------------------------------- |
 | `Network`        | One VPC (`10.0.0.0/16`), 2 AZs, public + private subnets, **1 NAT gateway** |
 | `Frontend`       | Private S3 bucket + CloudFront distribution (OAC, SPA error routing)    |
-| `Compute`        | ECS Fargate **cluster** (no services yet)                              |
+| `Compute`        | ECS Fargate **cluster** (currently unused — reserved for the milestone-4 MCP server) |
 | `Database`       | RDS PostgreSQL 16, single-AZ **db.t4g.micro**, 20 GB gp3, private, encrypted |
 | `Auth`           | Cognito User Pool + web client (email/password)                       |
+| `Api`            | `@clara/api` (Fastify) as a Lambda behind an HTTP API Gateway, in the private subnets on `AppSecurityGroup`; a deploy-time `Trigger` Lambda runs the SQL migrations against RDS on every `cdk deploy` |
 
 All wired together in a single stack, `ClaraStack` (`lib/clara-stack.ts`).
 
+### Why Lambda instead of Fargate for the API
+
+The PRD allows either (section 6, "Fargate vs. Lambda" is called out as an open
+question). Lambda was chosen here because building/pushing a Fargate container
+image needs Docker, which wasn't available in the dev environment this was
+built in — `aws-lambda-nodejs` bundles via esbuild with no container runtime
+needed. Revisit if the API outgrows Lambda's constraints (15 min timeout, no
+long-lived connections/websockets).
+
 ### Not here yet
 
-- ALB + Fargate **services** for the API and MCP server (milestones 1 & 4)
+- Fargate service for the MCP server (milestone 4) — the empty `Compute`
+  cluster is reserved for it
 - API Gateway WebSocket + DynamoDB for realtime (milestone 2)
 - Google OAuth IdP on Cognito — needs real client secrets in Secrets Manager
-- DB schema / migrations — those live with `@clara/api`
 - ACM cert + custom domain on CloudFront
 
 ## Cost knobs
@@ -74,4 +84,20 @@ comes from your active AWS credentials (`CDK_DEFAULT_ACCOUNT`).
 After `deploy`, CloudFormation prints the values the other packages need:
 `VpcId`, `AppSecurityGroupId`, `FrontendBucketName`, `FrontendDistributionId`,
 `FrontendUrl`, `EcsClusterName`, `EcsClusterArn`, `DbEndpoint`, `DbPort`,
-`DbCredentialsSecretArn`, `UserPoolId`, `UserPoolClientId`.
+`DbCredentialsSecretArn`, `UserPoolId`, `UserPoolClientId`, `ApiUrl`.
+
+`@clara/api`'s `.env` and `@clara/frontend`'s `.env` (see each package's
+`.env.example`) are populated from these — re-copy them after a deploy that
+changes any of these values.
+
+## Deploying the frontend build
+
+The `Frontend` construct only provisions the S3 bucket + CloudFront
+distribution; publishing a build to it is a manual step (also not yet
+automated in CI):
+
+```bash
+npm run frontend:build   # from repo root — outputs packages/frontend/dist
+aws s3 sync packages/frontend/dist/ s3://<FrontendBucketName>/ --delete
+aws cloudfront create-invalidation --distribution-id <FrontendDistributionId> --paths "/*"
+```
