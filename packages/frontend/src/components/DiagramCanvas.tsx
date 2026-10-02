@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DiagramElement } from '../lib/api';
+import type { ResolvedElement } from '../lib/states';
 
 type Tool = 'select' | 'rect' | 'ellipse' | 'text' | 'connector';
 
@@ -10,7 +11,8 @@ export interface RemoteCursor {
 }
 
 interface Props {
-  elements: DiagramElement[];
+  /** Elements with the selected state's overrides applied; `hidden` ones are drawn ghosted so they can still be selected and un-hidden. */
+  elements: ResolvedElement[];
   selectedIds: string[];
   onSelectionChange: (ids: string[]) => void;
   onDrillDown: (linkedDiagramId: string) => void;
@@ -23,6 +25,8 @@ interface Props {
   liveOverrides: Record<string, { x: number; y: number }>;
   remoteCursors: Record<string, RemoteCursor>;
 }
+
+const ghost = (el: ResolvedElement) => (el.hidden ? 0.25 : 1);
 
 function num(v: unknown, fallback = 0): number {
   return typeof v === 'number' ? v : fallback;
@@ -375,6 +379,7 @@ export function DiagramCanvas({
                       key={el.id}
                       x={x}
                       y={y}
+                      opacity={ghost(el)}
                       fontSize={num(el.style.fontSize, 14)}
                       fill={String(el.style.color ?? '#0f172a')}
                       onMouseDown={(e) => onShapeMouseDown(e, el)}
@@ -388,7 +393,7 @@ export function DiagramCanvas({
 
                 if (el.type === 'group') {
                   return (
-                    <g key={el.id}>
+                    <g key={el.id} opacity={ghost(el)}>
                       <rect x={x} y={y} width={w} height={h} fill="none" stroke="#94a3b8" strokeDasharray="6 4" rx={8} />
                       <text x={x + 8} y={y + 16} fontSize={12} fill="#64748b">
                         {String(el.geometry.text ?? '')}
@@ -399,7 +404,7 @@ export function DiagramCanvas({
 
                 const Shape = el.type === 'ellipse' ? 'ellipse' : 'rect';
                 return (
-                  <g key={el.id}>
+                  <g key={el.id} opacity={ghost(el)}>
                     {Shape === 'rect' ? (
                       <rect
                         x={x}
@@ -464,7 +469,7 @@ export function DiagramCanvas({
               .map((el) => {
                 const { x1, y1, x2, y2 } = connectorPoints(el, elements, { ...liveOverrides, ...localGeom } as Record<string, { x: number; y: number }>);
                 return (
-                  <g key={el.id}>
+                  <g key={el.id} opacity={ghost(el)}>
                     <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#475569" strokeWidth={1.5} markerEnd="url(#arrow)" />
                     {Boolean(el.geometry.text) && (
                       <text x={(x1 + x2) / 2} y={(y1 + y2) / 2 - 4} fontSize={11} fill="#475569" textAnchor="middle">

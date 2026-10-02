@@ -23,7 +23,12 @@ function esc(s: string): string {
  * geometry/style JSON shape the frontend canvas writes); PNG/PDF export
  * happens client-side from the live canvas instead of being replicated here.
  */
-export function renderDiagramSvg(elements: DiagramElementRow[]): string {
+export function renderDiagramSvg(allElements: DiagramElementRow[]): string {
+  // Export is the Base view: skip elements that were drawn inside a state (and connectors to them).
+  const hidden = new Set(allElements.filter((e) => e.style.baseHidden === true).map((e) => e.id));
+  const elements = allElements.filter(
+    (e) => !hidden.has(e.id) && !hidden.has(e.geometry.fromId as string) && !hidden.has(e.geometry.toId as string),
+  );
   let maxX = 800;
   let maxY = 600;
   for (const el of elements) {

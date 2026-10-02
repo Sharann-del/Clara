@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { query } from '../db.js';
 import { roleAtLeast } from '../lib/authz.js';
 import { dedupeUsers, getConnection, listRoomConnections } from './dynamo.js';
+import { elementOverrideSchema, setElementOverride } from '../lib/states.js';
 import { broadcastToRoom, postTo } from './broadcast.js';
 
 /**
@@ -55,7 +56,7 @@ const messageSchema = z.discriminatedUnion('action', [
     }),
   }),
   // Ephemeral, unpersisted — a live preview of a drag/resize in progress.
-  z.object({ action: z.literal('element.moving'), id: z.string(), x: z.number(), y: z.number() }),
+  z.object({ action: z.literal('element.moving'), id: z.string(), x: z.number(), y: z.number(), stateId: z.string().uuid().nullish() }),
   z.object({
     action: z.literal('element.update'),
     id: z.string(),
@@ -68,6 +69,17 @@ const messageSchema = z.discriminatedUnion('action', [
   // Sent right after the client's WS opens — $connect can't safely postToConnection
   // to itself (see connect-lambda.ts), so the client asks for its snapshot here instead.
   z.object({ action: z.literal('presence.sync') }),
+  // Per-element override within a diagram state (PRD 4.7). Granular + persisted here
+  // because it's edited as often as elements are; same per-element LWW model.
+  z.object({
+    action: z.literal('state.override'),
+    stateId: z.string().uuid(),
+    elementId: z.string().uuid(),
+    override: elementOverrideSchema.nullable(),
+  }),
+  // Sent after REST state CRUD/reorder (states are rarely edited, so they use the
+  // REST routes for persistence) so other viewers refetch the state list.
+  z.object({ action: z.literal('states.refresh') }),
   // Sent after a bulk REST replace (DSL apply / Mermaid import / version restore)
   // so other connected viewers know to refetch rather than trust their local state.
   z.object({ action: z.literal('diagram.refresh') }),
@@ -116,7 +128,7 @@ export async function handler(event: WsMessageEvent) {
       if (conn.resourceType === 'diagram') {
         await broadcastToRoom(
           conn.room,
-          { type: 'element.moving', id: msg.id, x: msg.x, y: msg.y, userId: conn.userId },
+          { type: 'element.moving', id: msg.id, x: msg.x, y: msg.y, stateId: msg.stateId ?? null, userId: conn.userId },
           connectionId,
         );
       }
@@ -176,6 +188,27 @@ export async function handler(event: WsMessageEvent) {
       if (!canEdit || conn.resourceType !== 'diagram') return deny(connectionId);
       await query('delete from diagram_elements where id = $1 and diagram_id = $2', [msg.id, conn.resourceId]);
       await broadcastToRoom(conn.room, { type: 'element.deleted', id: msg.id });
+      break;
+    }
+
+    case 'state.override': {
+      if (!canEdit || conn.resourceType !== 'diagram') return deny(connectionId);
+      const state = await setElementOverride(conn.resourceId, msg.stateId, msg.elementId, msg.override);
+      if (state) {
+        await broadcastToRoom(conn.room, {
+          type: 'state.override',
+          stateId: msg.stateId,
+          elementId: msg.elementId,
+          override: msg.override,
+          userId: conn.userId,
+        });
+      }
+      break;
+    }
+
+    case 'states.refresh': {
+      if (!canEdit || conn.resourceType !== 'diagram') return deny(connectionId);
+      await broadcastToRoom(conn.room, { type: 'states.refreshed' }, connectionId);
       break;
     }
 

@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "test": "npx tsx --test src/lib/states.test.ts"
   },
   "dependencies": {
     "amazon-cognito-identity-js": "^6.3.12",

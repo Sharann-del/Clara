@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { query, withTransaction } from '../db.js';
 import { workspaceRole, roleAtLeast } from '../lib/authz.js';
 import { recordVersion } from '../lib/versions.js';
+import { listStates } from '../lib/states.js';
 import { renderDiagramSvg, type DiagramElementRow } from '../lib/svg-export.js';
 
 async function requireDiagramRole(userId: string, diagramId: string, min: 'viewer' | 'editor') {
@@ -161,7 +162,7 @@ export async function diagramRoutes(app: FastifyInstance) {
       await recordVersion(
         'diagram',
         id,
-        { diagram, elements: prior.rows },
+        { diagram, elements: prior.rows, states: await listStates(id, client) },
         diagram.updated_by,
         client,
       );

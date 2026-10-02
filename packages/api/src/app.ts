@@ -8,6 +8,7 @@ import { folderRoutes } from './routes/folders.js';
 import { documentRoutes } from './routes/documents.js';
 import { diagramRoutes } from './routes/diagrams.js';
 import { versionRoutes } from './routes/versions.js';
+import { stateRoutes } from './routes/states.js';
 
 export async function buildApp() {
   const app = Fastify({ logger: true });
@@ -37,6 +38,7 @@ export async function buildApp() {
     await protectedApp.register(folderRoutes);
     await protectedApp.register(documentRoutes);
     await protectedApp.register(diagramRoutes);
+    await protectedApp.register(stateRoutes);
     await protectedApp.register(versionRoutes);
   });
 

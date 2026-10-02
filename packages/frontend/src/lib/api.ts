@@ -92,6 +92,20 @@ export interface DiagramFull extends DiagramSummary {
   >;
 }
 
+export interface ElementOverride {
+  hidden?: boolean;
+  geometry?: Record<string, unknown>;
+  style?: Record<string, unknown>;
+}
+
+export interface DiagramState {
+  id: string;
+  diagram_id: string;
+  name: string;
+  order_index: number;
+  element_overrides: Record<string, ElementOverride>;
+}
+
 export interface VersionSummary {
   id: string;
   created_at: string;
@@ -165,6 +179,21 @@ export const api = {
   diagramVersions: (id: string) => request<VersionSummary[]>(`/diagrams/${id}/versions`),
   restoreDiagramVersion: (id: string, versionId: string) =>
     request<DiagramSummary>(`/diagrams/${id}/versions/${versionId}/restore`, { method: 'POST' }),
+
+  listStates: (diagramId: string) => request<DiagramState[]>(`/diagrams/${diagramId}/states`),
+  createState: (diagramId: string, name: string, copyFromStateId?: string) =>
+    request<DiagramState>(`/diagrams/${diagramId}/states`, {
+      method: 'POST',
+      body: JSON.stringify({ name, copyFromStateId }),
+    }),
+  renameState: (stateId: string, name: string) =>
+    request<DiagramState>(`/diagram-states/${stateId}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
+  deleteState: (stateId: string) => request<void>(`/diagram-states/${stateId}`, { method: 'DELETE' }),
+  reorderStates: (diagramId: string, stateIds: string[]) =>
+    request<DiagramState[]>(`/diagrams/${diagramId}/states/order`, {
+      method: 'PUT',
+      body: JSON.stringify({ stateIds }),
+    }),
 
   exportUrl: (kind: 'documents' | 'diagrams', id: string, format?: string) =>
     `${BASE_URL}/${kind}/${id}/export${format ? `?format=${format}` : ''}`,

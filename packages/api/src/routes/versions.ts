@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { query, withTransaction } from '../db.js';
 import { workspaceRole, roleAtLeast, type Role } from '../lib/authz.js';
 import { recordVersion } from '../lib/versions.js';
+import { listStates } from '../lib/states.js';
 
 interface OwnedResource {
   workspace_id: string;
@@ -70,7 +71,7 @@ export async function versionRoutes(app: FastifyInstance) {
           await recordVersion(
             'diagram',
             id,
-            { diagram: resource, elements: currentElements.rows },
+            { diagram: resource, elements: currentElements.rows, states: await listStates(id, client) },
             req.user!.sub,
             client,
           );
@@ -101,6 +102,19 @@ export async function versionRoutes(app: FastifyInstance) {
               ],
             );
           }
+
+          // Snapshots from before milestone 3 carry no `states` key — leave current states alone then.
+          if (Array.isArray(snapshot.states)) {
+            await client.query('delete from diagram_states where diagram_id = $1', [id]);
+            for (const st of snapshot.states as Array<Record<string, unknown>>) {
+              await client.query(
+                `insert into diagram_states (id, diagram_id, name, order_index, element_overrides)
+                 values ($1, $2, $3, $4, $5)`,
+                [st.id, id, st.name, st.order_index ?? 0, JSON.stringify(st.element_overrides ?? {})],
+              );
+            }
+          }
+
           const { rows } = await client.query('select * from diagrams where id = $1', [id]);
           return rows[0];
         }

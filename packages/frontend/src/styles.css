@@ -280,3 +280,14 @@ select {
   color: var(--accent);
   text-decoration: none;
 }
+
+/* ---- States bar & present mode (PRD 4.7) ---- */
+.states-bar { display: flex; align-items: center; gap: 6px; padding: 6px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.state-chip { border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: 3px 12px; font-size: 13px; cursor: pointer; }
+.state-chip.active { background: #2563eb; border-color: #2563eb; color: #fff; }
+.state-chip-input { border: 1px solid #2563eb; border-radius: 999px; padding: 3px 12px; font-size: 13px; width: 120px; }
+.states-actions { display: flex; gap: 4px; margin-left: 8px; }
+.present-overlay { position: fixed; inset: 0; z-index: 100; background: #fff; display: flex; flex-direction: column; }
+.present-title { display: flex; gap: 12px; align-items: baseline; padding: 14px 24px; font-size: 20px; }
+.present-svg { flex: 1; min-height: 0; width: 100%; }
+.present-controls { display: flex; gap: 12px; align-items: center; justify-content: center; padding: 12px; border-top: 1px solid var(--border); }
