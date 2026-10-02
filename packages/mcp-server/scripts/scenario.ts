@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { normalizeElement } from '@clara/shared/elements';
 
 // One scenario, two drivers: local.ts (services + local Postgres) and e2e.ts
 // (the deployed stack over HTTP with real Cognito users). Both exercise the same
@@ -169,8 +170,23 @@ export async function runScenario(d: Driver, log: (s: string) => void = console.
     assert.equal(linked.linked_diagram_id, childId);
     assert.equal(linked.geometry.text, 'API Gateway (see detail)');
     assert.equal(linked.geometry.width, gateway.geometry.width, 'geometry is merge-patched, not replaced');
+    // Load the elements exactly as the canvas does (GET /diagrams/:id rows -> normalizeElement,
+    // the same call frontend/src/lib/api.ts makes) and check the drill-down link is visible.
+    const canvasEl = after.elements.map(normalizeElement).find((e: any) => e.id === gateway.id);
+    assert.equal(canvasEl?.linkedDiagramId, childId, 'canvas-shaped element carries the link');
+    assert.equal(canvasEl?.zIndex, gateway.zIndex);
     assert.ok((await d.versionCount('diagrams', rootId)) >= 1);
     step('update_diagram merge-patches one element and links a child; accept snapshots a version');
+
+    // A later, unrelated accepted edit (moving a different shape) must not drop the link.
+    const web = root.data.elements.find((e: any) => e.geometry.text === 'Web App');
+    const move = await call('editor', 'update_diagram', { diagram_id: rootId, update_elements: [{ id: web.id, geometry: { x: 777 } }] });
+    assert.equal((await d.accept('owner', move.data.changeId)).status, 200);
+    const afterMove = (await d.getDiagram(rootId)).elements.map(normalizeElement);
+    assert.equal(afterMove.find((e: any) => e.id === gateway.id)?.linkedDiagramId, childId, 'link preserved across later edits');
+    assert.equal(afterMove.find((e: any) => e.id === web.id)?.geometry.x, 777);
+    assert.equal((await call('viewer', 'read_diagram', { diagram_id: rootId })).data.elements.find((e: any) => e.id === gateway.id).linkedDiagramId, childId);
+    step('the link reads back as linkedDiagramId the way the canvas loads it, and survives later accepted edits');
 
     const tree = await call('viewer', 'traverse_diagram_hierarchy', { diagram_id: rootId, direction: 'down' });
     assert.deepEqual(tree.data.descendants.map((n: any) => n.id), [childId]);

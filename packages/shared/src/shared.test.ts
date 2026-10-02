@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseMermaid, type DiagramElement } from './dsl.js';
 import { diffElements } from './diff.js';
+import { normalizeElement } from './elements.js';
 
 test('mermaid: a bare later reference does not overwrite an earlier label', () => {
   const g = parseMermaid('flowchart TD\n  A[Web] --> B[API]\n  B -->|SQL| C[DB]');
@@ -59,4 +60,21 @@ test('diffElements classifies added / removed / changed and ignores key order', 
 test('diffElements treats id-less proposed elements as added', () => {
   const d = diffElements([], [{ type: 'text', geometry: {}, style: {}, zIndex: 0 }]);
   assert.equal(d.added.length, 1);
+});
+
+test('normalizeElement maps a diagram_elements row so the drill-down link survives', () => {
+  const row = {
+    id: 'e1', diagram_id: 'd1', type: 'rect', geometry: { text: 'Lambda' }, style: {},
+    z_index: 3, linked_diagram_id: 'child-1', parent_group_id: null,
+  };
+  const el = normalizeElement(row);
+  assert.equal(el.linkedDiagramId, 'child-1');
+  assert.equal(el.zIndex, 3);
+  assert.equal(el.parentGroupId, null);
+});
+
+test('normalizeElement is idempotent and tolerates the camelCase shape', () => {
+  const once = normalizeElement({ id: 'e1', type: 'rect', linked_diagram_id: 'c', z_index: 2 });
+  assert.deepEqual(normalizeElement(once), once);
+  assert.equal(normalizeElement({ id: 'e2', type: 'text' }).linkedDiagramId, null);
 });

@@ -371,7 +371,7 @@ export function DiagramCanvas({
               .map((el) => {
                 const selected = selectedIds.includes(el.id!);
                 const { x, y, width: w, height: h } = geomFor(el);
-                const hasLink = Boolean(el.linkedDiagramId ?? el.geometry.linkedDiagramId);
+                const hasLink = Boolean(el.linkedDiagramId);
 
                 if (el.type === 'text') {
                   return (
@@ -416,7 +416,7 @@ export function DiagramCanvas({
                         stroke={selected ? '#2563eb' : String(el.style.stroke ?? '#1f2937')}
                         strokeWidth={selected ? 2.5 : 1.5}
                         onMouseDown={(e) => onShapeMouseDown(e, el)}
-                        onDoubleClick={() => (hasLink ? onDrillDown((el.linkedDiagramId ?? el.geometry.linkedDiagramId) as string) : editText(el))}
+                        onDoubleClick={() => (hasLink ? onDrillDown(el.linkedDiagramId as string) : editText(el))}
                         style={{ cursor: tool === 'connector' ? 'crosshair' : 'move' }}
                       />
                     ) : (

@@ -1,3 +1,4 @@
+import { normalizeElement } from '@clara/shared/elements';
 import { getCurrentSession } from './cognito';
 
 const BASE_URL = import.meta.env.VITE_API_URL;
@@ -87,10 +88,13 @@ export interface DiagramElement {
 }
 
 export interface DiagramFull extends DiagramSummary {
-  elements: Array<
-    DiagramElement & { id: string; diagram_id: string; z_index: number; linked_diagram_id: string | null }
-  >;
+  elements: Array<DiagramElement & { id: string }>;
 }
+
+// The server returns diagram_elements rows (linked_diagram_id, z_index, …) and the WebSocket
+// broadcasts them too. The canvas works in camelCase, so every element is normalized on the
+// way in — otherwise a drill-down link stored in the column is invisible to it.
+export { normalizeElement };
 
 export interface ElementOverride {
   hidden?: boolean;
@@ -201,15 +205,20 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ name, folderId, parentDiagramId }),
     }),
-  getDiagram: (id: string) => request<DiagramFull>(`/diagrams/${id}`),
+  getDiagram: async (id: string): Promise<DiagramFull> => {
+    const d = await request<Omit<DiagramFull, 'elements'> & { elements: Record<string, unknown>[] }>(`/diagrams/${id}`);
+    return { ...d, elements: d.elements.map(normalizeElement) };
+  },
   updateDiagram: (id: string, patch: Partial<{ name: string; tags: string[] }>) =>
     request<DiagramSummary>(`/diagrams/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
   deleteDiagram: (id: string) => request<void>(`/diagrams/${id}`, { method: 'DELETE' }),
-  saveDiagramElements: (id: string, elements: DiagramElement[]) =>
-    request<DiagramFull['elements']>(`/diagrams/${id}/elements`, {
+  saveDiagramElements: async (id: string, elements: DiagramElement[]): Promise<DiagramFull['elements']> => {
+    const saved = await request<Record<string, unknown>[]>(`/diagrams/${id}/elements`, {
       method: 'PUT',
       body: JSON.stringify({ elements }),
-    }),
+    });
+    return saved.map(normalizeElement);
+  },
   getDiagramChildren: (id: string) => request<{ id: string; name: string }[]>(`/diagrams/${id}/children`),
   getDiagramSource: (id: string) =>
     request<{ diagram_id: string; dsl_text: string; format: string }>(`/diagrams/${id}/source`),

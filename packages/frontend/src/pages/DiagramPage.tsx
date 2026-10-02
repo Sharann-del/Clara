@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { NoAccess } from '../components/NoAccess';
-import { api, ApiError, type DiagramElement, type DiagramFull, type DiagramState, type ElementOverride } from '../lib/api';
+import { api, ApiError, normalizeElement, type DiagramElement, type DiagramFull, type DiagramState, type ElementOverride } from '../lib/api';
 import { DiagramCanvas, type RemoteCursor } from '../components/DiagramCanvas';
 import { StatesBar } from '../components/StatesBar';
 import { PresentMode } from '../components/PresentMode';
@@ -132,7 +132,7 @@ export function DiagramPage() {
           break;
         case 'element.created':
         case 'element.updated': {
-          const el = msg.element as DiagramFull['elements'][number];
+          const el = normalizeElement(msg.element as Record<string, unknown>);
           setElements((prev) => [...prev.filter((e) => e.id !== el.id), el]);
           setLiveOverrides((prev) => {
             const next = { ...prev };

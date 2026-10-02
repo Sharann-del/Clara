@@ -4,7 +4,7 @@ import { query, withTransaction } from '../db.js';
 import { assertWorkspaceRole, NotFoundError } from './authz.js';
 import { recordVersion } from './versions.js';
 import { listStates } from './states.js';
-import type { DiagramElement } from '@clara/shared/dsl';
+import { normalizeElement } from '@clara/shared/elements';
 
 // The one data path for diagrams — see lib/documents.ts.
 
@@ -33,17 +33,7 @@ export interface DiagramPatch {
 }
 
 /** diagram_elements row (snake_case) -> the camelCase shape the API accepts and the diff code compares. */
-export function toApiElement(row: Record<string, any>): DiagramElement {
-  return {
-    id: row.id,
-    type: row.type,
-    geometry: row.geometry ?? {},
-    style: row.style ?? {},
-    zIndex: row.z_index ?? 0,
-    linkedDiagramId: row.linked_diagram_id ?? null,
-    parentGroupId: row.parent_group_id ?? null,
-  };
-}
+export const toApiElement = normalizeElement;
 
 export async function listDiagrams(userId: string, workspaceId: string, folderId?: string) {
   await assertWorkspaceRole(userId, workspaceId, 'viewer');
