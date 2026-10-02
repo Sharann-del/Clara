@@ -145,6 +145,34 @@ export function layoutToElements(graph: DslGraph): DiagramElement[] {
   return elements;
 }
 
+/**
+ * Mermaid statements end at a newline or a `;`. A `;` inside a label (`A[a;b]`, `A("x;y")`)
+ * is part of the label, so only split when not within brackets or quotes. `%%` comment
+ * lines are dropped whole.
+ */
+function splitStatements(text: string): string[] {
+  const out: string[] = [];
+  for (const rawLine of text.split('\n')) {
+    if (rawLine.trim().startsWith('%%')) continue;
+    let depth = 0;
+    let quoted = false;
+    let current = '';
+    for (const ch of rawLine) {
+      if (ch === '"') quoted = !quoted;
+      else if (!quoted && (ch === '[' || ch === '(' || ch === '{')) depth += 1;
+      else if (!quoted && (ch === ']' || ch === ')' || ch === '}')) depth = Math.max(0, depth - 1);
+      if (ch === ';' && depth === 0 && !quoted) {
+        out.push(current);
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+    out.push(current);
+  }
+  return out.map((s) => s.trim()).filter(Boolean);
+}
+
 /** Minimal Mermaid flowchart importer — supports `A[Label] --> B[Label]` and `A -->|label| B`. */
 export function parseMermaid(text: string): DslGraph {
   const nodes = new Map<string, string>();
@@ -152,9 +180,8 @@ export function parseMermaid(text: string): DslGraph {
 
   const nodeRef = /([A-Za-z0-9_]+)(?:\[([^\]]*)\]|\{([^}]*)\}|\(([^)]*)\))?/;
 
-  for (const raw of text.split('\n')) {
-    const line = raw.trim();
-    if (!line || /^(flowchart|graph)\s/i.test(line) || line.startsWith('%%')) continue;
+  for (const line of splitStatements(text)) {
+    if (/^(flowchart|graph)\b/i.test(line)) continue;
 
     const m = line.match(
       new RegExp(`^${nodeRef.source}\\s*--[->]*>(?:\\|([^|]*)\\|)?\\s*${nodeRef.source}$`),

@@ -18,6 +18,30 @@ test('mermaid: a later explicit label does replace a bare one', () => {
   assert.equal(g.nodes.find((n) => n.id === 'B')?.label, 'Named');
 });
 
+test('mermaid: semicolons separate statements, including after the header', () => {
+  const g = parseMermaid('graph LR; Browser-->CloudFront; CloudFront-->S3');
+  assert.deepEqual(g.nodes.map((n) => n.id), ['Browser', 'CloudFront', 'S3']);
+  assert.deepEqual(g.edges.map((e) => [e.from, e.to]), [['Browser', 'CloudFront'], ['CloudFront', 'S3']]);
+});
+
+test('mermaid: trailing semicolons and bare header are fine', () => {
+  const g = parseMermaid('flowchart TD;\nA-->B;\n');
+  assert.equal(g.edges.length, 1);
+});
+
+test('mermaid: mixed newlines and semicolons', () => {
+  const g = parseMermaid('graph TD\n  A[Web] --> B[API]; B -->|SQL| C[DB]\n  C --> D;D --> E');
+  assert.deepEqual(g.nodes.map((n) => n.label), ['Web', 'API', 'DB', 'D', 'E']);
+  assert.deepEqual(g.edges.map((e) => `${e.from}>${e.to}`), ['A>B', 'B>C', 'C>D', 'D>E']);
+  assert.equal(g.edges[1].label, 'SQL');
+});
+
+test('mermaid: a semicolon inside a label is not a separator; comments are ignored', () => {
+  const g = parseMermaid('%% a; comment --> here\nA[one; two] --> B');
+  assert.equal(g.nodes[0].label, 'one; two');
+  assert.equal(g.edges.length, 1);
+});
+
 const el = (id: string, x: number, extra: Partial<DiagramElement> = {}): DiagramElement => ({
   id, type: 'rect', geometry: { x, y: 0 }, style: {}, zIndex: 0, ...extra,
 });
