@@ -112,6 +112,48 @@ export interface VersionSummary {
   created_by: string;
 }
 
+export interface PersonalAccessToken {
+  id: string;
+  name: string;
+  token_prefix: string;
+  created_at: string;
+  expires_at: string | null;
+  last_used_at: string | null;
+  revoked_at: string | null;
+}
+
+export interface DocumentFields {
+  title: string;
+  contentMd: string;
+  tags: string[];
+}
+
+export interface DiagramFields {
+  name: string;
+  tags: string[];
+  elements: DiagramElement[];
+}
+
+export interface PendingChange {
+  id: string;
+  workspace_id: string;
+  resource_type: 'document' | 'diagram';
+  resource_id: string | null;
+  operation: 'create' | 'update';
+  /** `proposed` holds only the fields the change touches; `base` is the resource as proposed against (updates only). */
+  diff_payload: { proposed: Record<string, any>; base?: Record<string, any> };
+  status: 'pending' | 'accepted' | 'rejected';
+  proposed_by: string;
+  summary: string;
+  created_at: string;
+  reviewed_at: string | null;
+  /** Live resource right now (pending updates only) — what the diff is shown against. */
+  current?: DocumentFields | DiagramFields | null;
+  /** The resource changed since this was proposed. */
+  stale: boolean;
+  resource_name: string | null;
+}
+
 export const api = {
   me: () => request<{ sub: string; email?: string }>('/me'),
 
@@ -194,6 +236,24 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify({ stateIds }),
     }),
+
+  listTokens: () => request<PersonalAccessToken[]>('/tokens'),
+  createToken: (name: string, expiresInDays: number | null) =>
+    request<PersonalAccessToken & { token: string }>('/tokens', {
+      method: 'POST',
+      body: JSON.stringify({ name, expiresInDays }),
+    }),
+  revokeToken: (id: string) => request<void>(`/tokens/${id}`, { method: 'DELETE' }),
+
+  listPendingChanges: (workspaceId: string, status: PendingChange['status'] = 'pending') =>
+    request<PendingChange[]>(`/workspaces/${workspaceId}/pending-changes?status=${status}`),
+  countPendingChanges: (workspaceId: string) =>
+    request<{ count: number }>(`/workspaces/${workspaceId}/pending-changes/count`),
+  acceptPendingChange: (id: string, force = false) =>
+    request<PendingChange>(`/pending-changes/${id}/accept`, { method: 'POST', body: JSON.stringify({ force }) }),
+  rejectPendingChange: (id: string) => request<PendingChange>(`/pending-changes/${id}/reject`, { method: 'POST' }),
+
+  mcpUrl: `${BASE_URL.replace(/\/$/, '')}/mcp`,
 
   exportUrl: (kind: 'documents' | 'diagrams', id: string, format?: string) =>
     `${BASE_URL}/${kind}/${id}/export${format ? `?format=${format}` : ''}`,

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, type DiagramSummary, type DocumentSummary, type Folder, type Workspace } from '../lib/api';
+import { PendingChangesPanel } from '../components/PendingChangesPanel';
 import { MembersPanel } from '../components/MembersPanel';
 import { FolderTree } from '../components/FolderTree';
 import { useAuth } from '../context/AuthContext';
@@ -18,6 +19,17 @@ export function WorkspacePage() {
   const [newFolderName, setNewFolderName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [showMembers, setShowMembers] = useState(false);
+  const [showPending, setShowPending] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const canReview = workspace?.role === 'owner' || workspace?.role === 'admin' || workspace?.role === 'editor';
+
+  const refreshPendingCount = () => {
+    if (!workspaceId) return;
+    api.countPendingChanges(workspaceId).then((r) => setPendingCount(r.count)).catch(() => undefined);
+  };
+  useEffect(() => {
+    if (canReview) refreshPendingCount();
+  }, [workspaceId, canReview]);
 
   useEffect(() => {
     if (!workspaceId) return;
@@ -36,6 +48,13 @@ export function WorkspacePage() {
       .then(setDiagrams)
       .catch((e) => setError(e.message));
   }, [workspaceId, selectedFolderId]);
+
+  function reloadLists() {
+    if (!workspaceId) return;
+    api.listDocuments(workspaceId, selectedFolderId ?? undefined).then(setDocuments).catch((e) => setError(e.message));
+    api.listDiagrams(workspaceId, selectedFolderId ?? undefined).then(setDiagrams).catch((e) => setError(e.message));
+    refreshPendingCount();
+  }
 
   async function createFolder() {
     if (!workspaceId || !newFolderName.trim()) return;
@@ -88,7 +107,7 @@ export function WorkspacePage() {
         <div className="topbar">
           <strong>{workspace?.name}</strong>
           <div className="muted">
-            {email} · <button className="btn" onClick={signOut}>Sign out</button>
+            {email} · <Link to="/settings/tokens">AI access tokens</Link> · <button className="btn" onClick={signOut}>Sign out</button>
           </div>
         </div>
         <div className="content">
@@ -104,7 +123,14 @@ export function WorkspacePage() {
             <button className="btn" onClick={() => setShowMembers((s) => !s)}>
               Members
             </button>
+            {canReview && (
+              <button className="btn" onClick={() => setShowPending((s) => !s)}>
+                Pending changes{pendingCount > 0 ? ` (${pendingCount})` : ''}
+              </button>
+            )}
           </div>
+
+          {showPending && canReview && <PendingChangesPanel workspaceId={workspaceId} onChanged={reloadLists} />}
 
           {showMembers && (
             <MembersPanel

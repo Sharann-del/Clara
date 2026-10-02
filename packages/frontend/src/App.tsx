@@ -6,6 +6,7 @@ import { WorkspacesPage } from './pages/WorkspacesPage';
 import { WorkspacePage } from './pages/WorkspacePage';
 import { DocumentPage } from './pages/DocumentPage';
 import { DiagramPage } from './pages/DiagramPage';
+import { TokensPage } from './pages/TokensPage';
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="/workspaces/:workspaceId" element={<WorkspacePage />} />
         <Route path="/documents/:documentId" element={<DocumentPage />} />
         <Route path="/diagrams/:diagramId" element={<DiagramPage />} />
+        <Route path="/settings/tokens" element={<TokensPage />} />
       </Route>
     </Routes>
   );

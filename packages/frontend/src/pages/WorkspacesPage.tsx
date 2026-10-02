@@ -33,7 +33,7 @@ export function WorkspacesPage() {
         <div className="topbar">
           <strong>Clara</strong>
           <div className="muted">
-            {email} · <button className="btn" onClick={signOut}>Sign out</button>
+            {email} · <Link to="/settings/tokens">AI access tokens</Link> · <button className="btn" onClick={signOut}>Sign out</button>
           </div>
         </div>
         <div className="content" style={{ maxWidth: 640, margin: '0 auto', width: '100%' }}>

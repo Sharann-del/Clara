@@ -291,3 +291,85 @@ select {
 .present-title { display: flex; gap: 12px; align-items: baseline; padding: 14px 24px; font-size: 20px; }
 .present-svg { flex: 1; min-height: 0; width: 100%; }
 .present-controls { display: flex; gap: 12px; align-items: center; justify-content: center; padding: 12px; border-top: 1px solid var(--border); }
+
+/* Pending MCP changes (review UI) */
+.change-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 10px;
+}
+.change-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.change-summary {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 6px;
+  font-style: italic;
+}
+.change-warn {
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  color: #92400e;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.diff-row {
+  font-size: 13px;
+  margin: 2px 0;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+.diff-label {
+  font-weight: 600;
+  min-width: 90px;
+}
+ins,
+.diff-add {
+  background: #dcfce7;
+  color: #166534;
+  text-decoration: none;
+}
+del,
+.diff-del {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.diff-chg {
+  background: #fef9c3;
+  color: #854d0e;
+}
+.diff-text {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 12px;
+  overflow-x: auto;
+  max-height: 320px;
+  overflow-y: auto;
+  margin: 6px 0 0;
+}
+.diff-text div {
+  white-space: pre-wrap;
+}
+.diff-same {
+  color: var(--muted);
+}
+.diff-el {
+  font-size: 13px;
+  margin: 4px 0;
+}
+.diff-field {
+  margin-left: 18px;
+  font-size: 12px;
+  color: var(--muted);
+}
