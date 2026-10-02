@@ -2,11 +2,13 @@
   "name": "clara",
   "version": "0.1.0",
   "private": true,
-  "description": "Clara — system design documentation tool (monorepo)",
+  "description": "Clara \u2014 system design documentation tool (monorepo)",
   "workspaces": [
+    "packages/shared",
     "packages/infra",
     "packages/api",
-    "packages/frontend"
+    "packages/frontend",
+    "packages/mcp-server"
   ],
   "scripts": {
     "infra:synth": "npm run synth -w @clara/infra",
@@ -15,6 +17,7 @@
     "api:dev": "npm run dev -w @clara/api",
     "api:migrate": "npm run migrate -w @clara/api",
     "frontend:dev": "npm run dev -w @clara/frontend",
-    "frontend:build": "npm run build -w @clara/frontend"
+    "frontend:build": "npm run build -w @clara/frontend",
+    "mcp:typecheck": "npm run typecheck -w @clara/mcp-server"
   }
 }

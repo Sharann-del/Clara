@@ -42,5 +42,27 @@ export async function effectiveResourceRole(
   return RANK[wsRole] >= RANK[directRole] ? wsRole : directRole;
 }
 
-export class ForbiddenError extends Error {}
-export class NotFoundError extends Error {}
+// statusCode is what app.ts's error handler turns these into, so services can throw
+// them and every caller (REST routes, MCP tools, change review) responds consistently.
+export class ForbiddenError extends Error {
+  statusCode = 403;
+}
+export class NotFoundError extends Error {
+  statusCode = 404;
+}
+export class ConflictError extends Error {
+  statusCode = 409;
+}
+export class BadRequestError extends Error {
+  statusCode = 400;
+}
+
+/** Throws ForbiddenError unless `userId` holds at least `min` in the workspace. */
+export async function assertWorkspaceRole(userId: string, workspaceId: string, min: Role): Promise<Role> {
+  const role = await workspaceRole(userId, workspaceId);
+  if (!role) throw new ForbiddenError('Not a member of this workspace');
+  if (!roleAtLeast(role, min)) {
+    throw new ForbiddenError(`${min[0].toUpperCase()}${min.slice(1)} role required`);
+  }
+  return role;
+}

@@ -1,41 +1,22 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { query, withTransaction } from '../db.js';
-import { workspaceRole, roleAtLeast } from '../lib/authz.js';
-import { recordVersion } from '../lib/versions.js';
-
-async function requireDocRole(userId: string, docId: string, min: 'viewer' | 'editor') {
-  const { rows } = await query('select * from documents where id = $1', [docId]);
-  const doc = rows[0];
-  if (!doc) return { doc: undefined, role: undefined };
-  const role = await workspaceRole(userId, doc.workspace_id);
-  return { doc, role, ok: roleAtLeast(role, min) };
-}
+import { query } from '../db.js';
+import {
+  createDocument,
+  getDocument,
+  listDocuments,
+  updateDocument,
+} from '../lib/documents.js';
 
 export async function documentRoutes(app: FastifyInstance) {
-  app.get('/workspaces/:workspaceId/documents', async (req, reply) => {
+  app.get('/workspaces/:workspaceId/documents', async (req) => {
     const { workspaceId } = req.params as { workspaceId: string };
     const { folderId } = req.query as { folderId?: string };
-    const role = await workspaceRole(req.user!.sub, workspaceId);
-    if (!role) return reply.code(403).send({ error: 'Not a member of this workspace' });
-
-    const { rows } = folderId
-      ? await query(
-          'select id, workspace_id, folder_id, title, tags, created_at, updated_at from documents where workspace_id = $1 and folder_id = $2 order by title',
-          [workspaceId, folderId],
-        )
-      : await query(
-          'select id, workspace_id, folder_id, title, tags, created_at, updated_at from documents where workspace_id = $1 order by title',
-          [workspaceId],
-        );
-    return rows;
+    return listDocuments(req.user!.sub, workspaceId, folderId);
   });
 
   app.post('/workspaces/:workspaceId/documents', async (req, reply) => {
     const { workspaceId } = req.params as { workspaceId: string };
-    const role = await workspaceRole(req.user!.sub, workspaceId);
-    if (!roleAtLeast(role, 'editor')) return reply.code(403).send({ error: 'Editor role required' });
-
     const body = z
       .object({
         title: z.string().min(1).max(300).default('Untitled'),
@@ -44,33 +25,16 @@ export async function documentRoutes(app: FastifyInstance) {
         tags: z.array(z.string()).default([]),
       })
       .parse(req.body ?? {});
-
-    const { rows } = await query(
-      `insert into documents (workspace_id, folder_id, title, content_md, tags, created_by, updated_by)
-       values ($1, $2, $3, $4, $5, $6, $6) returning *`,
-      [workspaceId, body.folderId ?? null, body.title, body.contentMd, body.tags, req.user!.sub],
-    );
-    reply.code(201).send(rows[0]);
+    reply.code(201).send(await createDocument(req.user!.sub, workspaceId, body));
   });
 
-  app.get('/documents/:id', async (req, reply) => {
+  app.get('/documents/:id', async (req) => {
     const { id } = req.params as { id: string };
-    const { doc, ok } = await requireDocRole(req.user!.sub, id, 'viewer');
-    if (!doc) return reply.code(404).send({ error: 'Not found' });
-    if (!ok) return reply.code(403).send({ error: 'Viewer role required' });
-    return doc;
+    return getDocument(req.user!.sub, id, 'viewer');
   });
 
-  app.patch('/documents/:id', async (req, reply) => {
+  app.patch('/documents/:id', async (req) => {
     const { id } = req.params as { id: string };
-    const { doc, ok } = await requireDocRole(req.user!.sub, id, 'editor');
-    if (!doc) return reply.code(404).send({ error: 'Not found' });
-    if (!ok) return reply.code(403).send({ error: 'Editor role required' });
-
-    // Realtime note (milestone 2, see ws/message-lambda.ts): this PATCH stays the
-    // sole persistence path for content_md — the WebSocket's `document.update`
-    // is broadcast-only, for live viewing between open tabs. So concurrent saves
-    // here are whole-field last-write-wins, same as any other field on this row.
     const body = z
       .object({
         title: z.string().min(1).max(300).optional(),
@@ -79,48 +43,21 @@ export async function documentRoutes(app: FastifyInstance) {
         folderId: z.string().uuid().nullish(),
       })
       .parse(req.body);
-
     const hasFolderId = req.body != null && typeof req.body === 'object' && 'folderId' in req.body;
-
-    const updated = await withTransaction(async (client) => {
-      await recordVersion('document', id, doc, doc.updated_by, client);
-      const { rows } = await client.query(
-        `update documents set
-           title = coalesce($1, title),
-           content_md = coalesce($2, content_md),
-           tags = coalesce($3, tags),
-           folder_id = case when $4::boolean then $5::uuid else folder_id end,
-           updated_by = $6
-         where id = $7 returning *`,
-        [
-          body.title ?? null,
-          body.contentMd ?? null,
-          body.tags ?? null,
-          hasFolderId,
-          body.folderId ?? null,
-          req.user!.sub,
-          id,
-        ],
-      );
-      return rows[0];
-    });
-    return updated;
+    const { folderId, ...rest } = body;
+    return updateDocument(req.user!.sub, id, hasFolderId ? { ...rest, folderId: folderId ?? null } : rest);
   });
 
   app.delete('/documents/:id', async (req, reply) => {
     const { id } = req.params as { id: string };
-    const { doc, ok } = await requireDocRole(req.user!.sub, id, 'editor');
-    if (!doc) return reply.code(404).send({ error: 'Not found' });
-    if (!ok) return reply.code(403).send({ error: 'Editor role required' });
+    await getDocument(req.user!.sub, id, 'editor');
     await query('delete from documents where id = $1', [id]);
     reply.code(204).send();
   });
 
   app.get('/documents/:id/export', async (req, reply) => {
     const { id } = req.params as { id: string };
-    const { doc, ok } = await requireDocRole(req.user!.sub, id, 'viewer');
-    if (!doc) return reply.code(404).send({ error: 'Not found' });
-    if (!ok) return reply.code(403).send({ error: 'Viewer role required' });
+    const doc = await getDocument(req.user!.sub, id, 'viewer');
     reply
       .header('Content-Type', 'text/markdown; charset=utf-8')
       .header('Content-Disposition', `attachment; filename="${doc.title.replace(/[^\w.-]+/g, '_')}.md"`)

@@ -5,6 +5,7 @@ import { Auth } from './auth';
 import { Compute } from './compute';
 import { Database } from './database';
 import { Frontend } from './frontend';
+import { McpServer } from './mcp';
 import { Network } from './network';
 import { Realtime } from './realtime';
 
@@ -14,12 +15,13 @@ import { Realtime } from './realtime';
  * One stack composing concern-scoped constructs:
  *   - Network   : VPC with public + private subnets, one NAT gateway
  *   - Frontend  : private S3 bucket + CloudFront distribution
- *   - Compute   : ECS Fargate cluster (currently unused — reserved for the
- *                 milestone-4 MCP server)
+ *   - Compute   : ECS Fargate cluster (currently unused — the milestone-4 MCP
+ *                 server runs as a Lambda instead, to avoid an always-on task + ALB)
  *   - Database  : RDS PostgreSQL (single-AZ db.t4g.micro)
  *   - Auth      : Cognito User Pool + web client (email/password)
  *   - Api       : REST API (Lambda + HTTP API Gateway) — milestone 1
  *   - Realtime  : WebSocket API + DynamoDB connections table — milestone 2
+ *   - Mcp       : MCP server (Lambda, POST /mcp on the REST API's HTTP API) — milestone 4
  */
 export class ClaraStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -64,6 +66,15 @@ export class ClaraStack extends Stack {
       userPoolClientId: auth.userPoolClient.userPoolClientId,
     });
 
+    new McpServer(this, 'Mcp', {
+      vpc: network.vpc,
+      securityGroup: network.appSecurityGroup,
+      dbSecret: database.instance.secret!,
+      dbName: 'clara',
+      httpApi: api.httpApi,
+      migrateTrigger: api.migrateTrigger,
+    });
+
     // --- Outputs: everything the app packages need to wire themselves up ---
     new CfnOutput(this, 'VpcId', { value: network.vpc.vpcId });
     new CfnOutput(this, 'AppSecurityGroupId', {
@@ -103,6 +114,7 @@ export class ClaraStack extends Stack {
     });
 
     new CfnOutput(this, 'ApiUrl', { value: api.httpApi.url! });
+    new CfnOutput(this, 'McpUrl', { value: `${api.httpApi.url!}mcp` });
     new CfnOutput(this, 'WebSocketUrl', { value: realtime.webSocketStage.url });
   }
 }

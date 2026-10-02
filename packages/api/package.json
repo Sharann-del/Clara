@@ -2,7 +2,7 @@
   "name": "@clara/api",
   "version": "0.1.0",
   "private": true,
-  "description": "Clara REST API (Fastify) — talks to RDS Postgres, verifies Cognito JWTs",
+  "description": "Clara REST API (Fastify) \u2014 talks to RDS Postgres, verifies Cognito JWTs",
   "type": "module",
   "main": "dist/server.js",
   "scripts": {
@@ -23,7 +23,8 @@
     "aws-jwt-verify": "^4.0.1",
     "fastify": "^5.1.0",
     "pg": "^8.13.1",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "@clara/shared": "*"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.146",

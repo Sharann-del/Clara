@@ -1,0 +1,20 @@
+{
+  "name": "@clara/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Framework-free code shared by the frontend, API and MCP server (DSL / Mermaid parsing + layout, diagram diffing)",
+  "type": "module",
+  "exports": {
+    "./dsl": "./src/dsl.ts",
+    "./diff": "./src/diff.ts"
+  },
+  "dependencies": {
+    "dagre": "^0.8.5"
+  },
+  "devDependencies": {
+    "@types/dagre": "^0.7.52"
+  },
+  "scripts": {
+    "test": "npx tsx --test src/*.test.ts"
+  }
+}

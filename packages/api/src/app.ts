@@ -9,6 +9,8 @@ import { documentRoutes } from './routes/documents.js';
 import { diagramRoutes } from './routes/diagrams.js';
 import { versionRoutes } from './routes/versions.js';
 import { stateRoutes } from './routes/states.js';
+import { tokenRoutes } from './routes/tokens.js';
+import { pendingChangeRoutes } from './routes/pending-changes.js';
 
 export async function buildApp() {
   const app = Fastify({ logger: true });
@@ -40,6 +42,8 @@ export async function buildApp() {
     await protectedApp.register(diagramRoutes);
     await protectedApp.register(stateRoutes);
     await protectedApp.register(versionRoutes);
+    await protectedApp.register(tokenRoutes);
+    await protectedApp.register(pendingChangeRoutes);
   });
 
   return app;

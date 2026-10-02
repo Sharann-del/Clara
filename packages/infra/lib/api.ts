@@ -41,6 +41,8 @@ export interface ApiProps {
 export class Api extends Construct {
   readonly httpApi: HttpApi;
   readonly fn: NodejsFunction;
+  /** One-shot migration runner; anything reading the new tables must depend on it. */
+  readonly migrateTrigger: Trigger;
 
   constructor(scope: Construct, id: string, props: ApiProps) {
     super(scope, id);
@@ -68,7 +70,7 @@ export class Api extends Construct {
     });
     props.dbSecret.grantRead(migrateFn);
 
-    const migrateTrigger = new Trigger(this, 'MigrateTrigger', {
+    this.migrateTrigger = new Trigger(this, 'MigrateTrigger', {
       handler: migrateFn,
       timeout: Duration.seconds(90),
       executeAfter: [props.dbInstance],
@@ -93,7 +95,7 @@ export class Api extends Construct {
       bundling,
     });
     props.dbSecret.grantRead(this.fn);
-    this.fn.node.addDependency(migrateTrigger);
+    this.fn.node.addDependency(this.migrateTrigger);
 
     // routes/workspaces.ts resolves an invited member's email to a Cognito
     // sub via ListUsers — scoped to just this one user pool and action.
