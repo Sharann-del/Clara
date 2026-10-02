@@ -39,6 +39,12 @@ export interface Workspace {
   role?: string;
 }
 
+export interface Member {
+  user_id: string;
+  email?: string;
+  role: 'owner' | 'admin' | 'editor' | 'viewer';
+}
+
 export interface Folder {
   id: string;
   workspace_id: string;
@@ -99,6 +105,12 @@ export const api = {
   createWorkspace: (name: string) =>
     request<Workspace>('/workspaces', { method: 'POST', body: JSON.stringify({ name }) }),
   getWorkspace: (id: string) => request<Workspace>(`/workspaces/${id}`),
+  listMembers: (workspaceId: string) => request<Member[]>(`/workspaces/${workspaceId}/members`),
+  inviteMember: (workspaceId: string, email: string, role: 'editor' | 'viewer') =>
+    request<{ userId: string; role: string }>(`/workspaces/${workspaceId}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ email, role }),
+    }),
 
   listFolders: (workspaceId: string) => request<Folder[]>(`/workspaces/${workspaceId}/folders`),
   createFolder: (workspaceId: string, name: string, parentFolderId?: string | null) =>

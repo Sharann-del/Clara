@@ -5,7 +5,9 @@ section 6 of the [PRD](../../docs/clara-prd-aws.md).
 
 Milestone 1 (core website) is deployed: the `Api` construct runs `@clara/api`
 as a Lambda behind an HTTP API Gateway, with a deploy-time trigger that applies
-the SQL migrations to RDS.
+the SQL migrations to RDS. Milestone 2 (real-time collaboration) is deployed
+too: the `Realtime` construct adds a WebSocket API + DynamoDB connections
+table.
 
 ## What it provisions
 
@@ -17,8 +19,34 @@ the SQL migrations to RDS.
 | `Database`       | RDS PostgreSQL 16, single-AZ **db.t4g.micro**, 20 GB gp3, private, encrypted |
 | `Auth`           | Cognito User Pool + web client (email/password)                       |
 | `Api`            | `@clara/api` (Fastify) as a Lambda behind an HTTP API Gateway, in the private subnets on `AppSecurityGroup`; a deploy-time `Trigger` Lambda runs the SQL migrations against RDS on every `cdk deploy` |
+| `Realtime`       | API Gateway WebSocket API ($connect/$disconnect/$default → 3 Lambdas) + a DynamoDB `Connections` table (PK `connectionId`, GSI `RoomIndex` on `room`), plus a free DynamoDB VPC gateway endpoint |
 
 All wired together in a single stack, `ClaraStack` (`lib/clara-stack.ts`).
+
+### Realtime design notes (milestone 2)
+
+- One WebSocket connection per open document/diagram — the client passes
+  `?token=<CognitoIdToken>&resourceType=document|diagram&resourceId=<uuid>`
+  on the connect URL, since the browser can't set a custom header on a WS
+  handshake. `$connect` verifies the token, checks the user's resource role,
+  and stores the connection in DynamoDB; `$default` dispatches on an `action`
+  field in the message body; `$disconnect` cleans up and broadcasts
+  `presence.left`.
+- **`$connect` never calls `postToConnection` on its own `connectionId`.**
+  API Gateway hasn't finished registering a connection with the Management
+  API while its own `$connect` invocation is still running, so a self-post
+  there reliably throws `GoneException` — and since the broadcast helper
+  treats `GoneException` as "stale connection, prune it," it was silently
+  deleting the just-created row within the same request. The client instead
+  sends `presence.sync` right after the socket opens, once the connection is
+  fully live. This cost a long debugging session to track down — see
+  `@clara/api/src/ws/message-lambda.ts` and `connect-lambda.ts` for the full
+  writeup in comments.
+- Conflict resolution for `diagram_elements` is plain **last-write-wins per
+  element** (not a CRDT) — single-row SQL statements per mutation, so
+  concurrent edits to *different* elements never conflict, and concurrent
+  edits to the *same* element are resolved by whichever UPDATE simply commits
+  last in Postgres. Documented in full in `message-lambda.ts`.
 
 ### Why Lambda instead of Fargate for the API
 
@@ -33,7 +61,7 @@ long-lived connections/websockets).
 
 - Fargate service for the MCP server (milestone 4) — the empty `Compute`
   cluster is reserved for it
-- API Gateway WebSocket + DynamoDB for realtime (milestone 2)
+- Interactive explainer states (milestone 3)
 - Google OAuth IdP on Cognito — needs real client secrets in Secrets Manager
 - ACM cert + custom domain on CloudFront
 
@@ -84,7 +112,8 @@ comes from your active AWS credentials (`CDK_DEFAULT_ACCOUNT`).
 After `deploy`, CloudFormation prints the values the other packages need:
 `VpcId`, `AppSecurityGroupId`, `FrontendBucketName`, `FrontendDistributionId`,
 `FrontendUrl`, `EcsClusterName`, `EcsClusterArn`, `DbEndpoint`, `DbPort`,
-`DbCredentialsSecretArn`, `UserPoolId`, `UserPoolClientId`, `ApiUrl`.
+`DbCredentialsSecretArn`, `UserPoolId`, `UserPoolClientId`, `ApiUrl`,
+`WebSocketUrl`.
 
 `@clara/api`'s `.env` and `@clara/frontend`'s `.env` (see each package's
 `.env.example`) are populated from these — re-copy them after a deploy that

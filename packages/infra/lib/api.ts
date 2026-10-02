@@ -9,6 +9,8 @@ import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations
 import { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
 import { DatabaseInstance } from 'aws-cdk-lib/aws-rds';
 import { Trigger } from 'aws-cdk-lib/triggers';
+import { IUserPool } from 'aws-cdk-lib/aws-cognito';
+import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 
 export interface ApiProps {
   readonly vpc: IVpc;
@@ -16,7 +18,7 @@ export interface ApiProps {
   readonly dbSecret: ISecret;
   readonly dbInstance: DatabaseInstance;
   readonly dbName: string;
-  readonly userPoolId: string;
+  readonly userPool: IUserPool;
   readonly userPoolClientId: string;
   readonly corsOrigins: string[];
 }
@@ -84,7 +86,7 @@ export class Api extends Construct {
       environment: {
         DB_SECRET_ARN: props.dbSecret.secretArn,
         DB_NAME: props.dbName,
-        USER_POOL_ID: props.userPoolId,
+        USER_POOL_ID: props.userPool.userPoolId,
         USER_POOL_CLIENT_ID: props.userPoolClientId,
         CORS_ORIGINS: props.corsOrigins.join(','),
       },
@@ -92,6 +94,15 @@ export class Api extends Construct {
     });
     props.dbSecret.grantRead(this.fn);
     this.fn.node.addDependency(migrateTrigger);
+
+    // routes/workspaces.ts resolves an invited member's email to a Cognito
+    // sub via ListUsers — scoped to just this one user pool and action.
+    this.fn.addToRolePolicy(
+      new PolicyStatement({
+        actions: ['cognito-idp:ListUsers'],
+        resources: [props.userPool.userPoolArn],
+      }),
+    );
 
     this.httpApi = new HttpApi(this, 'HttpApi', {
       apiName: 'clara-api',

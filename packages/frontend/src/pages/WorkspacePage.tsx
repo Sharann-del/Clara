@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, type DiagramSummary, type DocumentSummary, type Folder, type Workspace } from '../lib/api';
+import { MembersPanel } from '../components/MembersPanel';
 import { FolderTree } from '../components/FolderTree';
 import { useAuth } from '../context/AuthContext';
 
@@ -16,6 +17,7 @@ export function WorkspacePage() {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [newFolderName, setNewFolderName] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [showMembers, setShowMembers] = useState(false);
 
   useEffect(() => {
     if (!workspaceId) return;
@@ -99,7 +101,17 @@ export function WorkspacePage() {
             <button className="btn btn-primary" onClick={createDiagram}>
               + Diagram
             </button>
+            <button className="btn" onClick={() => setShowMembers((s) => !s)}>
+              Members
+            </button>
           </div>
+
+          {showMembers && (
+            <MembersPanel
+              workspaceId={workspaceId}
+              canInvite={workspace?.role === 'owner' || workspace?.role === 'admin'}
+            />
+          )}
 
           <h3>Documents</h3>
           {documents.length === 0 && <p className="muted">No documents here yet.</p>}

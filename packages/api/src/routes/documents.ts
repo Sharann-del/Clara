@@ -67,6 +67,10 @@ export async function documentRoutes(app: FastifyInstance) {
     if (!doc) return reply.code(404).send({ error: 'Not found' });
     if (!ok) return reply.code(403).send({ error: 'Editor role required' });
 
+    // Realtime note (milestone 2, see ws/message-lambda.ts): this PATCH stays the
+    // sole persistence path for content_md — the WebSocket's `document.update`
+    // is broadcast-only, for live viewing between open tabs. So concurrent saves
+    // here are whole-field last-write-wins, same as any other field on this row.
     const body = z
       .object({
         title: z.string().min(1).max(300).optional(),

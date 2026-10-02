@@ -3,44 +3,79 @@ import type { DiagramElement } from '../lib/api';
 
 type Tool = 'select' | 'rect' | 'ellipse' | 'text' | 'connector';
 
+export interface RemoteCursor {
+  x: number;
+  y: number;
+  email?: string;
+}
+
 interface Props {
   elements: DiagramElement[];
-  onChange: (elements: DiagramElement[]) => void;
   selectedIds: string[];
   onSelectionChange: (ids: string[]) => void;
   onDrillDown: (linkedDiagramId: string) => void;
+  onCreateElement: (element: DiagramElement) => void;
+  onUpdateElement: (id: string, patch: { geometry?: Record<string, unknown>; style?: Record<string, unknown> }) => void;
+  onMoveLive: (id: string, x: number, y: number) => void;
+  onDeleteElements: (ids: string[]) => void;
+  onCursorMove: (x: number, y: number) => void;
+  /** Other users' in-progress drags — rendered as a live preview, not yet persisted. */
+  liveOverrides: Record<string, { x: number; y: number }>;
+  remoteCursors: Record<string, RemoteCursor>;
 }
 
 function num(v: unknown, fallback = 0): number {
   return typeof v === 'number' ? v : fallback;
 }
 
-function shapeCenter(el: DiagramElement): { x: number; y: number } {
-  return { x: num(el.geometry.x) + num(el.geometry.width, 120) / 2, y: num(el.geometry.y) + num(el.geometry.height, 60) / 2 };
+function shapeCenter(el: DiagramElement, override?: { x: number; y: number }): { x: number; y: number } {
+  const x = override?.x ?? num(el.geometry.x);
+  const y = override?.y ?? num(el.geometry.y);
+  return { x: x + num(el.geometry.width, 120) / 2, y: y + num(el.geometry.height, 60) / 2 };
 }
 
-function connectorPoints(el: DiagramElement, all: DiagramElement[]) {
+function connectorPoints(el: DiagramElement, all: DiagramElement[], overrides: Record<string, { x: number; y: number }>) {
   const fromId = el.geometry.fromId as string | undefined;
   const toId = el.geometry.toId as string | undefined;
   const from = fromId ? all.find((e) => e.id === fromId) : undefined;
   const to = toId ? all.find((e) => e.id === toId) : undefined;
   if (from && to) {
-    const a = shapeCenter(from);
-    const b = shapeCenter(to);
+    const a = shapeCenter(from, from.id ? overrides[from.id] : undefined);
+    const b = shapeCenter(to, to.id ? overrides[to.id] : undefined);
     return { x1: a.x, y1: a.y, x2: b.x, y2: b.y };
   }
   return { x1: num(el.geometry.x1), y1: num(el.geometry.y1), x2: num(el.geometry.x2), y2: num(el.geometry.y2) };
 }
 
-export function DiagramCanvas({ elements, onChange, selectedIds, onSelectionChange, onDrillDown }: Props) {
+export function DiagramCanvas({
+  elements,
+  selectedIds,
+  onSelectionChange,
+  onDrillDown,
+  onCreateElement,
+  onUpdateElement,
+  onMoveLive,
+  onDeleteElements,
+  onCursorMove,
+  liveOverrides,
+  remoteCursors,
+}: Props) {
   const [tool, setTool] = useState<Tool>('select');
   const [pan, setPan] = useState({ x: 60, y: 40 });
   const [zoom, setZoom] = useState(1);
   const svgRef = useRef<SVGSVGElement>(null);
   const connectorFrom = useRef<string | null>(null);
+  const lastCursorSend = useRef(0);
+
+  // Local-only render overrides while THIS user drags/resizes/creates — kept
+  // out of the shared `elements` prop until mouseup, when the final position
+  // is persisted (see onUpdateElement/onCreateElement).
+  const [localGeom, setLocalGeom] = useState<Record<string, { x?: number; y?: number; width?: number; height?: number }>>({});
+  const [creating, setCreating] = useState<DiagramElement | null>(null);
+
   const drag = useRef<
     | { kind: 'move'; ids: string[]; startX: number; startY: number; origin: Map<string, { x: number; y: number }> }
-    | { kind: 'create'; type: 'rect' | 'ellipse'; startX: number; startY: number; id: string }
+    | { kind: 'create'; type: 'rect' | 'ellipse'; startX: number; startY: number }
     | { kind: 'marquee'; startX: number; startY: number }
     | { kind: 'resize'; id: string; startX: number; startY: number; origW: number; origH: number }
     | null
@@ -55,21 +90,14 @@ export function DiagramCanvas({ elements, onChange, selectedIds, onSelectionChan
     [pan, zoom],
   );
 
-  function updateElement(id: string, patch: Partial<DiagramElement['geometry']>) {
-    onChange(elements.map((e) => (e.id === id ? { ...e, geometry: { ...e.geometry, ...patch } } : e)));
-  }
-
-  function addElement(el: DiagramElement) {
-    onChange([...elements, el]);
-  }
-
   function deleteSelected() {
     const ids = new Set(selectedIds);
-    onChange(
-      elements.filter(
-        (e) => !ids.has(e.id ?? '') && !ids.has((e.geometry.fromId as string) ?? '__x') && !ids.has((e.geometry.toId as string) ?? '__x'),
-      ),
-    );
+    const toDelete = elements
+      .filter(
+        (e) => ids.has(e.id ?? '') || ids.has((e.geometry.fromId as string) ?? '__x') || ids.has((e.geometry.toId as string) ?? '__x'),
+      )
+      .map((e) => e.id!);
+    onDeleteElements(toDelete);
     onSelectionChange([]);
   }
 
@@ -93,10 +121,9 @@ export function DiagramCanvas({ elements, onChange, selectedIds, onSelectionChan
   function onBackgroundMouseDown(e: React.MouseEvent) {
     const { x, y } = toWorld(e.clientX, e.clientY);
     if (tool === 'rect' || tool === 'ellipse') {
-      const id = crypto.randomUUID();
-      drag.current = { kind: 'create', type: tool, startX: x, startY: y, id };
-      addElement({
-        id,
+      drag.current = { kind: 'create', type: tool, startX: x, startY: y };
+      setCreating({
+        id: crypto.randomUUID(),
         type: tool,
         geometry: { x, y, width: 1, height: 1, text: '' },
         style: { fill: tool === 'rect' ? '#eff6ff' : '#f0fdf4', stroke: tool === 'rect' ? '#2563eb' : '#16a34a' },
@@ -105,7 +132,7 @@ export function DiagramCanvas({ elements, onChange, selectedIds, onSelectionChan
     } else if (tool === 'text') {
       const text = window.prompt('Text:', '') ?? '';
       if (text) {
-        addElement({
+        onCreateElement({
           id: crypto.randomUUID(),
           type: 'text',
           geometry: { x, y, text },
@@ -126,7 +153,7 @@ export function DiagramCanvas({ elements, onChange, selectedIds, onSelectionChan
       if (!connectorFrom.current) {
         connectorFrom.current = el.id!;
       } else if (connectorFrom.current !== el.id) {
-        addElement({
+        onCreateElement({
           id: crypto.randomUUID(),
           type: 'connector',
           geometry: { fromId: connectorFrom.current, toId: el.id },
@@ -173,34 +200,48 @@ export function DiagramCanvas({ elements, onChange, selectedIds, onSelectionChan
   }
 
   function onMouseMove(e: React.MouseEvent) {
-    if (!drag.current) return;
     const { x, y } = toWorld(e.clientX, e.clientY);
 
+    const now = Date.now();
+    if (now - lastCursorSend.current > 60) {
+      lastCursorSend.current = now;
+      onCursorMove(x, y);
+    }
+
+    if (!drag.current) return;
+
     if (drag.current.kind === 'create') {
-      const { startX, startY, id } = drag.current;
-      updateElement(id, {
-        x: Math.min(startX, x),
-        y: Math.min(startY, y),
-        width: Math.max(4, Math.abs(x - startX)),
-        height: Math.max(4, Math.abs(y - startY)),
-      });
+      const { startX, startY } = drag.current;
+      setCreating((prev) =>
+        prev
+          ? {
+              ...prev,
+              geometry: {
+                ...prev.geometry,
+                x: Math.min(startX, x),
+                y: Math.min(startY, y),
+                width: Math.max(4, Math.abs(x - startX)),
+                height: Math.max(4, Math.abs(y - startY)),
+              },
+            }
+          : prev,
+      );
     } else if (drag.current.kind === 'move') {
       const { startX, startY, origin } = drag.current;
       const dx = x - startX;
       const dy = y - startY;
-      onChange(
-        elements.map((el) => {
-          const o = el.id ? origin.get(el.id) : undefined;
-          if (!o) return el;
-          return { ...el, geometry: { ...el.geometry, x: o.x + dx, y: o.y + dy } };
-        }),
-      );
+      const next: Record<string, { x: number; y: number }> = {};
+      for (const [id, o] of origin) {
+        next[id] = { x: o.x + dx, y: o.y + dy };
+        onMoveLive(id, next[id].x, next[id].y);
+      }
+      setLocalGeom((prev) => ({ ...prev, ...next }));
     } else if (drag.current.kind === 'resize') {
       const { id, startX, startY, origW, origH } = drag.current;
-      updateElement(id, {
-        width: Math.max(20, origW + (x - startX)),
-        height: Math.max(20, origH + (y - startY)),
-      });
+      setLocalGeom((prev) => ({
+        ...prev,
+        [id]: { width: Math.max(20, origW + (x - startX)), height: Math.max(20, origH + (y - startY)) },
+      }));
     } else if (drag.current.kind === 'marquee') {
       const { startX, startY } = drag.current;
       setMarquee({ x: Math.min(startX, x), y: Math.min(startY, y), w: Math.abs(x - startX), h: Math.abs(y - startY) });
@@ -208,7 +249,24 @@ export function DiagramCanvas({ elements, onChange, selectedIds, onSelectionChan
   }
 
   function onMouseUp() {
-    if (drag.current?.kind === 'marquee' && marquee) {
+    if (drag.current?.kind === 'move') {
+      for (const id of drag.current.ids) {
+        const el = elements.find((e) => e.id === id);
+        const g = localGeom[id];
+        if (el && g) onUpdateElement(id, { geometry: { ...el.geometry, x: g.x, y: g.y } });
+      }
+      setLocalGeom({});
+    } else if (drag.current?.kind === 'resize') {
+      const { id } = drag.current;
+      const el = elements.find((e) => e.id === id);
+      const g = localGeom[id];
+      if (el && g) onUpdateElement(id, { geometry: { ...el.geometry, width: g.width, height: g.height } });
+      setLocalGeom({});
+    } else if (drag.current?.kind === 'create' && creating) {
+      onCreateElement(creating);
+      setCreating(null);
+      setTool('select');
+    } else if (drag.current?.kind === 'marquee' && marquee) {
       const ids = elements
         .filter((el) => el.type !== 'connector')
         .filter((el) => {
@@ -234,8 +292,21 @@ export function DiagramCanvas({ elements, onChange, selectedIds, onSelectionChan
 
   function editText(el: DiagramElement) {
     const next = window.prompt('Edit text:', String(el.geometry.text ?? ''));
-    if (next !== null) updateElement(el.id!, { text: next });
+    if (next !== null) onUpdateElement(el.id!, { geometry: { ...el.geometry, text: next } });
   }
+
+  function geomFor(el: DiagramElement) {
+    const remote = el.id ? liveOverrides[el.id] : undefined;
+    const local = el.id ? localGeom[el.id] : undefined;
+    return {
+      x: local?.x ?? remote?.x ?? num(el.geometry.x),
+      y: local?.y ?? remote?.y ?? num(el.geometry.y),
+      width: local?.width ?? num(el.geometry.width, 120),
+      height: local?.height ?? num(el.geometry.height, 60),
+    };
+  }
+
+  const renderElements = creating ? [...elements, creating] : elements;
 
   return (
     <div className="canvas-shell">
@@ -290,15 +361,12 @@ export function DiagramCanvas({ elements, onChange, selectedIds, onSelectionChan
             </marker>
           </defs>
           <g transform={`translate(${pan.x},${pan.y}) scale(${zoom})`}>
-            {elements
+            {renderElements
               .filter((el) => el.type !== 'connector')
               .sort((a, b) => a.zIndex - b.zIndex)
               .map((el) => {
                 const selected = selectedIds.includes(el.id!);
-                const x = num(el.geometry.x);
-                const y = num(el.geometry.y);
-                const w = num(el.geometry.width, 120);
-                const h = num(el.geometry.height, 60);
+                const { x, y, width: w, height: h } = geomFor(el);
                 const hasLink = Boolean(el.linkedDiagramId ?? el.geometry.linkedDiagramId);
 
                 if (el.type === 'text') {
@@ -321,16 +389,7 @@ export function DiagramCanvas({ elements, onChange, selectedIds, onSelectionChan
                 if (el.type === 'group') {
                   return (
                     <g key={el.id}>
-                      <rect
-                        x={x}
-                        y={y}
-                        width={w}
-                        height={h}
-                        fill="none"
-                        stroke="#94a3b8"
-                        strokeDasharray="6 4"
-                        rx={8}
-                      />
+                      <rect x={x} y={y} width={w} height={h} fill="none" stroke="#94a3b8" strokeDasharray="6 4" rx={8} />
                       <text x={x + 8} y={y + 16} fontSize={12} fill="#64748b">
                         {String(el.geometry.text ?? '')}
                       </text>
@@ -403,7 +462,7 @@ export function DiagramCanvas({ elements, onChange, selectedIds, onSelectionChan
             {elements
               .filter((el) => el.type === 'connector')
               .map((el) => {
-                const { x1, y1, x2, y2 } = connectorPoints(el, elements);
+                const { x1, y1, x2, y2 } = connectorPoints(el, elements, { ...liveOverrides, ...localGeom } as Record<string, { x: number; y: number }>);
                 return (
                   <g key={el.id}>
                     <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#475569" strokeWidth={1.5} markerEnd="url(#arrow)" />
@@ -419,10 +478,18 @@ export function DiagramCanvas({ elements, onChange, selectedIds, onSelectionChan
             {marquee && (
               <rect x={marquee.x} y={marquee.y} width={marquee.w} height={marquee.h} fill="#2563eb22" stroke="#2563eb" />
             )}
+
+            {Object.entries(remoteCursors).map(([userId, c]) => (
+              <g key={userId} style={{ pointerEvents: 'none' }}>
+                <circle cx={c.x} cy={c.y} r={4} fill="#db2777" />
+                <text x={c.x + 8} y={c.y - 6} fontSize={11} fill="#db2777">
+                  {c.email ?? userId.slice(0, 6)}
+                </text>
+              </g>
+            ))}
           </g>
         </svg>
       </div>
-
     </div>
   );
 }

@@ -68,11 +68,24 @@ export async function workspaceRoutes(app: FastifyInstance) {
     const { id } = req.params as { id: string };
     const role = await workspaceRole(req.user!.sub, id);
     if (!role) return reply.code(403).send({ error: 'Not a member of this workspace' });
-    const { rows } = await query(
+    const { rows } = await query<{ user_id: string; role: string; created_at: string }>(
       'select user_id, role, created_at from workspace_members where workspace_id = $1 order by created_at',
       [id],
     );
-    return rows;
+    // Cognito is the identity source, so resolve emails per member (workspaces are small).
+    return Promise.all(
+      rows.map(async (m) => {
+        try {
+          const r = await cognito.send(
+            new ListUsersCommand({ UserPoolId: config.userPoolId, Filter: `sub = "${m.user_id}"`, Limit: 1 }),
+          );
+          const email = r.Users?.[0]?.Attributes?.find((a) => a.Name === 'email')?.Value;
+          return { ...m, email };
+        } catch {
+          return { ...m, email: undefined };
+        }
+      }),
+    );
   });
 
   app.post('/workspaces/:id/members', async (req, reply) => {
@@ -81,7 +94,7 @@ export async function workspaceRoutes(app: FastifyInstance) {
     if (!roleAtLeast(role, 'admin')) return reply.code(403).send({ error: 'Admin role required' });
 
     const body = z
-      .object({ email: z.string().email(), role: z.enum(['admin', 'editor', 'viewer']) })
+      .object({ email: z.string().email(), role: z.enum(['editor', 'viewer']) })
       .parse(req.body);
 
     const result = await cognito.send(
@@ -93,6 +106,11 @@ export async function workspaceRoutes(app: FastifyInstance) {
     );
     const sub = result.Users?.[0]?.Attributes?.find((a) => a.Name === 'sub')?.Value;
     if (!sub) return reply.code(404).send({ error: `No user found with email ${body.email}` });
+
+    const existing = await workspaceRole(sub, id);
+    if (existing === 'owner' || existing === 'admin') {
+      return reply.code(409).send({ error: `${body.email} is already an ${existing} of this workspace` });
+    }
 
     await query(
       `insert into workspace_members (workspace_id, user_id, role) values ($1, $2, $3)

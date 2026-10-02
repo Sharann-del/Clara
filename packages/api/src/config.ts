@@ -16,4 +16,8 @@ export const config = {
   userPoolClientId: process.env.USER_POOL_CLIENT_ID ?? '',
 
   corsOrigins: (process.env.CORS_ORIGINS ?? 'http://localhost:5173').split(','),
+
+  // Realtime (milestone 2) — only set in the WebSocket Lambdas.
+  connectionsTable: process.env.CONNECTIONS_TABLE ?? '',
+  wsManagementEndpoint: process.env.WS_MANAGEMENT_ENDPOINT,
 };
