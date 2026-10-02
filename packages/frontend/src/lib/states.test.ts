@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { DiagramElement, DiagramState } from './api';
-import { mergeOverride, planCreate, resolveElements } from './states';
+import { buildSteps, mergeOverride, planCreate, resolveElements, startStepIndex, stepBy } from './states';
 
 const box = (id: string, x = 10): DiagramElement => ({
   id,
@@ -70,4 +70,33 @@ test('connector to a state-only element is hidden outside that state', () => {
   const { base, states } = createInState([box('a'), conn], [state('future')], 'future', box('c'));
   assert.equal(resolveElements(base, undefined).find((e) => e.id === 'k')!.hidden, true);
   assert.equal(resolveElements(base, states[0]).find((e) => e.id === 'k')!.hidden, undefined);
+});
+
+test('present walkthrough is Base first, then states in order, counting N+1 steps', () => {
+  const states = [state('current'), state('interim'), state('future')];
+  const steps = buildSteps(states);
+  assert.deepEqual(steps.map((s) => s.name), ['Base', 'current', 'interim', 'future']);
+  assert.equal(steps.length, states.length + 1);
+  assert.equal(steps[0].state, undefined);
+  assert.equal(steps[2].state, states[1]);
+});
+
+test('Base step shows base elements, not any state overrides', () => {
+  const a = box('a');
+  const states = [state('future', { a: { geometry: { x: 300 } } })];
+  const [baseStep, futureStep] = buildSteps(states);
+  assert.equal(resolveElements([a], baseStep.state)[0].geometry.x, 10);
+  assert.equal(resolveElements([a], futureStep.state)[0].geometry.x, 300);
+});
+
+test('Prev on the first step does nothing; Next on the last does nothing', () => {
+  assert.equal(stepBy(0, -1, 4), 0);
+  assert.equal(stepBy(0, 1, 4), 1);
+  assert.equal(stepBy(3, 1, 4), 3);
+});
+
+test('presenting starts on the selected state (Base when none)', () => {
+  const states = [state('current'), state('future')];
+  assert.equal(startStepIndex(states, null), 0);
+  assert.equal(startStepIndex(states, 'future'), 2);
 });

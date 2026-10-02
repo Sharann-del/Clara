@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DiagramElement, DiagramState } from '../lib/api';
-import { easeInOut, interpolate, resolveElements, toRender, type RenderEl } from '../lib/states';
+import { buildSteps, easeInOut, interpolate, resolveElements, stepBy, toRender, type RenderEl } from '../lib/states';
 
 interface Props {
   base: DiagramElement[];
@@ -13,15 +13,16 @@ const TRANSITION_MS = 700;
 const num = (v: unknown, f = 0) => (typeof v === 'number' ? v : f);
 
 export function PresentMode({ base, states, startIndex, onClose }: Props) {
-  const [index, setIndex] = useState(Math.min(Math.max(startIndex, 0), states.length - 1));
+  const steps = useMemo(() => buildSteps(states), [states]);
+  const [index, setIndex] = useState(Math.min(Math.max(startIndex, 0), steps.length - 1));
   const [playing, setPlaying] = useState(false);
   const [seconds, setSeconds] = useState(3);
   const [loop, setLoop] = useState(true);
-  const [frame, setFrame] = useState<RenderEl[]>(() => resolveElements(base, states[index]).map(toRender));
+  const [frame, setFrame] = useState<RenderEl[]>(() => resolveElements(base, steps[index].state).map(toRender));
   const shown = useRef(frame); // what's currently on screen — the start point of the next transition
   const raf = useRef<number>();
 
-  const targets = useMemo(() => states.map((s) => resolveElements(base, s).map(toRender)), [base, states]);
+  const targets = useMemo(() => steps.map((s) => resolveElements(base, s.state).map(toRender)), [base, steps]);
 
   // Animate from whatever is on screen (even mid-transition) to the new state.
   useEffect(() => {
@@ -43,20 +44,20 @@ export function PresentMode({ base, states, startIndex, onClose }: Props) {
   }, [index, targets]);
 
   const go = useCallback(
-    (dir: -1 | 1) => setIndex((i) => Math.min(states.length - 1, Math.max(0, i + dir))),
-    [states.length],
+    (dir: -1 | 1) => setIndex((i) => stepBy(i, dir, steps.length)),
+    [steps.length],
   );
 
   // Timed auto-play.
   useEffect(() => {
     if (!playing) return;
     const timer = setTimeout(() => {
-      if (index < states.length - 1) setIndex(index + 1);
+      if (index < steps.length - 1) setIndex(index + 1);
       else if (loop) setIndex(0);
       else setPlaying(false);
     }, Math.max(0.5, seconds) * 1000);
     return () => clearTimeout(timer);
-  }, [playing, index, seconds, loop, states.length]);
+  }, [playing, index, seconds, loop, steps.length]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -99,9 +100,9 @@ export function PresentMode({ base, states, startIndex, onClose }: Props) {
   return (
     <div className="present-overlay">
       <div className="present-title">
-        <strong>{states[index]?.name}</strong>
+        <strong>{steps[index]?.name}</strong>
         <span className="muted">
-          {index + 1} / {states.length}
+          {index + 1} / {steps.length}
         </span>
       </div>
       <svg className="present-svg" viewBox={viewBox} preserveAspectRatio="xMidYMid meet">
@@ -164,7 +165,7 @@ export function PresentMode({ base, states, startIndex, onClose }: Props) {
       <div className="present-controls">
         <button className="btn" disabled={index === 0} onClick={() => go(-1)}>← Prev</button>
         <button className="btn" onClick={() => setPlaying((p) => !p)}>{playing ? '⏸ Pause' : '▶ Auto-play'}</button>
-        <button className="btn" disabled={index === states.length - 1} onClick={() => go(1)}>Next →</button>
+        <button className="btn" disabled={index === steps.length - 1} onClick={() => go(1)}>Next →</button>
         <label className="muted" style={{ fontSize: 12 }}>
           Seconds per state{' '}
           <input type="number" min={0.5} step={0.5} value={seconds} style={{ width: 56 }} onChange={(e) => setSeconds(Number(e.target.value) || 1)} />

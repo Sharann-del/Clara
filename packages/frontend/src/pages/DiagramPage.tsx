@@ -5,7 +5,7 @@ import { api, ApiError, type DiagramElement, type DiagramFull, type DiagramState
 import { DiagramCanvas, type RemoteCursor } from '../components/DiagramCanvas';
 import { StatesBar } from '../components/StatesBar';
 import { PresentMode } from '../components/PresentMode';
-import { mergeOverride, planCreate, resolveElements } from '../lib/states';
+import { mergeOverride, planCreate, resolveElements, startStepIndex } from '../lib/states';
 import { VersionHistoryPanel } from '../components/VersionHistoryPanel';
 import { downloadAuthed } from '../lib/download';
 import { layoutToElements, parseClaraDsl, parseMermaid, toMermaid } from '../lib/dsl';
@@ -391,7 +391,7 @@ export function DiagramPage() {
           <PresentMode
             base={elements}
             states={states}
-            startIndex={Math.max(0, states.findIndex((st) => st.id === activeStateId))}
+            startIndex={startStepIndex(states, activeStateId)}
             onClose={() => setPresenting(false)}
           />
         )}

@@ -85,6 +85,27 @@ export function mergeOverride(
   return Object.keys(next).length ? next : null;
 }
 
+// ---- Present mode steps ----
+
+export interface PresentStep {
+  name: string;
+  /** undefined = Base (no overrides). */
+  state: DiagramState | undefined;
+}
+
+/** Walkthrough order: Base first, then each named state in order. */
+export const buildSteps = (states: DiagramState[]): PresentStep[] => [
+  { name: 'Base', state: undefined },
+  ...states.map((state) => ({ name: state.name, state })),
+];
+
+/** Step index to start on for the currently selected state (null = Base). */
+export const startStepIndex = (states: DiagramState[], activeStateId: string | null) =>
+  activeStateId ? Math.max(0, states.findIndex((s) => s.id === activeStateId) + 1) : 0;
+
+/** Moves one step, staying in range (Prev on the first step / Next on the last does nothing). */
+export const stepBy = (index: number, dir: -1 | 1, count: number) => Math.min(count - 1, Math.max(0, index + dir));
+
 // ---- Present-mode interpolation ----
 
 export interface RenderEl {
