@@ -1,15 +1,67 @@
+# Dependencies
 node_modules/
+.pnp
+.pnp.*
+.yarn/
+
+# Build output
 dist/
 build/
-*.log
-.DS_Store
+out/
+coverage/
+*.tsbuildinfo
 
-# CDK
+# AWS CDK
 cdk.out/
 .cdk.staging/
-packages/infra/cdk.context.json
+cdk.context.json
 
-# Env files with real (non-secret but env-specific) config — .env.example stays committed
+# Environment & secrets (keep .env.example committed)
 .env
-.env.local
+.env.*
 !.env.example
+*.pem
+*.key
+*.p12
+credentials.json
+*.tfstate
+*.tfstate.*
+
+# Local AWS / deploy artifacts
+outputs.json
+cdk-outputs.json
+.aws-sam/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Caches
+.cache/
+.eslintcache
+.vite/
+.turbo/
+.parcel-cache/
+.npm/
+
+# Test
+jest-cache/
+.nyc_output/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+*.swo
+
+# Claude Code local state
+.claude/settings.local.json

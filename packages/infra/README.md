@@ -3,11 +3,16 @@
 AWS CDK (TypeScript) app that provisions Clara's cloud infrastructure, per
 section 6 of the [PRD](../../docs/clara-prd-aws.md).
 
-Milestone 1 (core website) is deployed: the `Api` construct runs `@clara/api`
-as a Lambda behind an HTTP API Gateway, with a deploy-time trigger that applies
-the SQL migrations to RDS. Milestone 2 (real-time collaboration) is deployed
-too: the `Realtime` construct adds a WebSocket API + DynamoDB connections
-table.
+Milestones 1–4 are deployed to **eu-north-1**: the `Api` construct runs
+`@clara/api` as a Lambda behind an HTTP API Gateway, with a deploy-time trigger
+that applies the SQL migrations to RDS; the `Realtime` construct adds a
+WebSocket API + DynamoDB connections table; the `McpServer` construct adds the
+MCP server as a second Lambda on the same HTTP API (`ANY /mcp`).
+
+For the full architecture, request flows, design trade-offs, security review,
+cost breakdown and scaling limits, see the
+**[AWS architecture report](../../docs/aws-report.md)**. This README is the
+short, package-level reference.
 
 ## What it provisions
 
@@ -15,11 +20,12 @@ table.
 | ---------------- | ----------------------------------------------------------------------- |
 | `Network`        | One VPC (`10.0.0.0/16`), 2 AZs, public + private subnets, **1 NAT gateway** |
 | `Frontend`       | Private S3 bucket + CloudFront distribution (OAC, SPA error routing)    |
-| `Compute`        | ECS Fargate **cluster** (currently unused — reserved for the milestone-4 MCP server) |
+| `Compute`        | An **empty** ECS cluster — no services, no cost. Leftover from the original Fargate plan; nothing uses it and it can be deleted |
 | `Database`       | RDS PostgreSQL 16, single-AZ **db.t4g.micro**, 20 GB gp3, private, encrypted |
 | `Auth`           | Cognito User Pool + web client (email/password)                       |
 | `Api`            | `@clara/api` (Fastify) as a Lambda behind an HTTP API Gateway, in the private subnets on `AppSecurityGroup`; a deploy-time `Trigger` Lambda runs the SQL migrations against RDS on every `cdk deploy` |
 | `Realtime`       | API Gateway WebSocket API ($connect/$disconnect/$default → 3 Lambdas) + a DynamoDB `Connections` table (PK `connectionId`, GSI `RoomIndex` on `room`), plus a free DynamoDB VPC gateway endpoint |
+| `McpServer`      | `@clara/mcp-server` as a Lambda (stateless streamable HTTP) on the existing HTTP API at `ANY /mcp`, in the private subnets; authenticates personal access tokens against RDS and only ever stages writes in `pending_mcp_changes` |
 
 All wired together in a single stack, `ClaraStack` (`lib/clara-stack.ts`).
 
@@ -48,22 +54,24 @@ All wired together in a single stack, `ClaraStack` (`lib/clara-stack.ts`).
   edits to the *same* element are resolved by whichever UPDATE simply commits
   last in Postgres. Documented in full in `message-lambda.ts`.
 
-### Why Lambda instead of Fargate for the API
+### Why Lambda instead of Fargate
 
-The PRD allows either (section 6, "Fargate vs. Lambda" is called out as an open
-question). Lambda was chosen here because building/pushing a Fargate container
-image needs Docker, which wasn't available in the dev environment this was
-built in — `aws-lambda-nodejs` bundles via esbuild with no container runtime
-needed. Revisit if the API outgrows Lambda's constraints (15 min timeout, no
-long-lived connections/websockets).
+The PRD allows either (section 6). The API went to Lambda because building and
+pushing a Fargate image needs Docker, which wasn't available in the dev
+environment — `aws-lambda-nodejs` bundles with esbuild and needs no container
+runtime. The MCP server was then deliberately put on the same HTTP API as a
+Lambda rather than a Fargate service: an always-on task plus an ALB would add
+fixed monthly cost, whereas the Lambda adds none. Constraints this brings (a
+stateless MCP transport, the ~30 s API Gateway integration limit, the account's
+Lambda concurrency limit of 10) are covered in the
+[report](../../docs/aws-report.md#21-lambda-vs-fargate-and-why-fargate-was-dropped)
+and [§5](../../docs/aws-report.md#5-scalability-and-limits).
 
 ### Not here yet
 
-- Fargate service for the MCP server (milestone 4) — the empty `Compute`
-  cluster is reserved for it
-- Interactive explainer states (milestone 3)
 - Google OAuth IdP on Cognito — needs real client secrets in Secrets Manager
 - ACM cert + custom domain on CloudFront
+- Hardening items from the report (separate least-privilege DB role for the MCP Lambda, verified DB TLS, rate limiting, log retention) — see [§3.4](../../docs/aws-report.md#34-secrets-and-the-things-i-would-fix)
 
 ## Cost knobs
 
@@ -71,23 +79,37 @@ Everything is tuned to stay cheap for a student project. The dials live in
 [`lib/config.ts`](lib/config.ts):
 
 - `natGateways: 1` — one shared NAT instead of one per AZ
-- `dbInstanceType: t4g.micro`, `dbMultiAz: false` — RDS free-tier eligible
+- `dbInstanceType: t4g.micro`, `dbMultiAz: false` — the cheapest managed Postgres
+  (RDS free-tier eligible only if the account qualifies)
 - `retainData: false` — `cdk destroy` tears everything down; no orphaned billable
-  resources. **Flip to `true` before storing real data.**
+  resources. **Flip to `true` before storing real data** (it also turns on RDS
+  deletion protection and longer backups).
 
-Rough steady-state estimate (us-east-1, outside free tier):
+Steady-state estimate for the **eu-north-1 (Stockholm)** deployment, on-demand
+list prices from the AWS Pricing API (2026-10-02), 730 h/month, before any free
+tier or credits:
 
-| Item                        | ~ USD / month |
-| --------------------------- | ------------- |
-| NAT gateway (+ data)        | ~$33          |
-| RDS db.t4g.micro + 20 GB    | ~$13 (or $0 on free tier) |
-| CloudFront + S3             | < $1 at low traffic |
-| ECS cluster (no tasks)      | $0            |
-| Cognito                     | $0 (well under the 50k MAU free tier) |
-| **Total**                   | **~$15–47/mo**, dominated by the NAT gateway |
+| Item                                     | ~ USD / month |
+| ---------------------------------------- | ------------- |
+| NAT gateway ($0.046/h)                   | 33.58         |
+| Public IPv4 for the NAT's Elastic IP ($0.005/h, published rate) | 3.65 |
+| RDS db.t4g.micro, single-AZ PostgreSQL ($0.016/h) | 11.68 |
+| RDS storage, 20 GB gp3 ($0.12/GB-month)  | 2.40          |
+| Secrets Manager, 1 secret                | 0.40          |
+| ECS cluster (empty), VPC, subnets, IGW, gateway endpoint, IAM | 0.00 |
+| **Fixed total**                          | **≈ $52**     |
 
-The NAT gateway is the thing to kill first if cost bites — replace it with VPC
-interface endpoints or a t4g.nano NAT instance.
+Usage-based costs on top (HTTP API $1.06/M requests, Lambda $0.20/M requests +
+$0.0000166667/GB-s, DynamoDB on-demand, NAT data $0.046/GB, WebSocket messages,
+CloudFront/S3, Cognito) are small for a course project — roughly $0–10/month at
+the usage levels in the report. The earlier "~$15–47" figure assumed us-east-1
+and a free-tier database; it understated this deployment.
+
+The NAT gateway is about 65% of the fixed bill and the lever worth pulling
+first: the private Lambdas need it to reach Secrets Manager, Cognito (JWKS,
+`ListUsers`) and the WebSocket management API. Options (NAT instance, interface
+endpoints, `cdk destroy` between demos) and their trade-offs are in
+[report §4.4](../../docs/aws-report.md#44-how-to-reduce-it).
 
 ## Usage
 
@@ -104,16 +126,20 @@ npm run deploy -w @clara/infra
 npm run destroy -w @clara/infra
 ```
 
-Region defaults to `us-east-1` (override with `CDK_DEFAULT_REGION`). The account
-comes from your active AWS credentials (`CDK_DEFAULT_ACCOUNT`).
+The region comes from `CDK_DEFAULT_REGION`, which the CDK CLI fills in from your
+AWS profile's region (`lib/config.ts` falls back to `us-east-1` only if it is
+unset). The live stack is in **eu-north-1**, so make sure your profile or
+`CDK_DEFAULT_REGION` says `eu-north-1` before `synth`/`diff`/`deploy`; a different
+region would create a second, separate stack.
+The account comes from your active AWS credentials (`CDK_DEFAULT_ACCOUNT`).
 
 ## Stack outputs
 
 After `deploy`, CloudFormation prints the values the other packages need:
 `VpcId`, `AppSecurityGroupId`, `FrontendBucketName`, `FrontendDistributionId`,
-`FrontendUrl`, `EcsClusterName`, `EcsClusterArn`, `DbEndpoint`, `DbPort`,
+`FrontendUrl`, `EcsClusterName`, `EcsClusterArn` (unused cluster), `DbEndpoint`, `DbPort`,
 `DbCredentialsSecretArn`, `UserPoolId`, `UserPoolClientId`, `ApiUrl`,
-`WebSocketUrl`.
+`WebSocketUrl`, `McpUrl`.
 
 `@clara/api`'s `.env` and `@clara/frontend`'s `.env` (see each package's
 `.env.example`) are populated from these — re-copy them after a deploy that
