@@ -75,7 +75,8 @@ export async function handler(event: WsConnectEvent) {
     email,
     role,
     connectedAt: Date.now(),
-    expiresAt: Math.floor(Date.now() / 1000) + 4 * 60 * 60,
+    // API Gateway caps a WebSocket at 2 hours; the TTL only sweeps rows whose $disconnect never ran.
+    expiresAt: Math.floor(Date.now() / 1000) + (2 * 60 + 15) * 60,
   });
 
   await broadcastToRoom(room, { type: 'presence.joined', userId: sub, email }, connectionId);

@@ -66,3 +66,29 @@ export async function assertWorkspaceRole(userId: string, workspaceId: string, m
   }
   return role;
 }
+
+export type ResourceKind = 'document' | 'diagram';
+
+/**
+ * Throws unless the user's *effective* role on this document/diagram (workspace role, or a
+ * direct per-item grant from the permissions table, whichever is higher) is at least `min`.
+ * This is the single check REST, MCP and the realtime socket share for item access.
+ */
+export async function assertResourceRole(
+  userId: string,
+  kind: ResourceKind,
+  row: { id: string; workspace_id: string },
+  min: Role,
+): Promise<Role> {
+  const role = await effectiveResourceRole(userId, row.workspace_id, kind, row.id);
+  if (!role) throw new ForbiddenError(`You don't have access to this ${kind}`);
+  if (!roleAtLeast(role, min)) throw new ForbiddenError(`${min[0].toUpperCase()}${min.slice(1)} role required`);
+  return role;
+}
+
+/** A folder used as a destination must exist in the same workspace (folders are global rows). */
+export async function assertFolderInWorkspace(folderId: string | null | undefined, workspaceId: string) {
+  if (!folderId) return;
+  const { rows } = await query<{ workspace_id: string }>('select workspace_id from folders where id = $1', [folderId]);
+  if (!rows[0] || rows[0].workspace_id !== workspaceId) throw new BadRequestError('Folder not found in this workspace');
+}

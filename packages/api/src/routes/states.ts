@@ -1,14 +1,14 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { query, withTransaction } from '../db.js';
-import { workspaceRole, roleAtLeast } from '../lib/authz.js';
+import { effectiveResourceRole, roleAtLeast } from '../lib/authz.js';
 import { createState, elementOverrideSchema, listStates, setElementOverride } from '../lib/states.js';
 
 async function requireDiagramRole(userId: string, diagramId: string, min: 'viewer' | 'editor') {
   const { rows } = await query('select * from diagrams where id = $1', [diagramId]);
   const diagram = rows[0];
   if (!diagram) return { diagram: undefined, ok: false };
-  const role = await workspaceRole(userId, diagram.workspace_id);
+  const role = await effectiveResourceRole(userId, diagram.workspace_id, 'diagram', diagramId);
   return { diagram, ok: roleAtLeast(role, min) };
 }
 

@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import type { DiagramState } from '../lib/api';
+import { useConfirm } from './ui/ConfirmProvider';
+import { Icon } from './ui/Icon';
 
 interface Props {
+  /** Viewers can switch states and present, not change them. */
+  readOnly?: boolean;
   states: DiagramState[];
   activeStateId: string | null;
   onSelect: (id: string | null) => void;
@@ -13,7 +17,8 @@ interface Props {
 }
 
 /** Tabs for the diagram's named states; "Base" is the underlying diagram (no overrides). */
-export function StatesBar({ states, activeStateId, onSelect, onAdd, onRename, onMove, onDelete, onPresent }: Props) {
+export function StatesBar({ readOnly, states, activeStateId, onSelect, onAdd, onRename, onMove, onDelete, onPresent }: Props) {
+  const { prompt, confirm } = useConfirm();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const idx = states.findIndex((s) => s.id === activeStateId);
@@ -24,15 +29,30 @@ export function StatesBar({ states, activeStateId, onSelect, onAdd, onRename, on
     setEditingId(null);
   }
 
-  function add() {
-    const name = window.prompt('New state name (e.g. "current", "interim", "future"):', '');
-    if (name?.trim()) onAdd(name.trim(), Boolean(active) && window.confirm(`Start from a copy of "${active!.name}"?`));
+  async function add() {
+    const name = await prompt({
+      title: 'New state',
+      message: 'A state is a named version of this diagram, like “Today”, “Migrating” or “Target”. Changes you make in it don’t touch the base diagram.',
+      label: 'State name',
+      placeholder: 'e.g. Target',
+      confirmLabel: 'Add state',
+    });
+    if (!name) return;
+    const copy =
+      Boolean(active) &&
+      (await confirm({
+        title: `Start from “${active!.name}”?`,
+        message: `Copy what’s different in “${active!.name}” into “${name}”, or start from the base diagram.`,
+        confirmLabel: `Copy “${active!.name}”`,
+        cancelLabel: 'Start from base',
+      }));
+    onAdd(name, copy);
   }
 
   return (
     <div className="states-bar">
       <span className="muted" style={{ fontSize: 12 }}>States</span>
-      <button className={`state-chip ${activeStateId === null ? 'active' : ''}`} onClick={() => onSelect(null)}>
+      <button className={`state-chip ${activeStateId === null ? 'active' : ''}`} aria-pressed={activeStateId === null} onClick={() => onSelect(null)}>
         Base
       </button>
       {states.map((s) =>
@@ -55,19 +75,23 @@ export function StatesBar({ states, activeStateId, onSelect, onAdd, onRename, on
             className={`state-chip ${activeStateId === s.id ? 'active' : ''}`}
             onClick={() => onSelect(s.id)}
             onDoubleClick={() => {
+              if (readOnly) return;
               setEditingId(s.id);
               setDraft(s.name);
             }}
-            title="Double-click to rename"
+            aria-pressed={activeStateId === s.id}
+            title={readOnly ? undefined : 'Double-click to rename'}
           >
             {s.name}
           </button>
         ),
       )}
-      <button className="state-chip" onClick={add} title="Add state">
-        +
-      </button>
-      {active && (
+      {!readOnly && (
+        <button className="state-chip" onClick={add} title="Add state" aria-label="Add state">
+          +
+        </button>
+      )}
+      {active && !readOnly && (
         <span className="states-actions">
           <button className="btn" disabled={idx === 0} onClick={() => onMove(active.id, -1)} title="Move left">
             ←
@@ -86,20 +110,23 @@ export function StatesBar({ states, activeStateId, onSelect, onAdd, onRename, on
           </button>
           <button
             className="btn btn-danger"
-            onClick={() => window.confirm(`Delete state "${active.name}"?`) && onDelete(active.id)}
+            onClick={async () =>
+              (await confirm({ title: `Delete state “${active.name}”?`, message: 'Shapes drawn only in this state are removed from it. The base diagram is unchanged.', confirmLabel: 'Delete state', danger: true })) &&
+              onDelete(active.id)
+            }
           >
             Delete
           </button>
         </span>
       )}
       <div style={{ flex: 1 }} />
-      {active && (
-        <span className="muted" style={{ fontSize: 12 }}>
-          Editing “{active.name}” — changes are saved to this state only
+      {active && !readOnly && (
+        <span className="muted hide-mobile" style={{ fontSize: 12 }}>
+          Editing “{active.name}”: changes apply to this state only
         </span>
       )}
-      <button className="btn btn-primary" disabled={states.length === 0} onClick={onPresent}>
-        ▶ Present
+      <button className="btn btn-primary btn-sm" disabled={states.length === 0} onClick={onPresent} title={states.length === 0 ? 'Add a state to present' : undefined}>
+        <Icon name="play" size={12} /> Present
       </button>
     </div>
   );

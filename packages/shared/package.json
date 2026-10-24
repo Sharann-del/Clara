@@ -2,12 +2,15 @@
   "name": "@clara/shared",
   "version": "0.1.0",
   "private": true,
-  "description": "Framework-free code shared by the frontend, API and MCP server (DSL / Mermaid parsing + layout, diagram diffing)",
+  "description": "Framework-free code shared by the frontend, API and MCP server (DSL / Mermaid parsing + layout, diagram diffing, SVG rendering)",
   "type": "module",
   "exports": {
     "./dsl": "./src/dsl.ts",
     "./diff": "./src/diff.ts",
-    "./elements": "./src/elements.ts"
+    "./elements": "./src/elements.ts",
+    "./render": "./src/render.ts",
+    "./onboarding": "./src/onboarding.ts",
+    "./embeds": "./src/embeds.ts"
   },
   "dependencies": {
     "dagre": "^0.8.5"

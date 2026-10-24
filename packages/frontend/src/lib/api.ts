@@ -12,15 +12,29 @@ class ApiError extends Error {
   }
 }
 
+/**
+ * True when the API doesn't have this route at all (Fastify's "Route X not found"), i.e. the
+ * frontend is newer than the deployed backend. Callers use it to fall back gracefully.
+ */
+export function isMissingRoute(err: unknown): boolean {
+  return err instanceof ApiError && err.status === 404 && /^Route .+ not found$/.test(err.message);
+}
+
+/** Message suitable for a toast: network failures get a plain-language explanation. */
+export function errorMessage(err: unknown): string {
+  if (err instanceof TypeError && /fetch|network/i.test(err.message)) return 'Can’t reach Clara. Check your connection and try again.';
+  return (err as Error)?.message || 'Something went wrong';
+}
+
 async function authHeader(): Promise<Record<string, string>> {
   const session = await getCurrentSession();
   if (!session?.isValid()) return {};
   return { Authorization: `Bearer ${session.getIdToken().getJwtToken()}` };
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function request<T>(path: string, options: RequestInit = {}, auth = true): Promise<T> {
   const headers = {
-    ...(await authHeader()),
+    ...(auth ? await authHeader() : {}),
     ...(options.body ? { 'Content-Type': 'application/json' } : {}),
     ...(options.headers ?? {}),
   };
@@ -37,13 +51,14 @@ export interface Workspace {
   id: string;
   name: string;
   created_at: string;
-  role?: string;
+  role?: Role;
 }
 
 export interface Member {
   user_id: string;
   email?: string;
   role: 'owner' | 'admin' | 'editor' | 'viewer';
+  created_at?: string;
 }
 
 export interface Folder {
@@ -53,12 +68,15 @@ export interface Folder {
   name: string;
 }
 
+export type Role = 'owner' | 'admin' | 'editor' | 'viewer';
+
 export interface DocumentSummary {
   id: string;
   workspace_id: string;
   folder_id: string | null;
   title: string;
   tags: string[];
+  updated_at?: string;
 }
 
 export interface DocumentFull extends DocumentSummary {
@@ -66,6 +84,8 @@ export interface DocumentFull extends DocumentSummary {
   created_by: string;
   updated_by: string;
   updated_at: string;
+  /** Caller's effective role (workspace or direct share). Absent from older APIs. */
+  role?: Role;
 }
 
 export interface DiagramSummary {
@@ -75,6 +95,7 @@ export interface DiagramSummary {
   parent_diagram_id: string | null;
   name: string;
   tags: string[];
+  updated_at?: string;
 }
 
 export interface DiagramElement {
@@ -89,6 +110,7 @@ export interface DiagramElement {
 
 export interface DiagramFull extends DiagramSummary {
   elements: Array<DiagramElement & { id: string }>;
+  role?: Role;
 }
 
 // The server returns diagram_elements rows (linked_diagram_id, z_index, …) and the WebSocket
@@ -114,6 +136,67 @@ export interface VersionSummary {
   id: string;
   created_at: string;
   created_by: string;
+}
+
+export interface Grant {
+  user_id: string;
+  email?: string;
+  role: 'viewer' | 'editor';
+  created_at: string;
+  /** Their workspace role, if they're also a member. */
+  workspace_role: Role | null;
+}
+
+export interface ShareLink {
+  id: string;
+  token: string;
+  created_at: string;
+  created_by: string;
+}
+
+export interface VersionFull extends VersionSummary {
+  snapshot: Record<string, any>;
+}
+
+export interface SharedItem {
+  kind: 'document' | 'diagram';
+  id: string;
+  name: string;
+  tags: string[];
+  updated_at: string;
+  role: 'viewer' | 'editor';
+  workspace_name: string;
+}
+
+export interface PublicDiagram {
+  id: string;
+  name: string;
+  updated_at: string;
+  elements: Record<string, unknown>[];
+  states: DiagramState[];
+}
+
+export type PublicResource =
+  | { kind: 'document'; document: { id: string; title: string; content_md: string; tags: string[]; updated_at: string } }
+  | { kind: 'diagram'; diagram: PublicDiagram };
+
+export interface SearchResult {
+  kind: 'document' | 'diagram';
+  id: string;
+  name: string;
+  tags: string[];
+  workspace_id: string;
+  workspace_name: string;
+  folder_id: string | null;
+  updated_at: string;
+}
+
+export interface OnboardingResult {
+  created: boolean;
+  /** Null when the account was set up before and has since left or deleted every workspace. */
+  workspaceId: string | null;
+  documentId?: string;
+  diagramId?: string;
 }
 
 export interface PersonalAccessToken {
@@ -160,13 +243,25 @@ export interface PendingChange {
 
 export const api = {
   me: () => request<{ sub: string; email?: string }>('/me'),
+  listFavorites: () => request<{ kind: 'document' | 'diagram'; id: string; name: string }[]>('/favorites'),
+  addFavorite: (kind: 'document' | 'diagram', id: string) => request<void>(`/favorites/${kind}/${id}`, { method: 'PUT' }),
+  removeFavorite: (kind: 'document' | 'diagram', id: string) => request<void>(`/favorites/${kind}/${id}`, { method: 'DELETE' }),
+  onboard: () => request<OnboardingResult>('/onboarding', { method: 'POST' }),
+  search: (q: string, limit = 20) => request<SearchResult[]>(`/search?q=${encodeURIComponent(q)}&limit=${limit}`),
 
   listWorkspaces: () => request<Workspace[]>('/workspaces'),
   createWorkspace: (name: string) =>
     request<Workspace>('/workspaces', { method: 'POST', body: JSON.stringify({ name }) }),
   getWorkspace: (id: string) => request<Workspace>(`/workspaces/${id}`),
+  renameWorkspace: (id: string, name: string) =>
+    request<Workspace>(`/workspaces/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
+  deleteWorkspace: (id: string) => request<void>(`/workspaces/${id}`, { method: 'DELETE' }),
+  setMemberRole: (workspaceId: string, userId: string, role: Role) =>
+    request<Member>(`/workspaces/${workspaceId}/members/${userId}`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+  removeMember: (workspaceId: string, userId: string) =>
+    request<void>(`/workspaces/${workspaceId}/members/${userId}`, { method: 'DELETE' }),
   listMembers: (workspaceId: string) => request<Member[]>(`/workspaces/${workspaceId}/members`),
-  inviteMember: (workspaceId: string, email: string, role: 'editor' | 'viewer') =>
+  inviteMember: (workspaceId: string, email: string, role: 'admin' | 'editor' | 'viewer') =>
     request<{ userId: string; role: string }>(`/workspaces/${workspaceId}/members`, {
       method: 'POST',
       body: JSON.stringify({ email, role }),
@@ -179,6 +274,11 @@ export const api = {
       body: JSON.stringify({ name, parentFolderId }),
     }),
 
+  renameFolder: (id: string, name: string) => request<Folder>(`/folders/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
+  moveFolder: (id: string, parentFolderId: string | null) =>
+    request<Folder>(`/folders/${id}`, { method: 'PATCH', body: JSON.stringify({ parentFolderId }) }),
+  deleteFolder: (id: string) => request<void>(`/folders/${id}`, { method: 'DELETE' }),
+
   listDocuments: (workspaceId: string, folderId?: string) =>
     request<DocumentSummary[]>(
       `/workspaces/${workspaceId}/documents${folderId ? `?folderId=${folderId}` : ''}`,
@@ -189,7 +289,7 @@ export const api = {
       body: JSON.stringify({ title, folderId }),
     }),
   getDocument: (id: string) => request<DocumentFull>(`/documents/${id}`),
-  updateDocument: (id: string, patch: Partial<{ title: string; contentMd: string; tags: string[] }>) =>
+  updateDocument: (id: string, patch: Partial<{ title: string; contentMd: string; tags: string[]; folderId: string | null }>) =>
     request<DocumentFull>(`/documents/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
   deleteDocument: (id: string) => request<void>(`/documents/${id}`, { method: 'DELETE' }),
   documentVersions: (id: string) => request<VersionSummary[]>(`/documents/${id}/versions`),
@@ -209,7 +309,7 @@ export const api = {
     const d = await request<Omit<DiagramFull, 'elements'> & { elements: Record<string, unknown>[] }>(`/diagrams/${id}`);
     return { ...d, elements: d.elements.map(normalizeElement) };
   },
-  updateDiagram: (id: string, patch: Partial<{ name: string; tags: string[] }>) =>
+  updateDiagram: (id: string, patch: Partial<{ name: string; tags: string[]; folderId: string | null; parentDiagramId: string | null }>) =>
     request<DiagramSummary>(`/diagrams/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
   deleteDiagram: (id: string) => request<void>(`/diagrams/${id}`, { method: 'DELETE' }),
   saveDiagramElements: async (id: string, elements: DiagramElement[]): Promise<DiagramFull['elements']> => {
@@ -245,6 +345,24 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify({ stateIds }),
     }),
+
+  getVersion: (kind: 'document' | 'diagram', id: string, versionId: string) =>
+    request<VersionFull>(`/${kind}s/${id}/versions/${versionId}`),
+
+  listGrants: (kind: 'document' | 'diagram', id: string) => request<Grant[]>(`/${kind}s/${id}/permissions`),
+  grant: (kind: 'document' | 'diagram', id: string, email: string, role: 'viewer' | 'editor') =>
+    request<Grant>(`/${kind}s/${id}/permissions`, { method: 'POST', body: JSON.stringify({ email, role }) }),
+  changeGrant: (kind: 'document' | 'diagram', id: string, userId: string, role: 'viewer' | 'editor') =>
+    request<Grant>(`/${kind}s/${id}/permissions/${userId}`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+  revokeGrant: (kind: 'document' | 'diagram', id: string, userId: string) =>
+    request<void>(`/${kind}s/${id}/permissions/${userId}`, { method: 'DELETE' }),
+  listShareLinks: (kind: 'document' | 'diagram', id: string) => request<ShareLink[]>(`/${kind}s/${id}/share-links`),
+  createShareLink: (kind: 'document' | 'diagram', id: string) => request<ShareLink>(`/${kind}s/${id}/share-links`, { method: 'POST' }),
+  revokeShareLink: (linkId: string) => request<void>(`/share-links/${linkId}`, { method: 'DELETE' }),
+  sharedWithMe: () => request<SharedItem[]>('/shared-with-me'),
+  getPublic: (token: string) => request<PublicResource>(`/public/${encodeURIComponent(token)}`, {}, false),
+  getPublicDiagram: (token: string, diagramId: string) =>
+    request<PublicDiagram>(`/public/${encodeURIComponent(token)}/diagrams/${diagramId}`, {}, false),
 
   listTokens: () => request<PersonalAccessToken[]>('/tokens'),
   createToken: (name: string, expiresInDays: number | null) =>

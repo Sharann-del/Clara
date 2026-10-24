@@ -1,0 +1,13 @@
+{
+  "name": "Clara",
+  "short_name": "Clara",
+  "description": "System design docs and diagrams as code",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#0e1726",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

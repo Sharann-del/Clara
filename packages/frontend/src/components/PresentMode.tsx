@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DiagramElement, DiagramState } from '../lib/api';
 import { buildSteps, easeInOut, interpolate, resolveElements, stepBy, toRender, type RenderEl } from '../lib/states';
+import { connectorSegment, elementBox, type Box } from '@clara/shared/render';
 
 interface Props {
   base: DiagramElement[];
@@ -92,9 +93,13 @@ export function PresentMode({ base, states, startIndex, onClose }: Props) {
   }, [targets]);
 
   const byId = new Map(frame.map((r) => [r.el.id, r]));
-  const center = (id: unknown) => {
-    const r = typeof id === 'string' ? byId.get(id) : undefined;
-    return r ? { x: r.x + r.width / 2, y: r.y + r.height / 2 } : undefined;
+  const elById = new Map(frame.filter((r) => r.el.id).map((r) => [r.el.id as string, r.el]));
+  /** Interpolated box, so connectors track shapes mid-transition. */
+  const frameBox = (el: DiagramElement): Box => {
+    const r = byId.get(el.id);
+    if (!r) return elementBox(el);
+    if (el.type === 'text') return elementBox({ ...el, geometry: { ...el.geometry, x: r.x, y: r.y } });
+    return { x: r.x, y: r.y, width: r.width, height: r.height };
   };
 
   return (
@@ -146,9 +151,8 @@ export function PresentMode({ base, states, startIndex, onClose }: Props) {
         {frame
           .filter((r) => r.el.type === 'connector')
           .map((r) => {
-            const a = center(r.el.geometry.fromId);
-            const b = center(r.el.geometry.toId);
-            const p = a && b ? { x1: a.x, y1: a.y, x2: b.x, y2: b.y } : { x1: num(r.el.geometry.x1), y1: num(r.el.geometry.y1), x2: num(r.el.geometry.x2), y2: num(r.el.geometry.y2) };
+            const p = connectorSegment(r.el, elById, frameBox);
+            if (!p) return null;
             return (
               <g key={r.el.id} opacity={r.opacity}>
                 <line {...p} stroke="#475569" strokeWidth={1.5} markerEnd="url(#present-arrow)" />

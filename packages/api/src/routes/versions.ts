@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { query, withTransaction } from '../db.js';
-import { workspaceRole, roleAtLeast, type Role } from '../lib/authz.js';
+import { effectiveResourceRole, roleAtLeast, type Role } from '../lib/authz.js';
 import { recordVersion } from '../lib/versions.js';
 import { listStates } from '../lib/states.js';
 
@@ -15,9 +15,8 @@ async function loadOwner(resourceType: 'document' | 'diagram', id: string): Prom
   return rows[0];
 }
 
-async function checkRole(userId: string, resource: { workspace_id: string } | undefined, min: Role) {
-  if (!resource) return false;
-  const role = await workspaceRole(userId, resource.workspace_id);
+async function checkRole(userId: string, resourceType: 'document' | 'diagram', resource: OwnedResource & { id?: unknown }, min: Role) {
+  const role = await effectiveResourceRole(userId, resource.workspace_id, resourceType, String(resource.id));
   return roleAtLeast(role, min);
 }
 
@@ -29,7 +28,7 @@ export async function versionRoutes(app: FastifyInstance) {
       const { id } = req.params as { id: string };
       const resource = await loadOwner(resourceType, id);
       if (!resource) return reply.code(404).send({ error: 'Not found' });
-      if (!(await checkRole(req.user!.sub, resource, 'viewer')))
+      if (!(await checkRole(req.user!.sub, resourceType, resource, 'viewer')))
         return reply.code(403).send({ error: 'Viewer role required' });
 
       const { rows } = await query(
@@ -39,11 +38,26 @@ export async function versionRoutes(app: FastifyInstance) {
       return rows;
     });
 
+    // Full snapshot of one version, for previewing / diffing before a restore.
+    app.get(`/${base}/:id/versions/:versionId`, async (req, reply) => {
+      const { id, versionId } = req.params as { id: string; versionId: string };
+      const resource = await loadOwner(resourceType, id);
+      if (!resource) return reply.code(404).send({ error: 'Not found' });
+      if (!(await checkRole(req.user!.sub, resourceType, resource, 'viewer')))
+        return reply.code(403).send({ error: 'Viewer role required' });
+      const { rows } = await query(
+        'select id, created_at, created_by, snapshot from versions where id = $1 and resource_type = $2 and resource_id = $3',
+        [versionId, resourceType, id],
+      );
+      if (!rows[0]) return reply.code(404).send({ error: 'Version not found' });
+      return rows[0];
+    });
+
     app.post(`/${base}/:id/versions/:versionId/restore`, async (req, reply) => {
       const { id, versionId } = req.params as { id: string; versionId: string };
       const resource = await loadOwner(resourceType, id);
       if (!resource) return reply.code(404).send({ error: 'Not found' });
-      if (!(await checkRole(req.user!.sub, resource, 'editor')))
+      if (!(await checkRole(req.user!.sub, resourceType, resource, 'editor')))
         return reply.code(403).send({ error: 'Editor role required' });
 
       const versionRows = await query(

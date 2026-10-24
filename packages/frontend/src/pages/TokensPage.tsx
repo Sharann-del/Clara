@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { api, type PersonalAccessToken } from '../lib/api';
-import { useAuth } from '../context/AuthContext';
+import { AppShell } from '../components/AppShell';
+import { SettingsNav } from './SettingsPage';
+import { useConfirm } from '../components/ui/ConfirmProvider';
+import { useToast } from '../components/ui/Toast';
+import { EmptyState } from '../components/EmptyState';
+import { Icon } from '../components/ui/Icon';
+import { usePageMeta } from '../lib/seo';
 
 const EXPIRY: { label: string; days: number | null }[] = [
   { label: '30 days', days: 30 },
@@ -19,7 +24,9 @@ function status(t: PersonalAccessToken) {
 }
 
 export function TokensPage() {
-  const { email, signOut } = useAuth();
+  usePageMeta('Access tokens', { noindex: true });
+  const { confirm } = useConfirm();
+  const toast = useToast();
   const [tokens, setTokens] = useState<PersonalAccessToken[]>([]);
   const [name, setName] = useState('');
   const [days, setDays] = useState<number | null>(90);
@@ -51,26 +58,30 @@ export function TokensPage() {
   }
 
   async function revoke(t: PersonalAccessToken) {
-    if (!window.confirm(`Revoke "${t.name}"? Anything using it will stop working immediately.`)) return;
-    await api.revokeToken(t.id).catch((e) => setError(e.message));
+    const ok = await confirm({
+      title: `Revoke “${t.name}”?`,
+      message: 'Anything using this token, like Claude Code, stops working immediately. Proposals it already made stay in Pending changes.',
+      confirmLabel: 'Revoke token',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await api.revokeToken(t.id);
+      toast.success(`Revoked “${t.name}”`);
+    } catch (e) {
+      setError((e as Error).message);
+    }
     await load();
   }
 
   const command = `claude mcp add --transport http clara ${api.mcpUrl} --header "Authorization: Bearer ${fresh ?? '<your token>'}"`;
 
   return (
-    <div className="app-shell">
-      <div className="main-area">
-        <div className="topbar">
-          <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
-            <strong>← Clara</strong>
-          </Link>
-          <div className="muted">
-            {email} · <button className="btn" onClick={signOut}>Sign out</button>
-          </div>
-        </div>
-        <div className="content" style={{ maxWidth: 720, margin: '0 auto', width: '100%' }}>
-          <h2>Access tokens for AI assistants</h2>
+    <AppShell title={<strong>Settings</strong>}>
+      <div className="settings">
+        <SettingsNav current="tokens" />
+        <div className="settings-body">
+          <h1 style={{ fontSize: '1.5rem', margin: 0 }}>Access tokens for AI assistants</h1>
           <p className="muted">
             A token lets an MCP client such as Claude act as you in Clara, with exactly your workspace roles. It can read
             what you can read, but its writes are only proposals: you accept or reject each one under a workspace's
@@ -116,7 +127,11 @@ export function TokensPage() {
           </div>
 
           <h3>Your tokens</h3>
-          {tokens.length === 0 && <p className="muted">No tokens yet.</p>}
+          {tokens.length === 0 && (
+            <EmptyState icon="key" title="No tokens yet" compact>
+              Create one above, then connect Claude Code with the command below.
+            </EmptyState>
+          )}
           {tokens.map((t) => (
             <div className="list-item" key={t.id} style={{ opacity: status(t) === 'active' ? 1 : 0.55 }}>
               <span>
@@ -131,13 +146,15 @@ export function TokensPage() {
             </div>
           ))}
 
-          <h3>Connect Claude Code</h3>
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Icon name="sparkles" /> Connect Claude Code
+          </h3>
           <pre className="diff-text" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{command}</pre>
           <p className="muted">
             Server URL: <code>{api.mcpUrl}</code> · header <code>Authorization: Bearer &lt;token&gt;</code>
           </p>
         </div>
       </div>
-    </div>
+    </AppShell>
   );
 }

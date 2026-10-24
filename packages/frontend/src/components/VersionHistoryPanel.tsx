@@ -1,47 +1,230 @@
-import { useEffect, useState } from 'react';
-import { api, type VersionSummary } from '../lib/api';
+import { useEffect, useMemo, useState } from 'react';
+import { diffLines } from 'diff';
+import { describeElement, diffElements } from '@clara/shared/diff';
+import { Dialog } from './ui/Dialog';
+import { Icon } from './ui/Icon';
+import { useToast } from './ui/Toast';
+import { useConfirm } from './ui/ConfirmProvider';
+import { EmptyState, SkeletonRows } from './EmptyState';
+import { DiagramViewer } from './DiagramViewer';
+import { MarkdownView } from './MarkdownView';
+import { api, errorMessage, normalizeElement, type DiagramElement, type VersionFull, type VersionSummary } from '../lib/api';
+import { timeAgo } from '../lib/time';
 
 interface Props {
+  open: boolean;
+  onClose: () => void;
   resourceKind: 'document' | 'diagram';
   resourceId: string;
+  /** What the item looks like now, to diff against. */
+  current: { contentMd?: string; title?: string; elements?: DiagramElement[] };
+  canRestore: boolean;
   onRestored: () => void;
 }
 
-export function VersionHistoryPanel({ resourceKind, resourceId, onRestored }: Props) {
-  const [versions, setVersions] = useState<VersionSummary[]>([]);
-  const [busy, setBusy] = useState<string | null>(null);
+/** Version list with a preview and a diff against the current state before restoring. */
+export function VersionHistoryPanel({ open, onClose, resourceKind, resourceId, current, canRestore, onRestored }: Props) {
+  const toast = useToast();
+  const { confirm } = useConfirm();
+  const [versions, setVersions] = useState<VersionSummary[] | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [version, setVersion] = useState<VersionFull | null>(null);
+  const [view, setView] = useState<'changes' | 'preview'>('changes');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  function load() {
+  useEffect(() => {
+    if (!open) return;
+    setVersions(null);
     const fn = resourceKind === 'document' ? api.documentVersions : api.diagramVersions;
-    fn(resourceId).then(setVersions);
-  }
+    fn(resourceId)
+      .then((v) => {
+        setVersions(v);
+        setSelected(v[0]?.id ?? null);
+      })
+      .catch((e) => setError(errorMessage(e)));
+  }, [open, resourceKind, resourceId]);
 
-  useEffect(load, [resourceKind, resourceId]);
+  useEffect(() => {
+    if (!selected) return;
+    setVersion(null);
+    api
+      .getVersion(resourceKind, resourceId, selected)
+      .then(setVersion)
+      .catch((e) => setError(errorMessage(e)));
+  }, [selected, resourceKind, resourceId]);
 
-  async function restore(versionId: string) {
-    setBusy(versionId);
+  async function restore() {
+    if (!version) return;
+    const ok = await confirm({
+      title: 'Restore this version?',
+      message: `The ${resourceKind} goes back to how it was ${timeAgo(version.created_at)}. What it looks like now is saved as a new version first, so you can undo this.`,
+      confirmLabel: 'Restore version',
+    });
+    if (!ok) return;
+    setBusy(true);
     try {
       const fn = resourceKind === 'document' ? api.restoreDocumentVersion : api.restoreDiagramVersion;
-      await fn(resourceId, versionId);
+      await fn(resourceId, version.id);
+      toast.success('Version restored. The previous state is saved in history.');
       onRestored();
-      load();
+      onClose();
+    } catch (e) {
+      toast.error(errorMessage(e));
     } finally {
-      setBusy(null);
+      setBusy(false);
     }
   }
 
   return (
-    <div className="panel" style={{ width: 260 }}>
-      <strong style={{ fontSize: 13 }}>Version history</strong>
-      {versions.length === 0 && <p className="muted">No saved versions yet.</p>}
-      {versions.map((v) => (
-        <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: 12 }}>
-          <span>{new Date(v.created_at).toLocaleString()}</span>
-          <button className="btn" disabled={busy === v.id} onClick={() => restore(v.id)}>
-            {busy === v.id ? '…' : 'Restore'}
-          </button>
+    <Dialog open={open} onClose={onClose} title="Version history" description="Every save keeps the previous version. Preview one, then restore it if you need to." size="lg">
+      {error && <div className="error-text">{error}</div>}
+      {versions === null ? (
+        <SkeletonRows rows={4} />
+      ) : versions.length === 0 ? (
+        <EmptyState icon="history" title="No earlier versions yet" compact>
+          A version is saved each time this {resourceKind} changes.
+        </EmptyState>
+      ) : (
+        <div className="history">
+          <ul className="history-list" role="listbox" aria-label="Versions">
+            {versions.map((v, i) => (
+              <li
+                key={v.id}
+                role="option"
+                tabIndex={0}
+                aria-selected={selected === v.id}
+                className={selected === v.id ? 'active' : ''}
+                onClick={() => setSelected(v.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') (e.preventDefault(), setSelected(v.id));
+                  if (e.key === 'ArrowDown') (e.currentTarget.nextElementSibling as HTMLElement | null)?.focus();
+                  if (e.key === 'ArrowUp') (e.currentTarget.previousElementSibling as HTMLElement | null)?.focus();
+                }}
+              >
+                <strong>{timeAgo(v.created_at)}</strong>
+                <span className="muted">{new Date(v.created_at).toLocaleString()}</span>
+                {i === 0 && <span className="tag tag-neutral">latest saved</span>}
+              </li>
+            ))}
+          </ul>
+          <div className="history-preview">
+            {!version ? (
+              <SkeletonRows rows={6} height={22} />
+            ) : (
+              <>
+                <div className="history-toolbar">
+                  <div className="segmented" role="radiogroup" aria-label="Show">
+                    {(['changes', 'preview'] as const).map((v) => (
+                      <button key={v} type="button" role="radio" aria-checked={view === v} className={view === v ? 'on' : ''} onClick={() => setView(v)}>
+                        {v === 'changes' ? 'Changes since' : 'Preview'}
+                      </button>
+                    ))}
+                  </div>
+                  {canRestore && (
+                    <button type="button" className="btn btn-primary" onClick={restore} disabled={busy}>
+                      <Icon name="history" /> {busy ? 'Restoring…' : 'Restore this version'}
+                    </button>
+                  )}
+                </div>
+                {resourceKind === 'document' ? (
+                  <DocumentVersion snapshot={version.snapshot} current={current} view={view} />
+                ) : (
+                  <DiagramVersion snapshot={version.snapshot} current={current} view={view} />
+                )}
+              </>
+            )}
+          </div>
         </div>
-      ))}
+      )}
+    </Dialog>
+  );
+}
+
+function DocumentVersion({ snapshot, current, view }: { snapshot: Record<string, any>; current: Props['current']; view: 'changes' | 'preview' }) {
+  const then = String(snapshot.content_md ?? '');
+  if (view === 'preview') {
+    return (
+      <div className="history-doc">
+        <h2 style={{ marginTop: 0 }}>{snapshot.title}</h2>
+        <MarkdownView markdown={then} />
+      </div>
+    );
+  }
+  const parts = diffLines(then, current.contentMd ?? '');
+  const changed = parts.some((p) => p.added || p.removed) || snapshot.title !== current.title;
+  return (
+    <div>
+      <p className="muted" style={{ marginTop: 0 }}>
+        <del>red</del> is in this version but not now; <ins>green</ins> was added since. Restoring removes the green and brings back the red.
+      </p>
+      {snapshot.title !== current.title && (
+        <div className="diff-row">
+          <span className="diff-label">Title</span>
+          <del>{snapshot.title}</del> <ins>{current.title}</ins>
+        </div>
+      )}
+      {!changed ? (
+        <p className="muted">Identical to the current version.</p>
+      ) : (
+        <pre className="diff-text" style={{ maxHeight: 420 }}>
+          {parts.map((part, i) => {
+            const cls = part.added ? 'diff-add' : part.removed ? 'diff-del' : 'diff-same';
+            const mark = part.added ? '+ ' : part.removed ? '- ' : '  ';
+            const lines = part.value.replace(/\n$/, '').split('\n');
+            const shown = !part.added && !part.removed && lines.length > 6 ? [...lines.slice(0, 2), `… ${lines.length - 4} unchanged lines …`, ...lines.slice(-2)] : lines;
+            return shown.map((line, j) => (
+              <div className={cls} key={`${i}-${j}`}>
+                {line.startsWith('…') ? line : mark + line}
+              </div>
+            ));
+          })}
+        </pre>
+      )}
+    </div>
+  );
+}
+
+function DiagramVersion({ snapshot, current, view }: { snapshot: Record<string, any>; current: Props['current']; view: 'changes' | 'preview' }) {
+  const then = useMemo(() => ((snapshot.elements ?? []) as Record<string, unknown>[]).map(normalizeElement), [snapshot]);
+  const diff = useMemo(() => diffElements(then, current.elements ?? []), [then, current.elements]);
+  if (view === 'preview') {
+    return (
+      <div className="history-diagram">
+        <DiagramViewer elements={then} label="Diagram as it was in this version" />
+      </div>
+    );
+  }
+  const total = diff.added.length + diff.removed.length + diff.changed.length;
+  return (
+    <div>
+      <p className="muted" style={{ marginTop: 0 }}>
+        What changed between this version and now. Restoring undoes these.
+      </p>
+      {total === 0 ? (
+        <p className="muted">Same shapes as the current diagram.</p>
+      ) : (
+        <ul className="history-changes">
+          {diff.removed.map((e) => (
+            <li key={`r${e.id}`}>
+              <del>removed since</del> {describeElement(e)}
+            </li>
+          ))}
+          {diff.added.map((e) => (
+            <li key={`a${e.id}`}>
+              <ins>added since</ins> {describeElement(e)}
+            </li>
+          ))}
+          {diff.changed.map((c) => (
+            <li key={`c${c.id}`}>
+              <span className="diff-chg">changed</span> {describeElement(c.after)} <span className="muted">({c.fields.join(', ')})</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="history-diagram" style={{ height: 240 }}>
+        <DiagramViewer elements={then} controls={false} label="Diagram as it was in this version" />
+      </div>
     </div>
   );
 }

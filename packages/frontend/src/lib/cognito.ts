@@ -68,3 +68,14 @@ export function getCurrentSession(): Promise<CognitoUserSession | null> {
 export function getCurrentUserEmail(): string | null {
   return userPool.getCurrentUser()?.getUsername() ?? null;
 }
+
+export function changePassword(oldPassword: string, newPassword: string): Promise<void> {
+  const user = userPool.getCurrentUser();
+  if (!user) return Promise.reject(new Error('You’re signed out. Sign in again first.'));
+  return new Promise((resolve, reject) => {
+    user.getSession((err: Error | null) => {
+      if (err) return reject(err);
+      user.changePassword(oldPassword, newPassword, (e) => (e ? reject(e) : resolve()));
+    });
+  });
+}

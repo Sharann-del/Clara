@@ -1,11 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { query, withTransaction } from '../db.js';
-import { workspaceRole, roleAtLeast } from '../lib/authz.js';
-import { CognitoIdentityProviderClient, ListUsersCommand } from '@aws-sdk/client-cognito-identity-provider';
-import { config } from '../config.js';
-
-const cognito = new CognitoIdentityProviderClient({ region: config.awsRegion });
+import { assertWorkspaceRole, BadRequestError, ForbiddenError, NotFoundError, workspaceRole, roleAtLeast } from '../lib/authz.js';
+import { emailForUser, findUserIdByEmail } from '../lib/users.js';
 
 export async function workspaceRoutes(app: FastifyInstance) {
   app.get('/workspaces', async (req) => {
@@ -72,51 +69,64 @@ export async function workspaceRoutes(app: FastifyInstance) {
       'select user_id, role, created_at from workspace_members where workspace_id = $1 order by created_at',
       [id],
     );
-    // Cognito is the identity source, so resolve emails per member (workspaces are small).
-    return Promise.all(
-      rows.map(async (m) => {
-        try {
-          const r = await cognito.send(
-            new ListUsersCommand({ UserPoolId: config.userPoolId, Filter: `sub = "${m.user_id}"`, Limit: 1 }),
-          );
-          const email = r.Users?.[0]?.Attributes?.find((a) => a.Name === 'email')?.Value;
-          return { ...m, email };
-        } catch {
-          return { ...m, email: undefined };
-        }
-      }),
-    );
+    return Promise.all(rows.map(async (m) => ({ ...m, email: await emailForUser(m.user_id) })));
   });
 
   app.post('/workspaces/:id/members', async (req, reply) => {
     const { id } = req.params as { id: string };
     const role = await workspaceRole(req.user!.sub, id);
     if (!roleAtLeast(role, 'admin')) return reply.code(403).send({ error: 'Admin role required' });
-
-    const body = z
-      .object({ email: z.string().email(), role: z.enum(['editor', 'viewer']) })
-      .parse(req.body);
-
-    const result = await cognito.send(
-      new ListUsersCommand({
-        UserPoolId: config.userPoolId,
-        Filter: `email = "${body.email.replace(/"/g, '')}"`,
-        Limit: 1,
-      }),
-    );
-    const sub = result.Users?.[0]?.Attributes?.find((a) => a.Name === 'sub')?.Value;
-    if (!sub) return reply.code(404).send({ error: `No user found with email ${body.email}` });
-
+    const body = z.object({ email: z.string().email(), role: z.enum(['admin', 'editor', 'viewer']) }).parse(req.body);
+    const sub = await findUserIdByEmail(body.email);
     const existing = await workspaceRole(sub, id);
-    if (existing === 'owner' || existing === 'admin') {
-      return reply.code(409).send({ error: `${body.email} is already an ${existing} of this workspace` });
+    if (existing) {
+      return reply.code(409).send({ error: `${body.email} is already ${existing === 'admin' || existing === 'owner' ? 'an' : 'a'} ${existing} here. Change their role in the list instead.` });
     }
-
-    await query(
-      `insert into workspace_members (workspace_id, user_id, role) values ($1, $2, $3)
-       on conflict (workspace_id, user_id) do update set role = excluded.role`,
-      [id, sub, body.role],
-    );
-    reply.code(201).send({ userId: sub, role: body.role });
+    await query('insert into workspace_members (workspace_id, user_id, role) values ($1, $2, $3)', [id, sub, body.role]);
+    reply.code(201).send({ userId: sub, role: body.role, email: body.email.trim().toLowerCase() });
   });
+
+  /**
+   * Change a member's role. Admins manage admins/editors/viewers; only owners can make or
+   * unmake owners; the last owner can't be demoted (there must always be one).
+   */
+  app.patch('/workspaces/:id/members/:userId', async (req) => {
+    const { id, userId } = req.params as { id: string; userId: string };
+    const actorRole = await assertWorkspaceRole(req.user!.sub, id, 'admin');
+    const { role: next } = z.object({ role: z.enum(['owner', 'admin', 'editor', 'viewer']) }).parse(req.body);
+    const current = await workspaceRole(userId, id);
+    if (!current) throw new NotFoundError('Not a member of this workspace');
+    if ((current === 'owner' || next === 'owner') && actorRole !== 'owner') throw new ForbiddenError('Only an owner can change owners');
+    if (current === 'owner' && next !== 'owner') await assertAnotherOwner(id, userId);
+    const { rows } = await query(
+      'update workspace_members set role = $1 where workspace_id = $2 and user_id = $3 returning user_id, role, created_at',
+      [next, id, userId],
+    );
+    return rows[0];
+  });
+
+  /** Remove someone (admin+), or yourself (leave). Owners can only be removed by owners; never the last one. */
+  app.delete('/workspaces/:id/members/:userId', async (req, reply) => {
+    const { id, userId } = req.params as { id: string; userId: string };
+    const self = userId === req.user!.sub;
+    const target = await workspaceRole(userId, id);
+    if (!target) throw new NotFoundError('Not a member of this workspace');
+    if (!self) {
+      const actorRole = await assertWorkspaceRole(req.user!.sub, id, 'admin');
+      if (target === 'owner' && actorRole !== 'owner') throw new ForbiddenError('Only an owner can remove an owner');
+    }
+    if (target === 'owner') await assertAnotherOwner(id, userId);
+    await query('delete from workspace_members where workspace_id = $1 and user_id = $2', [id, userId]);
+    reply.code(204).send();
+  });
+}
+
+async function assertAnotherOwner(workspaceId: string, exceptUserId: string) {
+  const { rows } = await query<{ n: string }>(
+    "select count(*) as n from workspace_members where workspace_id = $1 and role = 'owner' and user_id <> $2",
+    [workspaceId, exceptUserId],
+  );
+  if (Number(rows[0].n) === 0) {
+    throw new BadRequestError('A workspace needs at least one owner. Make someone else an owner first, or delete the workspace.');
+  }
 }

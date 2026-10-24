@@ -93,7 +93,11 @@ async function deny(connectionId: string) {
   return { statusCode: 200 };
 }
 
+/** Client keep-alive (API Gateway's idle timeout is 10 minutes): traffic alone resets it, nothing to do or reply. */
+const isPing = (body: string | undefined) => body !== undefined && body.length < 64 && /^\s*\{\s*"action"\s*:\s*"ping"\s*\}\s*$/.test(body);
+
 export async function handler(event: WsMessageEvent) {
+  if (isPing(event.body)) return { statusCode: 200 };
   const connectionId = event.requestContext.connectionId;
   const conn = await getConnection(connectionId);
   if (!conn) return { statusCode: 200 };

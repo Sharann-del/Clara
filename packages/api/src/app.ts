@@ -11,6 +11,11 @@ import { versionRoutes } from './routes/versions.js';
 import { stateRoutes } from './routes/states.js';
 import { tokenRoutes } from './routes/tokens.js';
 import { pendingChangeRoutes } from './routes/pending-changes.js';
+import { onboardingRoutes } from './routes/onboarding.js';
+import { searchRoutes } from './routes/search.js';
+import { sharingRoutes } from './routes/sharing.js';
+import { favoriteRoutes } from './routes/favorites.js';
+import { publicRoutes } from './routes/public.js';
 
 export async function buildApp() {
   const app = Fastify({ logger: true });
@@ -31,6 +36,9 @@ export async function buildApp() {
 
   app.get('/health', async () => ({ status: 'ok' }));
 
+  // Unauthenticated, read-only share links. Registered outside the auth hook on purpose.
+  await app.register(publicRoutes);
+
   app.register(async (protectedApp) => {
     protectedApp.addHook('preHandler', requireAuth);
 
@@ -44,6 +52,10 @@ export async function buildApp() {
     await protectedApp.register(versionRoutes);
     await protectedApp.register(tokenRoutes);
     await protectedApp.register(pendingChangeRoutes);
+    await protectedApp.register(onboardingRoutes);
+    await protectedApp.register(searchRoutes);
+    await protectedApp.register(sharingRoutes);
+    await protectedApp.register(favoriteRoutes);
   });
 
   return app;

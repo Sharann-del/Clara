@@ -32,7 +32,7 @@ const elementInput = z.object({
   geometry: z
     .record(z.unknown())
     .describe(
-      'Shapes (rect/ellipse/group/text): {x, y, width, height, text}. Connectors: {x1, y1, x2, y2, text} — absolute canvas coordinates, not element references.',
+      'Shapes (rect/ellipse/group/text): {x, y, width, height, text}. Connectors: preferably {fromId, toId, text} referencing two shape ids (the arrow follows the shapes and exports to Mermaid exactly), or free {x1, y1, x2, y2, text} in absolute canvas coordinates.',
     ),
   style: z.record(z.unknown()).default({}).describe('e.g. {fill: "#eff6ff", stroke: "#2563eb"}'),
   zIndex: z.number().int().default(0),

@@ -21,7 +21,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const session = await cognito.getCurrentSession();
     if (session?.isValid()) {
       setIdToken(session.getIdToken().getJwtToken());
-      setEmail(cognito.getCurrentUserEmail());
+      // The pool's username is the Cognito sub, not the email; the ID token carries the email claim.
+      const claim = session.getIdToken().decodePayload().email;
+      setEmail(typeof claim === 'string' ? claim : cognito.getCurrentUserEmail());
     } else {
       setIdToken(null);
       setEmail(null);

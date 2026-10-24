@@ -1,10 +1,12 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { query } from '../db.js';
+import { assertWorkspaceRole } from '../lib/authz.js';
 import {
   createDocument,
   getDocument,
   listDocuments,
+  loadDocument,
   updateDocument,
 } from '../lib/documents.js';
 
@@ -30,7 +32,8 @@ export async function documentRoutes(app: FastifyInstance) {
 
   app.get('/documents/:id', async (req) => {
     const { id } = req.params as { id: string };
-    return getDocument(req.user!.sub, id, 'viewer');
+    const { doc, role } = await loadDocument(req.user!.sub, id, 'viewer');
+    return { ...doc, role };
   });
 
   app.patch('/documents/:id', async (req) => {
@@ -50,7 +53,9 @@ export async function documentRoutes(app: FastifyInstance) {
 
   app.delete('/documents/:id', async (req, reply) => {
     const { id } = req.params as { id: string };
-    await getDocument(req.user!.sub, id, 'editor');
+    // A direct share can edit but not delete someone else's document.
+    const doc = await getDocument(req.user!.sub, id, 'editor');
+    await assertWorkspaceRole(req.user!.sub, doc.workspace_id, 'editor');
     await query('delete from documents where id = $1', [id]);
     reply.code(204).send();
   });

@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { query } from '../db.js';
+import { assertWorkspaceRole } from '../lib/authz.js';
 import {
   createDiagram,
   elementSchema,
@@ -65,7 +66,9 @@ export async function diagramRoutes(app: FastifyInstance) {
 
   app.delete('/diagrams/:id', async (req, reply) => {
     const { id } = req.params as { id: string };
-    await getDiagramRow(req.user!.sub, id, 'editor');
+    // A direct share can edit but not delete someone else's diagram.
+    const diagram = await getDiagramRow(req.user!.sub, id, 'editor');
+    await assertWorkspaceRole(req.user!.sub, diagram.workspace_id, 'editor');
     await query('delete from diagrams where id = $1', [id]);
     reply.code(204).send();
   });

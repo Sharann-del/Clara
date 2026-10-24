@@ -2,6 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, type PendingChange } from '../lib/api';
 import { ChangeDiff } from './ChangeDiff';
+import { useConfirm } from './ui/ConfirmProvider';
+import { useToast } from './ui/Toast';
+import { EmptyState, SkeletonRows } from './EmptyState';
 
 interface Props {
   workspaceId: string;
@@ -14,6 +17,8 @@ export function PendingChangesPanel({ workspaceId, onChanged }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+  const { confirm } = useConfirm();
+  const toast = useToast();
 
   const load = useCallback(
     () => api.listPendingChanges(workspaceId).then(setChanges).catch((e) => setError(e.message)),
@@ -26,9 +31,13 @@ export function PendingChangesPanel({ workspaceId, onChanged }: Props) {
   async function review(change: PendingChange, action: 'accept' | 'reject', force = false) {
     if (
       force &&
-      !window.confirm(
-        'This resource changed after the change was proposed. Accepting will overwrite those newer edits with the proposal (the current state is kept in version history). Continue?',
-      )
+      !(await confirm({
+        title: 'Overwrite newer edits?',
+        message:
+          'This changed after the proposal was made. Accepting replaces those newer edits with the proposal. The current version stays in version history, so you can restore it.',
+        confirmLabel: 'Accept and overwrite',
+        danger: true,
+      }))
     ) {
       return;
     }
@@ -37,6 +46,7 @@ export function PendingChangesPanel({ workspaceId, onChanged }: Props) {
     try {
       if (action === 'accept') await api.acceptPendingChange(change.id, force);
       else await api.rejectPendingChange(change.id);
+      toast.success(action === 'accept' ? 'Accepted. The previous version is in history.' : 'Rejected. Nothing changed.');
       await load();
       onChanged();
     } catch (e) {
@@ -48,18 +58,22 @@ export function PendingChangesPanel({ workspaceId, onChanged }: Props) {
   }
 
   return (
-    <div className="panel" style={{ marginBottom: 16 }}>
-      <strong>Pending changes from AI assistants</strong>
-      <p className="muted" style={{ margin: '4px 0 8px' }}>
+    <div>
+      <p className="muted" style={{ margin: '0 0 8px', fontSize: 13.5 }}>
         Nothing below has been applied yet. Accept applies it and saves the previous state to version history; Reject discards it.
       </p>
       {error && <div className="error-text">{error}</div>}
-      {changes?.length === 0 && <p className="muted">Nothing waiting for review.</p>}
+      {changes === null && !error && <SkeletonRows rows={2} height={80} />}
+      {changes?.length === 0 && (
+        <EmptyState icon="sparkles" title="Nothing waiting for review" compact>
+          When an assistant connected over MCP proposes a change, it appears here. <Link to="/docs/mcp">Connect Claude</Link>
+        </EmptyState>
+      )}
       {changes?.map((c) => (
         <div className="change-card" key={c.id}>
           <div className="change-head">
             <div>
-              <span className="tag">{c.operation === 'create' ? 'new' : 'edit'} {c.resource_type}</span>{' '}
+              <span className="tag tag-amber">{c.operation === 'create' ? 'new' : 'edit'} {c.resource_type}</span>{' '}
               {c.operation === 'update' && c.resource_id ? (
                 <Link to={`/${c.resource_type}s/${c.resource_id}`}>{c.resource_name ?? 'Untitled'}</Link>
               ) : (

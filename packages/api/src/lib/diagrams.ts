@@ -1,7 +1,7 @@
 import type pg from 'pg';
 import { z } from 'zod';
 import { query, withTransaction } from '../db.js';
-import { assertWorkspaceRole, NotFoundError } from './authz.js';
+import { assertFolderInWorkspace, assertResourceRole, assertWorkspaceRole, BadRequestError, NotFoundError, type Role } from './authz.js';
 import { recordVersion } from './versions.js';
 import { listStates } from './states.js';
 import { normalizeElement } from '@clara/shared/elements';
@@ -46,22 +46,27 @@ export async function listDiagrams(userId: string, workspaceId: string, folderId
   return rows;
 }
 
-/** Loads a diagram row and checks the caller's role on its workspace. */
-export async function getDiagramRow(userId: string, id: string, min: 'viewer' | 'editor' = 'viewer') {
-  const { rows } = await query('select * from diagrams where id = $1', [id]);
+/** Loads a diagram row and the caller's effective role on it (workspace role or a direct share). */
+export async function loadDiagram(userId: string, id: string, min: Role = 'viewer') {
+  const { rows } = await query<Record<string, any> & { id: string; workspace_id: string }>('select * from diagrams where id = $1', [id]);
   const diagram = rows[0];
   if (!diagram) throw new NotFoundError('Not found');
-  await assertWorkspaceRole(userId, diagram.workspace_id, min);
-  return diagram;
+  const role = await assertResourceRole(userId, 'diagram', diagram, min);
+  return { diagram, role };
+}
+
+/** Loads a diagram row, checking the caller's effective role on it. */
+export async function getDiagramRow(userId: string, id: string, min: 'viewer' | 'editor' = 'viewer') {
+  return (await loadDiagram(userId, id, min)).diagram;
 }
 
 export async function getDiagram(
   userId: string,
   id: string,
-): Promise<Record<string, any> & { elements: Record<string, any>[] }> {
-  const diagram = await getDiagramRow(userId, id, 'viewer');
+): Promise<Record<string, any> & { elements: Record<string, any>[]; role: Role }> {
+  const { diagram, role } = await loadDiagram(userId, id, 'viewer');
   const elements = await query('select * from diagram_elements where diagram_id = $1 order by z_index', [id]);
-  return { ...diagram, elements: elements.rows };
+  return { ...diagram, elements: elements.rows, role };
 }
 
 export async function getDiagramChildren(userId: string, id: string) {
@@ -77,6 +82,8 @@ export async function createDiagram(
   client?: pg.PoolClient,
 ) {
   await assertWorkspaceRole(userId, workspaceId, 'editor');
+  await assertFolderInWorkspace(input.folderId, workspaceId);
+  if (input.parentDiagramId) await assertParentDiagram(input.parentDiagramId, workspaceId);
   const apply = async (c: pg.PoolClient) => {
     const { rows } = await c.query(
       `insert into diagrams (workspace_id, folder_id, parent_diagram_id, name, tags, created_by, updated_by)
@@ -100,8 +107,20 @@ export async function createDiagram(
   return client ? apply(client) : withTransaction(apply);
 }
 
+/** C4 parent must be another diagram in the same workspace. */
+async function assertParentDiagram(parentId: string, workspaceId: string, selfId?: string) {
+  if (parentId === selfId) throw new BadRequestError('A diagram cannot be its own parent');
+  const { rows } = await query<{ workspace_id: string }>('select workspace_id from diagrams where id = $1', [parentId]);
+  if (!rows[0] || rows[0].workspace_id !== workspaceId) throw new BadRequestError('Parent diagram not found in this workspace');
+}
+
 export async function updateDiagramMeta(userId: string, id: string, patch: DiagramPatch, client?: pg.PoolClient) {
-  await getDiagramRow(userId, id, 'editor');
+  const current = await getDiagramRow(userId, id, 'editor');
+  if ('folderId' in patch) {
+    await assertWorkspaceRole(userId, current.workspace_id, 'editor');
+    await assertFolderInWorkspace(patch.folderId, current.workspace_id);
+  }
+  if (patch.parentDiagramId) await assertParentDiagram(patch.parentDiagramId, current.workspace_id, id);
   const run = client ? client.query.bind(client) : query;
   const { rows } = await run(
     `update diagrams set
