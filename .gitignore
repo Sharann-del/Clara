@@ -69,3 +69,6 @@ Thumbs.db
 # Playwright
 test-results/
 playwright-report/
+
+# CI synth output with optional features on
+cdk.out.flags/

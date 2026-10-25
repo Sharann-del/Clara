@@ -1,0 +1,110 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+
+  release:
+    name: Build and publish
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Check the tag matches package.json
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $version" >&2
+            exit 1
+          fi
+
+      # The frontend inlines its configuration at build time. When the repository has
+      # Actions variables for a deployment (Settings → Secrets and variables → Actions →
+      # Variables), the release ships a build for that deployment, ready to sync to S3.
+      # Otherwise it is built from .env.example to prove the build works, and not attached.
+      - name: Configure the frontend build
+        id: frontend-env
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_WS_URL: ${{ vars.VITE_WS_URL }}
+          VITE_USER_POOL_ID: ${{ vars.VITE_USER_POOL_ID }}
+          VITE_USER_POOL_CLIENT_ID: ${{ vars.VITE_USER_POOL_CLIENT_ID }}
+          VITE_AWS_REGION: ${{ vars.VITE_AWS_REGION }}
+          VITE_SITE_URL: ${{ vars.VITE_SITE_URL }}
+          VITE_SIGNUP_INVITE_REQUIRED: ${{ vars.VITE_SIGNUP_INVITE_REQUIRED }}
+        run: |
+          if [ -n "$VITE_API_URL" ]; then
+            {
+              echo "VITE_API_URL=$VITE_API_URL"
+              echo "VITE_WS_URL=$VITE_WS_URL"
+              echo "VITE_USER_POOL_ID=$VITE_USER_POOL_ID"
+              echo "VITE_USER_POOL_CLIENT_ID=$VITE_USER_POOL_CLIENT_ID"
+              echo "VITE_AWS_REGION=$VITE_AWS_REGION"
+              echo "VITE_SITE_URL=$VITE_SITE_URL"
+              echo "VITE_SIGNUP_INVITE_REQUIRED=${VITE_SIGNUP_INVITE_REQUIRED:-false}"
+            } > packages/frontend/.env
+            echo "attach=true" >> "$GITHUB_OUTPUT"
+          else
+            cp packages/frontend/.env.example packages/frontend/.env
+            echo "attach=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - run: npm run build
+
+      - name: Synthesize the CDK cloud assembly
+        working-directory: packages/infra
+        run: npx cdk synth --quiet -o cdk.out
+
+      - name: Package release assets
+        run: |
+          mkdir -p release
+          tar -czf "release/clara-cdk-assembly-$GITHUB_REF_NAME.tar.gz" -C packages/infra cdk.out
+          if [ "${{ steps.frontend-env.outputs.attach }}" = "true" ]; then
+            tar -czf "release/clara-frontend-$GITHUB_REF_NAME.tar.gz" -C packages/frontend/dist .
+          fi
+          (cd release && sha256sum * > SHA256SUMS)
+
+      - name: Extract release notes from CHANGELOG.md
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" { found = 1; next }
+            found && /^## \[/ { exit }
+            found && /^\[[^]]+\]: / { exit }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "CHANGELOG.md has no section for $version" >&2
+            exit 1
+          fi
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" release/* --title "Clara $GITHUB_REF_NAME" --notes-file release-notes.md --verify-tag

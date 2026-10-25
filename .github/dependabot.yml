@@ -1,0 +1,31 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: deps
+    groups:
+      aws-sdk:
+        patterns: ['@aws-sdk/*']
+      aws-cdk:
+        patterns: ['aws-cdk', 'aws-cdk-lib', 'constructs']
+      lint-and-format:
+        patterns: ['eslint', '@eslint/*', 'typescript-eslint', 'eslint-*', 'prettier', 'globals']
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Kept in step with the Chromium build the e2e suite is pinned to; upgrade deliberately.
+      - dependency-name: '@playwright/test'
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: ci

@@ -1,0 +1,126 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint and format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+
+  test:
+    name: Unit and infrastructure tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Unit tests (shared, api, frontend, mcp-server)
+        run: |
+          npm test -w @clara/shared
+          npm test -w @clara/api
+          npm test -w @clara/frontend
+          npm test -w @clara/mcp-server
+      - name: Infrastructure tests (CDK assertions)
+        run: npm test -w @clara/infra
+
+  build:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Use the example environment
+        run: cp packages/frontend/.env.example packages/frontend/.env
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: packages/frontend/dist
+          retention-days: 7
+
+  cdk-synth:
+    name: CDK synth
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Synthesize with default settings
+        working-directory: packages/infra
+        run: npx cdk synth --quiet
+      - name: Synthesize with every optional feature switched on
+        working-directory: packages/infra
+        run: >
+          npx cdk synth --quiet -o cdk.out.flags
+          -c natMode=gateway
+          -c signupMode=invite -c signupInviteCodes=ci-check-code
+          -c retainData=true
+          -c extraOrigins=https://clara.example.com
+
+  e2e:
+    name: Playwright
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Use the example environment
+        run: cp packages/frontend/.env.example packages/frontend/.env
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+        working-directory: packages/frontend
+      - name: Run the smoke tests (signed-out flows; the signed-in ones need a Cognito pool)
+        run: npm run e2e -w @clara/frontend
+        env:
+          CI: true
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: packages/frontend/test-results
+          retention-days: 7

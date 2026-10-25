@@ -1,0 +1,75 @@
+name: Bug report
+description: Something in Clara doesn't work the way it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. **Security problems don't belong here:** report
+        them privately as described in [SECURITY.md](https://github.com/Sharann-del/Clara/blob/main/SECURITY.md).
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Where did it happen?
+      options:
+        - Web app (documents, diagrams, sharing, settings)
+        - Diagram canvas or diagrams as code
+        - Real-time collaboration
+        - MCP server or AI pending changes
+        - Public site or playground
+        - iOS app
+        - AWS infrastructure (CDK)
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the problem, including any error message you saw.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The smallest set of steps that shows the problem. For diagram bugs, include the Clara DSL or Mermaid source.
+      placeholder: |
+        1. Open the playground at /editor
+        2. Paste the diagram code below
+        3. Click Export → PNG
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: The release tag (for example v0.1.0) or commit SHA you're running.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Browser, device and OS
+      description: For example "Firefox 131 on macOS 15" or "iPhone 16, iOS 27".
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment
+      options:
+        - Local development (npm run frontend:dev / api:dev)
+        - My own AWS deployment
+        - Not applicable
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Browser console output, CloudWatch logs or CDK output. Remove tokens, emails and account IDs first.
+      render: text

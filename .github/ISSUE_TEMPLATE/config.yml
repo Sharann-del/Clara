@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/Sharann-del/Clara/security/advisories/new
+    about: Report vulnerabilities privately. Please don't open a public issue.
+  - name: Documentation
+    url: https://github.com/Sharann-del/Clara/tree/main/docs
+    about: Setup, self-hosting, configuration, the API and MCP guides.
