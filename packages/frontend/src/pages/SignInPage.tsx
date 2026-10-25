@@ -23,6 +23,9 @@ export function friendlyAuthError(err: unknown): string {
       return 'That code isn’t right. Check the email and try again.';
     case 'ExpiredCodeException':
       return 'That code has expired. Send a new one.';
+    case 'UserLambdaValidationException':
+      // The pre-sign-up trigger's own message, e.g. "That invite code isn't valid."
+      return (e.message ?? '').replace(/^PreSignUp failed with error\s*/, '') || 'Sign-ups are restricted on this deployment.';
     case 'LimitExceededException':
     case 'TooManyRequestsException':
       return 'Too many attempts. Wait a minute, then try again.';

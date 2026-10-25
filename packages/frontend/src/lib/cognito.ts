@@ -1,5 +1,6 @@
 import {
   CognitoUser,
+  CognitoUserAttribute,
   CognitoUserPool,
   CognitoUserSession,
   AuthenticationDetails,
@@ -10,9 +11,14 @@ const userPool = new CognitoUserPool({
   ClientId: import.meta.env.VITE_USER_POOL_CLIENT_ID,
 });
 
-export function signUp(email: string, password: string): Promise<void> {
+/** True when the deployment only accepts sign-ups with an invite code (CDK `signupMode=invite`). */
+export const inviteCodeRequired = import.meta.env.VITE_SIGNUP_INVITE_REQUIRED === 'true';
+
+export function signUp(email: string, password: string, inviteCode?: string): Promise<void> {
+  // Validation data reaches the pre-sign-up trigger only; Cognito doesn't store it.
+  const validationData = inviteCode ? [new CognitoUserAttribute({ Name: 'inviteCode', Value: inviteCode })] : [];
   return new Promise((resolve, reject) => {
-    userPool.signUp(email, password, [], [], (err) => {
+    userPool.signUp(email, password, [], validationData, (err) => {
       if (err) reject(err);
       else resolve();
     });

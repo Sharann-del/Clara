@@ -21,6 +21,7 @@ export function SignUpPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -29,7 +30,7 @@ export function SignUpPage() {
     setError(null);
     setBusy(true);
     try {
-      await cognito.signUp(email.trim(), password);
+      await cognito.signUp(email.trim(), password, cognito.inviteCodeRequired ? inviteCode.trim() : undefined);
       setStage('verify');
     } catch (err) {
       setError(friendlyAuthError(err));
@@ -125,6 +126,20 @@ export function SignUpPage() {
             At least 10 characters, with uppercase, lowercase and a number.
           </span>
         </label>
+        {cognito.inviteCodeRequired && (
+          <label className="field">
+            Invite code
+            <input
+              className="input"
+              autoComplete="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
+              required
+            />
+          </label>
+        )}
         {error && (
           <div className="error-text" role="alert">
             {error}

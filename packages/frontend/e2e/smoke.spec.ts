@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { AdminConfirmSignUpCommand, AdminDeleteUserCommand, CognitoIdentityProviderClient } from '@aws-sdk/client-cognito-identity-provider';
 import { readFileSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
 
 /**
  * Smoke test of the main flows.
@@ -18,7 +19,8 @@ import { readFileSync } from 'node:fs';
 const region = process.env.AWS_REGION ?? 'eu-north-1';
 const poolId = process.env.E2E_USER_POOL_ID;
 const email = `clara-smoke-${Date.now()}@${process.env.E2E_EMAIL_DOMAIN ?? 'example.com'}`;
-const password = 'Smoke-test-Passw0rd';
+// Fresh per run and never printed; it meets the pool's policy (10+ chars, upper, lower, digit).
+const password = `Aa1-${randomBytes(12).toString('base64url')}`;
 
 test.describe('playground (no account)', () => {
   test('renders as you type, shares a link, exports PNG', async ({ page, context }) => {

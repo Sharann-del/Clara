@@ -1,8 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const externalBaseUrl = process.env.E2E_BASE_URL;
+
 /**
- * Smoke tests against a running Clara frontend (dev server, preview, or the deployed site).
- * See README "End-to-end smoke test" for the environment variables.
+ * Smoke tests against a Clara frontend: the local dev server by default, or any running site
+ * (preview build, deployed CloudFront URL) via E2E_BASE_URL. See docs/testing.md for the
+ * environment variables.
  */
 export default defineConfig({
   testDir: './e2e',
@@ -12,10 +15,19 @@ export default defineConfig({
   retries: 0,
   reporter: [['list']],
   use: {
-    baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:5173',
+    baseURL: externalBaseUrl ?? 'http://localhost:5173',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     acceptDownloads: true,
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  // Without E2E_BASE_URL, start (or reuse) the Vite dev server, as CI does.
+  webServer: externalBaseUrl
+    ? undefined
+    : {
+        command: 'npm run dev -- --strictPort',
+        url: 'http://localhost:5173',
+        reuseExistingServer: !process.env.CI,
+        timeout: 120_000,
+      },
 });
