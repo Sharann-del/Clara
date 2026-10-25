@@ -43,6 +43,31 @@ The first public release: the web app, MCP server, AWS infrastructure and the na
 - **Tests.** Unit tests for the shared engine, frontend libraries, API and MCP edit operations; CDK
   assertion tests; MCP and sharing integration scripts; a Playwright smoke test.
 - **Docs.** AWS architecture report, route reference and the product requirements document.
+- **Cheaper egress.** A `t4g.micro` NAT instance (Amazon Linux 2023, IMDSv2, no SSH key, accepts
+  traffic only from the VPC) replaces the managed NAT gateway, cutting the fixed monthly cost in
+  `eu-north-1` from about $52 to about $25. `natMode=gateway` switches back, and
+  `natInstanceType` picks another type.
+- **Abuse and cost controls.** Stage throttling on the HTTP API (50 requests/s, burst 100) and the
+  WebSocket API (100 messages/s, burst 200), limits of 10 open WebSocket connections per user and
+  25 per document or diagram, and an optional Cognito pre-sign-up trigger that restricts sign-up
+  to an allowlist of emails and domains or to invite codes (`signupMode`, off by default). The web
+  and iOS sign-up forms show an invite-code field when one is required.
+- **Config-driven deployment.** Every infrastructure setting is a CDK context value with defaults
+  that suit a fresh account, and the account and region come from the AWS profile. iOS endpoints
+  are generated from the web app's environment, and iOS signing lives in `xcconfig` files, so
+  forks need no code changes.
+- **Open-source project files.** MIT license, contributing guide, code of conduct, security
+  policy, issue and pull request templates, and guides for getting started, self-hosting on AWS,
+  configuration, architecture, the API, MCP setup, realtime, sharing and permissions, testing,
+  troubleshooting and the roadmap.
+- **Tooling.** ESLint, Prettier and EditorConfig; CI that runs lint, format, typecheck, unit and
+  infrastructure tests, the frontend build, `cdk synth` and Playwright on every push and pull
+  request; a release workflow for version tags; and Dependabot for npm and GitHub Actions.
+
+### Changed
+
+- The Playwright suite starts the dev server itself when `E2E_BASE_URL` isn't set, and the
+  smoke-test account gets a fresh random password on every run.
 
 ### Fixed
 
@@ -51,5 +76,11 @@ The first public release: the web app, MCP server, AWS infrastructure and the na
 - The Mermaid importer accepts semicolon statement separators.
 - Element rows are normalized so the canvas sees linked child diagrams.
 - Shapes that exist only in a diagram state now render correctly.
+- The iOS sign-up form asked for at least 8 password characters; the user pool requires 10.
+
+### Security
+
+- Example configuration files and the Git history no longer contain real AWS account, Cognito, API
+  Gateway or CloudFront identifiers, or an Apple team ID.
 
 [0.1.0]: https://github.com/Sharann-del/Clara/releases/tag/v0.1.0
