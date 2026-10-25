@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-25
+
 ### Fixed
 
 - The NAT instance now forwards traffic. CDK's default setup script found the outbound interface
@@ -14,6 +16,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   instance before it had finished booting, so deploys with the default `natMode=instance` failed
   with Lambda timeouts. Clara now configures the instance with its own script that verifies NAT
   works, and CloudFormation waits for the instance to signal success before switching the routes.
+
+### Changed
+
+- Dependency updates: zod 4 (`z.record` now takes an explicit key schema), react-router-dom 7,
+  `@fastify/cors` 11, `@fastify/aws-lambda` 6, Jest, the AWS CDK packages and the GitHub Actions
+  (`checkout`, `setup-node`, `upload-artifact`) to their latest majors.
+
+### Security
+
+- Fixed the critical and high Dependabot advisories: handlebars, the MCP SDK, zod, vite,
+  body-parser, brace-expansion, playwright and source-map-js, plus fast-uri, fastify and ip-address.
 
 ## [0.1.0] - 2026-10-25
 
@@ -93,5 +106,6 @@ The first public release: the web app, MCP server, AWS infrastructure and the na
 - Example configuration files and the Git history no longer contain real AWS account, Cognito, API
   Gateway or CloudFront identifiers, or an Apple team ID.
 
-[Unreleased]: https://github.com/Sharann-del/Clara/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Sharann-del/Clara/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/Sharann-del/Clara/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Sharann-del/Clara/releases/tag/v0.1.0
