@@ -20,7 +20,11 @@ export function refreshWorkspaces(): Promise<Workspace[]> {
   return inflight;
 }
 
-export function useWorkspaces(): { workspaces: Workspace[] | null; error: string | null; refresh: () => Promise<Workspace[]> } {
+export function useWorkspaces(): {
+  workspaces: Workspace[] | null;
+  error: string | null;
+  refresh: () => Promise<Workspace[]>;
+} {
   const [workspaces, setWorkspaces] = useState<Workspace[] | null>(cache);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {

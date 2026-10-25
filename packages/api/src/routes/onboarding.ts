@@ -28,7 +28,10 @@ export async function onboardingRoutes(app: FastifyInstance) {
 
       const { rows: ws } = await c.query("insert into workspaces (name) values ('My workspace') returning *");
       const workspaceId = ws[0].id as string;
-      await c.query("insert into workspace_members (workspace_id, user_id, role) values ($1, $2, 'owner')", [workspaceId, userId]);
+      await c.query("insert into workspace_members (workspace_id, user_id, role) values ($1, $2, 'owner')", [
+        workspaceId,
+        userId,
+      ]);
 
       const { rows: dg } = await c.query(
         `insert into diagrams (workspace_id, name, tags, created_by, updated_by) values ($1, $2, $3, $4, $4) returning id`,

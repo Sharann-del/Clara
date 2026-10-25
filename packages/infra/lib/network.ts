@@ -75,7 +75,11 @@ export class Network extends Construct {
 
     if (natInstanceProvider) {
       // Forward traffic that originates inside the VPC; nothing from the internet gets in.
-      natInstanceProvider.connections.allowFrom(Peer.ipv4(this.vpc.vpcCidrBlock), Port.allTraffic(), 'NAT for the private subnets');
+      natInstanceProvider.connections.allowFrom(
+        Peer.ipv4(this.vpc.vpcCidrBlock),
+        Port.allTraffic(),
+        'NAT for the private subnets',
+      );
       Aspects.of(this).add(new InstanceRequireImdsv2Aspect());
     }
 

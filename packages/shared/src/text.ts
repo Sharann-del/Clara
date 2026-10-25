@@ -70,4 +70,5 @@ export function wrapLabel(text: string, width: number, height: number, ellipse =
 }
 
 /** Baseline-centred y for line `i` of a wrapped label centred on `cy`. */
-export const lineY = (wrap: WrappedLabel, cy: number, i: number) => cy + (i - (wrap.lines.length - 1) / 2) * wrap.lineHeight;
+export const lineY = (wrap: WrappedLabel, cy: number, i: number) =>
+  cy + (i - (wrap.lines.length - 1) / 2) * wrap.lineHeight;

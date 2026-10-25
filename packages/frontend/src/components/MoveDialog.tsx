@@ -53,7 +53,12 @@ export function MoveDialog({
           <button type="button" className="btn" onClick={onClose}>
             Cancel
           </button>
-          <button type="button" className="btn btn-primary" disabled={target === currentFolderId} onClick={() => onMove(target)}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={target === currentFolderId}
+            onClick={() => onMove(target)}
+          >
             Move here
           </button>
         </>
@@ -63,11 +68,25 @@ export function MoveDialog({
         {rows.map(({ folder, depth }) => {
           const id = folder?.id ?? null;
           return (
-            <label key={id ?? 'root'} className={`folder-tree-item ${target === id ? 'active' : ''}`} style={{ paddingLeft: 8 + depth * 16 }}>
-              <input type="radio" name="move-target" className="sr-only" checked={target === id} onChange={() => setTarget(id)} />
+            <label
+              key={id ?? 'root'}
+              className={`folder-tree-item ${target === id ? 'active' : ''}`}
+              style={{ paddingLeft: 8 + depth * 16 }}
+            >
+              <input
+                type="radio"
+                name="move-target"
+                className="sr-only"
+                checked={target === id}
+                onChange={() => setTarget(id)}
+              />
               <Icon name={folder ? 'folder' : 'layers'} />
               {folder ? folder.name : 'Workspace root'}
-              {id === currentFolderId && <span className="muted" style={{ marginLeft: 'auto' }}>current</span>}
+              {id === currentFolderId && (
+                <span className="muted" style={{ marginLeft: 'auto' }}>
+                  current
+                </span>
+              )}
             </label>
           );
         })}

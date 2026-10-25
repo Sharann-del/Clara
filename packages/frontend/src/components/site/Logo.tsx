@@ -6,7 +6,13 @@ export function LogoGlyph({ size = 26 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true" focusable="false">
       <rect width="32" height="32" rx="8" fill="var(--ink)" />
       <rect x="6.5" y="6.5" width="10" height="8" rx="2" fill="none" stroke="var(--paper)" strokeWidth="2" />
-      <path d="M11.5 14.5v4.5a2 2 0 0 0 2 2h3" fill="none" stroke="var(--paper)" strokeWidth="2" strokeLinecap="round" />
+      <path
+        d="M11.5 14.5v4.5a2 2 0 0 0 2 2h3"
+        fill="none"
+        stroke="var(--paper)"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
       <rect x="16.5" y="17" width="9" height="8" rx="2" fill="var(--cobalt)" />
     </svg>
   );

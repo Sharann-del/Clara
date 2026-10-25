@@ -60,6 +60,9 @@ export async function decodeState(hash: string): Promise<PlaygroundState | undef
 
 /** Mermaid sources start with a flowchart/graph header; anything else is treated as Clara DSL. */
 export function detectFormat(code: string): CodeFormat {
-  const first = code.split('\n').map((l) => l.trim()).find((l) => l && !l.startsWith('%%') && !l.startsWith('#'));
+  const first = code
+    .split('\n')
+    .map((l) => l.trim())
+    .find((l) => l && !l.startsWith('%%') && !l.startsWith('#'));
   return first && /^(flowchart|graph)\b/i.test(first) ? 'mermaid' : 'clara';
 }

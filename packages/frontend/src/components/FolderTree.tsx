@@ -64,7 +64,8 @@ export function FolderTree({ folders, selectedFolderId, onSelect, actions, onDro
       return next;
     });
 
-  const children = (parent: string | null) => folders.filter((f) => f.parent_folder_id === parent).sort((a, b) => a.name.localeCompare(b.name));
+  const children = (parent: string | null) =>
+    folders.filter((f) => f.parent_folder_id === parent).sort((a, b) => a.name.localeCompare(b.name));
 
   const renderNode = (folder: Folder, depth: number) => {
     const kids = children(folder.id);
@@ -129,7 +130,12 @@ export function FolderTree({ folders, selectedFolderId, onSelect, actions, onDro
       <div className="sidebar-section-label">
         <span>Folders</span>
         {actions && (
-          <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label="New folder" onClick={() => actions.onNewSubfolder(null)}>
+          <button
+            type="button"
+            className="btn btn-ghost btn-icon btn-sm"
+            aria-label="New folder"
+            onClick={() => actions.onNewSubfolder(null)}
+          >
             <Icon name="plus" size={14} />
           </button>
         )}
@@ -138,7 +144,12 @@ export function FolderTree({ folders, selectedFolderId, onSelect, actions, onDro
         <li role="none">
           <div className={`folder-row ${selectedFolderId === null ? 'active' : ''}`} {...dropProps(null, onDrop)}>
             <span className="folder-twisty" aria-hidden="true" />
-            <button type="button" className="folder-name" aria-current={selectedFolderId === null ? 'true' : undefined} onClick={() => onSelect(null)}>
+            <button
+              type="button"
+              className="folder-name"
+              aria-current={selectedFolderId === null ? 'true' : undefined}
+              onClick={() => onSelect(null)}
+            >
               <Icon name="layers" />
               <span>Top level</span>
             </button>
@@ -146,7 +157,11 @@ export function FolderTree({ folders, selectedFolderId, onSelect, actions, onDro
         </li>
         {children(null).map((f) => renderNode(f, 0))}
       </ul>
-      {folders.length === 0 && actions && <p className="muted" style={{ padding: '4px 10px' }}>Group documents and diagrams into folders.</p>}
+      {folders.length === 0 && actions && (
+        <p className="muted" style={{ padding: '4px 10px' }}>
+          Group documents and diagrams into folders.
+        </p>
+      )}
     </div>
   );
 }

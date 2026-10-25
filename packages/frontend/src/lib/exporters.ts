@@ -62,7 +62,10 @@ const toBlob = (canvas: HTMLCanvasElement, type: string, quality?: number) =>
 export async function exportDiagram(elements: RenderableElement[], name: string, format: ExportFormat): Promise<void> {
   const base = fileBase(name);
   if (format === 'mermaid') {
-    saveBlob(new Blob([toMermaid(elements.filter((e) => !e.hidden))], { type: 'text/plain;charset=utf-8' }), `${base}.mmd`);
+    saveBlob(
+      new Blob([toMermaid(elements.filter((e) => !e.hidden))], { type: 'text/plain;charset=utf-8' }),
+      `${base}.mmd`,
+    );
     return;
   }
   const { svg, width, height } = renderDiagramSvg(elements, { xmlProlog: format === 'svg' });

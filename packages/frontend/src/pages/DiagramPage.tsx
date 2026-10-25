@@ -20,7 +20,18 @@ import { Menu } from '../components/ui/Menu';
 import { useToast } from '../components/ui/Toast';
 import { useConfirm } from '../components/ui/ConfirmProvider';
 import { useRegisterWorkspace } from '../components/CommandPalette';
-import { api, ApiError, errorMessage, normalizeElement, type DiagramElement, type DiagramFull, type DiagramState, type ElementOverride, type Role, type Workspace } from '../lib/api';
+import {
+  api,
+  ApiError,
+  errorMessage,
+  normalizeElement,
+  type DiagramElement,
+  type DiagramFull,
+  type DiagramState,
+  type ElementOverride,
+  type Role,
+  type Workspace,
+} from '../lib/api';
 import { mergeOverride, planCreate, resolveElements, startStepIndex, type ResolvedElement } from '../lib/states';
 import { exportDiagram, type ExportFormat } from '../lib/exporters';
 import { compileDiagram, describeCompile } from '../lib/diagramFromCode';
@@ -97,7 +108,10 @@ export function DiagramPage() {
     const source = await api.getDiagramSource(diagramId);
     setCode(source.dsl_text);
     setCodeFormat(source.format === 'mermaid' ? 'mermaid' : 'clara');
-    api.getWorkspace(d.workspace_id).then(setWorkspace).catch(() => setWorkspace(null));
+    api
+      .getWorkspace(d.workspace_id)
+      .then(setWorkspace)
+      .catch(() => setWorkspace(null));
     api
       .listDiagrams(d.workspace_id)
       .then((list) => setDiagramNames(Object.fromEntries(list.map((x) => [x.id, x.name]))))
@@ -160,7 +174,10 @@ export function DiagramPage() {
             setPresence(msg.users as PresenceUser[]);
             break;
           case 'presence.joined':
-            setPresence((prev) => [...prev.filter((u) => u.userId !== msg.userId), { userId: msg.userId as string, email: msg.email as string | undefined }]);
+            setPresence((prev) => [
+              ...prev.filter((u) => u.userId !== msg.userId),
+              { userId: msg.userId as string, email: msg.email as string | undefined },
+            ]);
             break;
           case 'presence.left':
             setPresence((prev) => prev.filter((u) => u.userId !== msg.userId));
@@ -171,7 +188,14 @@ export function DiagramPage() {
             });
             break;
           case 'cursor':
-            setRemoteCursors((prev) => ({ ...prev, [msg.userId as string]: { x: msg.x as number, y: msg.y as number, email: msg.email as string | undefined } }));
+            setRemoteCursors((prev) => ({
+              ...prev,
+              [msg.userId as string]: {
+                x: msg.x as number,
+                y: msg.y as number,
+                email: msg.email as string | undefined,
+              },
+            }));
             break;
           case 'element.moving':
             if ((msg.stateId ?? null) !== activeStateIdRef.current) break;
@@ -209,7 +233,11 @@ export function DiagramPage() {
               delete next[msg.elementId as string];
               return next;
             });
-            applyOverrideLocally(msg.stateId as string, msg.elementId as string, msg.override as ElementOverride | null);
+            applyOverrideLocally(
+              msg.stateId as string,
+              msg.elementId as string,
+              msg.override as ElementOverride | null,
+            );
             break;
           case 'error':
             toast.error(String(msg.message ?? 'Live update was refused'));
@@ -239,7 +267,10 @@ export function DiagramPage() {
   }
 
   /** While a state is selected, element edits become overrides on that state instead of changing the base diagram. */
-  function overrideEdit(id: string, patch: { geometry?: Record<string, unknown>; style?: Record<string, unknown>; hidden?: boolean }) {
+  function overrideEdit(
+    id: string,
+    patch: { geometry?: Record<string, unknown>; style?: Record<string, unknown>; hidden?: boolean },
+  ) {
     const base = elements.find((e) => e.id === id);
     if (!base || !activeState) return;
     saveOverride(activeState, id, mergeOverride(base, activeState.element_overrides[id], patch));
@@ -252,7 +283,10 @@ export function DiagramPage() {
     if (override && activeState) saveOverride(activeState, override.elementId, override.value);
   }
 
-  function handleUpdateElement(id: string, patch: { geometry?: Record<string, unknown>; style?: Record<string, unknown> }) {
+  function handleUpdateElement(
+    id: string,
+    patch: { geometry?: Record<string, unknown>; style?: Record<string, unknown> },
+  ) {
     if (activeState) return overrideEdit(id, patch);
     setElements((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
     rtRef.current?.send('element.update', { id, ...patch });
@@ -291,7 +325,7 @@ export function DiagramPage() {
   async function addState(name: string, copyFromActive: boolean) {
     if (!diagramId) return;
     try {
-      const created = await api.createState(diagramId, name, copyFromActive ? activeStateId ?? undefined : undefined);
+      const created = await api.createState(diagramId, name, copyFromActive ? (activeStateId ?? undefined) : undefined);
       setStates((prev) => [...prev, created]);
       setActiveStateId(created.id);
       rtRef.current?.send('states.refresh');
@@ -312,7 +346,12 @@ export function DiagramPage() {
     const reordered = [...states];
     [reordered[i], reordered[j]] = [reordered[j], reordered[i]];
     setStates(reordered);
-    setStates(await api.reorderStates(diagramId, reordered.map((st) => st.id)));
+    setStates(
+      await api.reorderStates(
+        diagramId,
+        reordered.map((st) => st.id),
+      ),
+    );
     rtRef.current?.send('states.refresh');
   }
   async function deleteState(id: string) {
@@ -325,7 +364,11 @@ export function DiagramPage() {
   async function applyCode() {
     if (!diagramId) return;
     if (compiled.nodeCount === 0) {
-      toast.error(codeFormat === 'mermaid' ? 'No nodes found. Check the syntax, e.g. A[Label] --> B[Label].' : 'No nodes found. Declare some with: node id "Label".');
+      toast.error(
+        codeFormat === 'mermaid'
+          ? 'No nodes found. Check the syntax, e.g. A[Label] --> B[Label].'
+          : 'No nodes found. Declare some with: node id "Label".',
+      );
       return;
     }
     if (
@@ -373,7 +416,10 @@ export function DiagramPage() {
       const child = await api.createDiagram(diagram.workspace_id, name, diagram.folder_id, diagram.id);
       setDiagramNames((m) => ({ ...m, [child.id]: child.name }));
       setLink(el.id!, child.id);
-      toast.show(`Linked to new diagram “${child.name}”`, { tone: 'success', action: { label: 'Open', onClick: () => navigate(`/diagrams/${child.id}`) } });
+      toast.show(`Linked to new diagram “${child.name}”`, {
+        tone: 'success',
+        action: { label: 'Open', onClick: () => navigate(`/diagrams/${child.id}`) },
+      });
     } catch (e) {
       toast.error(errorMessage(e));
     }
@@ -381,7 +427,12 @@ export function DiagramPage() {
 
   async function renameDiagram() {
     if (!diagram) return;
-    const name = await prompt({ title: 'Rename diagram', label: 'Name', defaultValue: diagram.name, confirmLabel: 'Rename' });
+    const name = await prompt({
+      title: 'Rename diagram',
+      label: 'Name',
+      defaultValue: diagram.name,
+      confirmLabel: 'Rename',
+    });
     if (!name || name === diagram.name) return;
     try {
       await api.updateDiagram(diagram.id, { name });
@@ -396,7 +447,8 @@ export function DiagramPage() {
     if (!diagram) return;
     const ok = await confirm({
       title: `Delete “${diagram.name}”?`,
-      message: 'This deletes the diagram, its states and version history for everyone. Shapes elsewhere that link to it lose their link.',
+      message:
+        'This deletes the diagram, its states and version history for everyone. Shapes elsewhere that link to it lose their link.',
       confirmLabel: 'Delete diagram',
       danger: true,
     });
@@ -411,17 +463,27 @@ export function DiagramPage() {
   }
 
   if (loadError) {
-    if (loadError.status === 403 || loadError.status === 404) return <NoAccess what="diagram" notFound={loadError.status === 404} />;
+    if (loadError.status === 403 || loadError.status === 404)
+      return <NoAccess what="diagram" notFound={loadError.status === 404} />;
     return (
       <AppShell sidebarMode="drawer" title={<strong>Diagram</strong>}>
-        <EmptyState icon="alert" title="This diagram didn’t load" actions={<button className="btn btn-primary" onClick={() => load().catch(() => undefined)}>Try again</button>}>
+        <EmptyState
+          icon="alert"
+          title="This diagram didn’t load"
+          actions={
+            <button className="btn btn-primary" onClick={() => load().catch(() => undefined)}>
+              Try again
+            </button>
+          }
+        >
           {loadError.message}
         </EmptyState>
       </AppShell>
     );
   }
 
-  const selectedEl: ResolvedElement | undefined = selectedIds.length === 1 ? displayElements.find((e) => e.id === selectedIds[0]) : undefined;
+  const selectedEl: ResolvedElement | undefined =
+    selectedIds.length === 1 ? displayElements.find((e) => e.id === selectedIds[0]) : undefined;
   const others = presence.filter((u) => u.email !== myEmail);
   const fav = diagram ? isFavorite('diagram', diagram.id) : false;
 
@@ -443,7 +505,11 @@ export function DiagramPage() {
           <>
             <Presence users={others} />
             {(rtStatus === 'reconnecting' || rtStatus === 'offline') && (
-              <span className="save-status" role="status" title="Live updates paused; edits are sent when the connection is back">
+              <span
+                className="save-status"
+                role="status"
+                title="Live updates paused; edits are sent when the connection is back"
+              >
                 <Icon name="wifiOff" size={13} /> {rtStatus === 'offline' ? 'Offline' : 'Reconnecting…'}
               </span>
             )}
@@ -453,7 +519,11 @@ export function DiagramPage() {
               className={`btn btn-ghost btn-icon star ${fav ? 'on' : ''}`}
               aria-pressed={fav}
               aria-label={fav ? 'Remove from favorites' : 'Add to favorites'}
-              onClick={() => toggleFavorite({ kind: 'diagram', id: diagram.id, name: diagram.name }).catch((e) => toast.error(errorMessage(e)))}
+              onClick={() =>
+                toggleFavorite({ kind: 'diagram', id: diagram.id, name: diagram.name }).catch((e) =>
+                  toast.error(errorMessage(e)),
+                )
+              }
             >
               <Icon name="star" />
             </button>
@@ -489,7 +559,12 @@ export function DiagramPage() {
                       { label: 'Edit tags', icon: 'tag' as const, onSelect: () => setPanel('tags') },
                     ]
                   : []),
-                ...(canDelete ? ['separator' as const, { label: 'Delete diagram', icon: 'trash' as const, danger: true, onSelect: deleteDiagram }] : []),
+                ...(canDelete
+                  ? [
+                      'separator' as const,
+                      { label: 'Delete diagram', icon: 'trash' as const, danger: true, onSelect: deleteDiagram },
+                    ]
+                  : []),
               ]}
             />
           </>
@@ -503,137 +578,183 @@ export function DiagramPage() {
       ) : (
         <>
           {!sub && (
-          <>
-          <div className="diagram-subbar">
-            <div className="tabs" role="tablist" aria-label="View">
-              <button role="tab" aria-selected={tab === 'canvas'} className={`tab-btn ${tab === 'canvas' ? 'active' : ''}`} onClick={() => setTab('canvas')}>
-                Canvas
-              </button>
-              <button role="tab" aria-selected={tab === 'code'} className={`tab-btn ${tab === 'code' ? 'active' : ''}`} onClick={() => setTab('code')}>
-                Code
-              </button>
-            </div>
-            {narrow && canEdit && <span className="muted">Editing works on a larger screen; this is a read-only view.</span>}
-          </div>
-
-          <StatesBar
-            readOnly={!editable}
-            states={states}
-            activeStateId={activeStateId}
-            onSelect={setActiveStateId}
-            onAdd={addState}
-            onRename={renameState}
-            onMove={moveState}
-            onDelete={deleteState}
-            onPresent={() => setPresenting(true)}
-          />
-
-          {presenting && <PresentMode base={elements} states={states} startIndex={startStepIndex(states, activeStateId)} onClose={() => setPresenting(false)} />}
-
-          {tab === 'canvas' ? (
-            <div className="diagram-body">
-              <div className="diagram-stage">
-                {editable ? (
-                  <DiagramCanvas
-                    elements={displayElements}
-                    selectedIds={selectedIds}
-                    onSelectionChange={setSelectedIds}
-                    onDrillDown={(id) => navigate(`/diagrams/${id}`)}
-                    onCreateElement={handleCreateElement}
-                    onUpdateElement={handleUpdateElement}
-                    onMoveLive={(id, x, y) => rtRef.current?.send('element.moving', { id, x, y, stateId: activeStateId })}
-                    onDeleteElements={handleDeleteElements}
-                    onCursorMove={(x, y) => rtRef.current?.send('cursor', { x, y })}
-                    liveOverrides={liveOverrides}
-                    remoteCursors={remoteCursors}
-                  />
-                ) : displayElements.length === 0 ? (
-                  <EmptyState icon="diagram" title="This diagram is empty">
-                    {canEdit ? 'Open it on a larger screen to draw, or write it as code.' : 'Nothing has been drawn here yet.'}
-                  </EmptyState>
-                ) : (
-                  <DiagramViewer elements={displayElements} onDrillDown={(id) => navigate(`/diagrams/${id}`)} label={`Diagram: ${diagram.name}`} />
-                )}
-                {editable && elements.length === 0 && (
-                  <div className="canvas-empty">
-                    <strong>An empty canvas</strong>
-                    <span>Pick a shape tool on the left (R for rectangle), or write the diagram as code.</span>
-                    <button type="button" className="btn btn-sm" onClick={() => setTab('code')}>
-                      <Icon name="code" /> Write it as code
-                    </button>
-                  </div>
+            <>
+              <div className="diagram-subbar">
+                <div className="tabs" role="tablist" aria-label="View">
+                  <button
+                    role="tab"
+                    aria-selected={tab === 'canvas'}
+                    className={`tab-btn ${tab === 'canvas' ? 'active' : ''}`}
+                    onClick={() => setTab('canvas')}
+                  >
+                    Canvas
+                  </button>
+                  <button
+                    role="tab"
+                    aria-selected={tab === 'code'}
+                    className={`tab-btn ${tab === 'code' ? 'active' : ''}`}
+                    onClick={() => setTab('code')}
+                  >
+                    Code
+                  </button>
+                </div>
+                {narrow && canEdit && (
+                  <span className="muted">Editing works on a larger screen; this is a read-only view.</span>
                 )}
               </div>
-              {editable && selectedIds.length > 0 && (
-                <Inspector
-                  selected={selectedEl}
-                  count={selectedIds.length}
-                  activeState={activeState}
-                  diagramNames={diagramNames}
-                  onUpdate={handleUpdateElement}
-                  onHide={(id, hidden) => (activeState ? overrideEdit(id, { hidden }) : handleUpdateElement(id, { style: { ...selectedEl!.style, baseHidden: hidden } }))}
-                  onOpenLink={(id) => navigate(`/diagrams/${id}`)}
-                  onPickLink={() => setPanel('link')}
-                  onCreateChild={() => selectedEl && createChild(selectedEl)}
-                  onUnlink={() => selectedEl && setLink(selectedEl.id!, null)}
-                  onDelete={() => handleDeleteElements(selectedIds)}
-                  onClose={() => setSelectedIds([])}
+
+              <StatesBar
+                readOnly={!editable}
+                states={states}
+                activeStateId={activeStateId}
+                onSelect={setActiveStateId}
+                onAdd={addState}
+                onRename={renameState}
+                onMove={moveState}
+                onDelete={deleteState}
+                onPresent={() => setPresenting(true)}
+              />
+
+              {presenting && (
+                <PresentMode
+                  base={elements}
+                  states={states}
+                  startIndex={startStepIndex(states, activeStateId)}
+                  onClose={() => setPresenting(false)}
                 />
               )}
-            </div>
-          ) : (
-            <div className="code-tab">
-              <div className="code-tab-bar">
-                <div className="segmented" role="radiogroup" aria-label="Code format">
-                  {(['clara', 'mermaid'] as CodeFormat[]).map((f) => (
-                    <button key={f} type="button" role="radio" aria-checked={codeFormat === f} className={codeFormat === f ? 'on' : ''} onClick={() => setCodeFormat(f)}>
-                      {f === 'clara' ? 'Clara DSL' : 'Mermaid'}
-                    </button>
-                  ))}
+
+              {tab === 'canvas' ? (
+                <div className="diagram-body">
+                  <div className="diagram-stage">
+                    {editable ? (
+                      <DiagramCanvas
+                        elements={displayElements}
+                        selectedIds={selectedIds}
+                        onSelectionChange={setSelectedIds}
+                        onDrillDown={(id) => navigate(`/diagrams/${id}`)}
+                        onCreateElement={handleCreateElement}
+                        onUpdateElement={handleUpdateElement}
+                        onMoveLive={(id, x, y) =>
+                          rtRef.current?.send('element.moving', { id, x, y, stateId: activeStateId })
+                        }
+                        onDeleteElements={handleDeleteElements}
+                        onCursorMove={(x, y) => rtRef.current?.send('cursor', { x, y })}
+                        liveOverrides={liveOverrides}
+                        remoteCursors={remoteCursors}
+                      />
+                    ) : displayElements.length === 0 ? (
+                      <EmptyState icon="diagram" title="This diagram is empty">
+                        {canEdit
+                          ? 'Open it on a larger screen to draw, or write it as code.'
+                          : 'Nothing has been drawn here yet.'}
+                      </EmptyState>
+                    ) : (
+                      <DiagramViewer
+                        elements={displayElements}
+                        onDrillDown={(id) => navigate(`/diagrams/${id}`)}
+                        label={`Diagram: ${diagram.name}`}
+                      />
+                    )}
+                    {editable && elements.length === 0 && (
+                      <div className="canvas-empty">
+                        <strong>An empty canvas</strong>
+                        <span>Pick a shape tool on the left (R for rectangle), or write the diagram as code.</span>
+                        <button type="button" className="btn btn-sm" onClick={() => setTab('code')}>
+                          <Icon name="code" /> Write it as code
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {editable && selectedIds.length > 0 && (
+                    <Inspector
+                      selected={selectedEl}
+                      count={selectedIds.length}
+                      activeState={activeState}
+                      diagramNames={diagramNames}
+                      onUpdate={handleUpdateElement}
+                      onHide={(id, hidden) =>
+                        activeState
+                          ? overrideEdit(id, { hidden })
+                          : handleUpdateElement(id, { style: { ...selectedEl!.style, baseHidden: hidden } })
+                      }
+                      onOpenLink={(id) => navigate(`/diagrams/${id}`)}
+                      onPickLink={() => setPanel('link')}
+                      onCreateChild={() => selectedEl && createChild(selectedEl)}
+                      onUnlink={() => selectedEl && setLink(selectedEl.id!, null)}
+                      onDelete={() => handleDeleteElements(selectedIds)}
+                      onClose={() => setSelectedIds([])}
+                    />
+                  )}
                 </div>
-                <span className="spacer" />
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={() => {
-                    setCode(toMermaid(elements));
-                    setCodeFormat('mermaid');
-                  }}
-                  title="Replace the code with Mermaid generated from the canvas"
-                >
-                  <Icon name="arrowLeft" /> Load from canvas
-                </button>
-                {editable && (
-                  <button type="button" className="btn btn-primary" onClick={applyCode}>
-                    <Icon name="arrowRight" /> Apply to canvas
-                  </button>
-                )}
-              </div>
-              <div className="code-tab-body">
-                <div className="code-tab-editor">
-                  <CodeEditor
-                    id="diagram-code"
-                    label={`Diagram code (${codeFormat === 'clara' ? 'Clara DSL' : 'Mermaid'})`}
-                    value={code}
-                    readOnly={!editable}
-                    issues={compiled.issues}
-                    placeholder={codeFormat === 'clara' ? 'node web "Web app"\nnode api "API"\nedge web -> api "REST"' : 'flowchart LR\n  web[Web app] --> api[API]'}
-                    onChange={(v) => {
-                      setCode(v);
-                      if (!code.trim() && v.trim()) setCodeFormat(detectFormat(v));
-                    }}
-                  />
-                  <div id="diagram-code-status" className={`code-status ${compiled.issues.length ? 'error' : ''}`} aria-live="polite">
-                    {describeCompile(compiled)}
+              ) : (
+                <div className="code-tab">
+                  <div className="code-tab-bar">
+                    <div className="segmented" role="radiogroup" aria-label="Code format">
+                      {(['clara', 'mermaid'] as CodeFormat[]).map((f) => (
+                        <button
+                          key={f}
+                          type="button"
+                          role="radio"
+                          aria-checked={codeFormat === f}
+                          className={codeFormat === f ? 'on' : ''}
+                          onClick={() => setCodeFormat(f)}
+                        >
+                          {f === 'clara' ? 'Clara DSL' : 'Mermaid'}
+                        </button>
+                      ))}
+                    </div>
+                    <span className="spacer" />
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() => {
+                        setCode(toMermaid(elements));
+                        setCodeFormat('mermaid');
+                      }}
+                      title="Replace the code with Mermaid generated from the canvas"
+                    >
+                      <Icon name="arrowLeft" /> Load from canvas
+                    </button>
+                    {editable && (
+                      <button type="button" className="btn btn-primary" onClick={applyCode}>
+                        <Icon name="arrowRight" /> Apply to canvas
+                      </button>
+                    )}
+                  </div>
+                  <div className="code-tab-body">
+                    <div className="code-tab-editor">
+                      <CodeEditor
+                        id="diagram-code"
+                        label={`Diagram code (${codeFormat === 'clara' ? 'Clara DSL' : 'Mermaid'})`}
+                        value={code}
+                        readOnly={!editable}
+                        issues={compiled.issues}
+                        placeholder={
+                          codeFormat === 'clara'
+                            ? 'node web "Web app"\nnode api "API"\nedge web -> api "REST"'
+                            : 'flowchart LR\n  web[Web app] --> api[API]'
+                        }
+                        onChange={(v) => {
+                          setCode(v);
+                          if (!code.trim() && v.trim()) setCodeFormat(detectFormat(v));
+                        }}
+                      />
+                      <div
+                        id="diagram-code-status"
+                        className={`code-status ${compiled.issues.length ? 'error' : ''}`}
+                        aria-live="polite"
+                      >
+                        {describeCompile(compiled)}
+                      </div>
+                    </div>
+                    <div className="code-tab-preview" aria-label="Preview of the code">
+                      <DiagramViewer elements={compiled.elements} emptyText="The preview appears as you type" />
+                    </div>
                   </div>
                 </div>
-                <div className="code-tab-preview" aria-label="Preview of the code">
-                  <DiagramViewer elements={compiled.elements} emptyText="The preview appears as you type" />
-                </div>
-              </div>
-            </div>
-          )}
-          </>
+              )}
+            </>
           )}
 
           <VersionHistoryPanel
@@ -649,7 +770,15 @@ export function DiagramPage() {
               rtRef.current?.send('diagram.refresh');
             }}
           />
-          <ShareDialog open={sub === 'share'} backTo={base} kind="diagram" id={diagram.id} name={diagram.name} workspaceName={workspace?.name} canManage={canEdit} />
+          <ShareDialog
+            open={sub === 'share'}
+            backTo={base}
+            kind="diagram"
+            id={diagram.id}
+            name={diagram.name}
+            workspaceName={workspace?.name}
+            canManage={canEdit}
+          />
           {panel === 'tags' && (
             <TagEditor
               open
@@ -726,7 +855,12 @@ function Inspector({
       <aside className="inspector" aria-label="Selection">
         <div className="inspector-head">
           <strong>{count} selected</strong>
-          <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label="Clear selection" onClick={onClose}>
+          <button
+            type="button"
+            className="btn btn-ghost btn-icon btn-sm"
+            aria-label="Clear selection"
+            onClick={onClose}
+          >
             <Icon name="x" />
           </button>
         </div>
@@ -739,8 +873,12 @@ function Inspector({
   }
 
   const isShape = selected.type === 'rect' || selected.type === 'ellipse';
-  const kindLabel = { rect: 'Box', ellipse: 'Ellipse', text: 'Text', connector: 'Arrow', group: 'Group' }[selected.type];
-  const commitText = () => text !== String(selected.geometry.text ?? '') && onUpdate(selected.id!, { geometry: { ...selected.geometry, text } });
+  const kindLabel = { rect: 'Box', ellipse: 'Ellipse', text: 'Text', connector: 'Arrow', group: 'Group' }[
+    selected.type
+  ];
+  const commitText = () =>
+    text !== String(selected.geometry.text ?? '') &&
+    onUpdate(selected.id!, { geometry: { ...selected.geometry, text } });
 
   return (
     <aside className="inspector" aria-label={`${kindLabel} properties`}>
@@ -752,7 +890,13 @@ function Inspector({
       </div>
       <label className="field">
         {selected.type === 'connector' ? 'Label' : 'Text'}
-        <input className="input" value={text} onChange={(e) => setText(e.target.value)} onBlur={commitText} onKeyDown={(e) => e.key === 'Enter' && commitText()} />
+        <input
+          className="input"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onBlur={commitText}
+          onKeyDown={(e) => e.key === 'Enter' && commitText()}
+        />
       </label>
 
       {isShape && (
@@ -787,10 +931,15 @@ function Inspector({
           {selected.linkedDiagramId ? (
             <>
               <p className="inspector-link">
-                <Icon name="link" size={13} /> Opens <strong>{diagramNames[selected.linkedDiagramId] ?? 'a diagram'}</strong>
+                <Icon name="link" size={13} /> Opens{' '}
+                <strong>{diagramNames[selected.linkedDiagramId] ?? 'a diagram'}</strong>
               </p>
               <div className="inspector-actions">
-                <button type="button" className="btn btn-primary btn-sm" onClick={() => onOpenLink(selected.linkedDiagramId!)}>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => onOpenLink(selected.linkedDiagramId!)}
+                >
                   Open
                 </button>
                 <button type="button" className="btn btn-sm" onClick={onPickLink}>
@@ -819,7 +968,12 @@ function Inspector({
         </div>
       )}
 
-      <button type="button" className="btn btn-ghost btn-danger" style={{ justifyContent: 'flex-start' }} onClick={onDelete}>
+      <button
+        type="button"
+        className="btn btn-ghost btn-danger"
+        style={{ justifyContent: 'flex-start' }}
+        onClick={onDelete}
+      >
         <Icon name="trash" /> {activeState ? `Hide in “${activeState.name}”` : `Delete ${kindLabel.toLowerCase()}`}
       </button>
     </aside>

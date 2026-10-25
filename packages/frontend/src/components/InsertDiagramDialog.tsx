@@ -44,7 +44,12 @@ export function DiagramPicker({
   }, [open, workspaceId]);
 
   const list = useMemo(
-    () => rankMatches((all ?? []).filter((d) => !excludeIds.includes(d.id)), q, (d) => [d.name, ...d.tags]).slice(0, 50),
+    () =>
+      rankMatches(
+        (all ?? []).filter((d) => !excludeIds.includes(d.id)),
+        q,
+        (d) => [d.name, ...d.tags],
+      ).slice(0, 50),
     [all, q, excludeIds],
   );
   const pick = list.find((d) => d.id === selected);
@@ -59,7 +64,12 @@ export function DiagramPicker({
       footer={
         <>
           {onCreate && (
-            <button type="button" className="btn" style={{ marginRight: 'auto' }} onClick={() => onCreate(q.trim() || 'Untitled diagram')}>
+            <button
+              type="button"
+              className="btn"
+              style={{ marginRight: 'auto' }}
+              onClick={() => onCreate(q.trim() || 'Untitled diagram')}
+            >
               <Icon name="plus" /> New diagram{q.trim() ? ` “${q.trim()}”` : ''}
             </button>
           )}
@@ -74,7 +84,12 @@ export function DiagramPicker({
     >
       <div className="filter-search">
         <Icon name="search" />
-        <input aria-label="Find a diagram" placeholder="Find a diagram" value={q} onChange={(e) => setQ(e.target.value)} />
+        <input
+          aria-label="Find a diagram"
+          placeholder="Find a diagram"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
       </div>
       {error && <div className="error-text">{error}</div>}
       {all === null ? (

@@ -35,8 +35,8 @@ describe('ClaraStack with default settings', () => {
       Properties: { GroupDescription: 'Security Group for NAT instances' },
     });
     expect(Object.keys(groups)).toHaveLength(1);
-    const ingress = (Object.values(groups)[0] as { Properties: { SecurityGroupIngress: { CidrIp: unknown }[] } }).Properties
-      .SecurityGroupIngress;
+    const ingress = (Object.values(groups)[0] as { Properties: { SecurityGroupIngress: { CidrIp: unknown }[] } })
+      .Properties.SecurityGroupIngress;
     expect(ingress).toHaveLength(1);
     expect(ingress[0].CidrIp).toEqual({ 'Fn::GetAtt': [expect.stringMatching(/^NetworkVpc/), 'CidrBlock'] });
     template.hasResourceProperties('AWS::EC2::LaunchTemplate', {
@@ -90,7 +90,9 @@ describe('ClaraStack with default settings', () => {
     const fns = template.findResources('AWS::Lambda::Function', {
       Properties: { Handler: 'index.handler', VpcConfig: Match.anyValue() },
     });
-    const mcpFns = Object.values(fns).filter((f) => JSON.stringify(f).includes('DB_SECRET_ARN') && !JSON.stringify(f).includes('USER_POOL_ID'));
+    const mcpFns = Object.values(fns).filter(
+      (f) => JSON.stringify(f).includes('DB_SECRET_ARN') && !JSON.stringify(f).includes('USER_POOL_ID'),
+    );
     // The MCP function and the migration runner both have a DB secret but no user pool; the REST API has both.
     expect(mcpFns.length).toBeGreaterThanOrEqual(2);
   });
@@ -133,7 +135,11 @@ describe('ClaraStack context flags', () => {
     template.hasResourceProperties('AWS::Lambda::Function', {
       VpcConfig: Match.absent(),
       Environment: {
-        Variables: { SIGNUP_MODE: 'invite', SIGNUP_ALLOWLIST: '', SIGNUP_INVITE_CODES: 'spring-cohort-7,design-review' },
+        Variables: {
+          SIGNUP_MODE: 'invite',
+          SIGNUP_ALLOWLIST: '',
+          SIGNUP_INVITE_CODES: 'spring-cohort-7,design-review',
+        },
       },
     });
   });
@@ -142,7 +148,10 @@ describe('ClaraStack context flags', () => {
     const template = synth({ signupMode: 'allowlist', signupAllowlist: ['Ada@Example.com', '@team.example.net'] });
     template.hasResourceProperties('AWS::Lambda::Function', {
       Environment: {
-        Variables: Match.objectLike({ SIGNUP_MODE: 'allowlist', SIGNUP_ALLOWLIST: 'ada@example.com,@team.example.net' }),
+        Variables: Match.objectLike({
+          SIGNUP_MODE: 'allowlist',
+          SIGNUP_ALLOWLIST: 'ada@example.com,@team.example.net',
+        }),
       },
     });
   });

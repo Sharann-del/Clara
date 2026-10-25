@@ -34,7 +34,12 @@ async function publicDiagram(id: string) {
     updated_at: rows[0].updated_at,
     workspace_id: rows[0].workspace_id as string,
     elements: els.rows,
-    states: states.map((s) => ({ id: s.id, name: s.name, order_index: s.order_index, element_overrides: s.element_overrides })),
+    states: states.map((s) => ({
+      id: s.id,
+      name: s.name,
+      order_index: s.order_index,
+      element_overrides: s.element_overrides,
+    })),
   };
 }
 
@@ -51,7 +56,9 @@ export async function publicRoutes(app: FastifyInstance) {
     const link = await resolveLink(token);
     if (!link) return reply.code(404).send({ error: 'This link was revoked or never existed' });
     if (link.resource_type === 'document') {
-      const { rows } = await query('select id, title, content_md, tags, updated_at from documents where id = $1', [link.resource_id]);
+      const { rows } = await query('select id, title, content_md, tags, updated_at from documents where id = $1', [
+        link.resource_id,
+      ]);
       if (!rows[0]) return reply.code(404).send({ error: 'This link was revoked or never existed' });
       return { kind: 'document', document: rows[0] };
     }
@@ -82,7 +89,10 @@ export async function publicRoutes(app: FastifyInstance) {
     const { token } = req.params as { token: string };
     const link = await resolveLink(token);
     if (!link || link.resource_type !== 'diagram') return reply.code(404).send({ error: 'Not found' });
-    const els = await query<DiagramElementRow>('select * from diagram_elements where diagram_id = $1 order by z_index', [link.resource_id]);
+    const els = await query<DiagramElementRow>(
+      'select * from diagram_elements where diagram_id = $1 order by z_index',
+      [link.resource_id],
+    );
     reply.header('Content-Type', 'image/svg+xml').header('X-Robots-Tag', 'noindex').send(renderDiagramSvg(els.rows));
   });
 }

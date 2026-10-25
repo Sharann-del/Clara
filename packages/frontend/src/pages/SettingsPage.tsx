@@ -11,10 +11,18 @@ import { friendlyAuthError } from './SignInPage';
 export function SettingsNav({ current }: { current: 'profile' | 'tokens' }) {
   return (
     <nav className="settings-nav" aria-label="Settings">
-      <Link to="/settings" aria-current={current === 'profile' ? 'page' : undefined} className={current === 'profile' ? 'active' : ''}>
+      <Link
+        to="/settings"
+        aria-current={current === 'profile' ? 'page' : undefined}
+        className={current === 'profile' ? 'active' : ''}
+      >
         <Icon name="settings" /> Profile
       </Link>
-      <Link to="/settings/tokens" aria-current={current === 'tokens' ? 'page' : undefined} className={current === 'tokens' ? 'active' : ''}>
+      <Link
+        to="/settings/tokens"
+        aria-current={current === 'tokens' ? 'page' : undefined}
+        className={current === 'tokens' ? 'active' : ''}
+      >
         <Icon name="key" /> Access tokens
       </Link>
     </nav>
@@ -73,11 +81,26 @@ export function SettingsPage() {
             <form onSubmit={onChangePassword} className="settings-form">
               <label className="field">
                 Current password
-                <input className="input" type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} required />
+                <input
+                  className="input"
+                  type="password"
+                  autoComplete="current-password"
+                  value={current}
+                  onChange={(e) => setCurrent(e.target.value)}
+                  required
+                />
               </label>
               <label className="field">
                 New password
-                <input className="input" type="password" autoComplete="new-password" minLength={10} value={next} onChange={(e) => setNext(e.target.value)} required />
+                <input
+                  className="input"
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={10}
+                  value={next}
+                  onChange={(e) => setNext(e.target.value)}
+                  required
+                />
                 <span className="field-hint">At least 10 characters, with uppercase, lowercase and a number.</span>
               </label>
               {error && (

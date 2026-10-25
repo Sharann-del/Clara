@@ -19,7 +19,10 @@ test('update shallow-merges geometry/style, remove drops, add appends', () => {
     removeIds: ['b'],
     add: [el('c', 'C')],
   });
-  assert.deepEqual(out.map((e) => e.id), ['a', 'c']);
+  assert.deepEqual(
+    out.map((e) => e.id),
+    ['a', 'c'],
+  );
   assert.deepEqual(out[0].geometry, { x: 99, y: 0, width: 10, height: 10, text: 'A' });
   assert.deepEqual(out[0].style, { fill: '#fff', stroke: 'red' });
   assert.equal(out[0].linkedDiagramId, 'child');

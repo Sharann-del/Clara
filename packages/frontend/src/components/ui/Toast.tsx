@@ -61,7 +61,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 {t.action.label}
               </button>
             )}
-            <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label="Dismiss" onClick={() => dismiss(t.id)}>
+            <button
+              type="button"
+              className="btn btn-ghost btn-icon btn-sm"
+              aria-label="Dismiss"
+              onClick={() => dismiss(t.id)}
+            >
               <Icon name="x" size={14} />
             </button>
           </div>

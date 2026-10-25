@@ -35,7 +35,14 @@ export function MembersDialog({ open, workspaceId, myRole, mySub, backTo }: Prop
   const [error, setError] = useState<string | null>(null);
   const canManage = myRole === 'owner' || myRole === 'admin';
 
-  const refresh = useCallback(() => api.listMembers(workspaceId).then(setMembers).catch((e) => setError(errorMessage(e))), [workspaceId]);
+  const refresh = useCallback(
+    () =>
+      api
+        .listMembers(workspaceId)
+        .then(setMembers)
+        .catch((e) => setError(errorMessage(e))),
+    [workspaceId],
+  );
   useEffect(() => {
     if (open) refresh();
   }, [open, refresh]);
@@ -96,7 +103,11 @@ export function MembersDialog({ open, workspaceId, myRole, mySub, backTo }: Prop
 
   // Owners can assign any role; admins can't touch owners or create them.
   const assignable = (m: Member): Role[] =>
-    myRole === 'owner' ? ['owner', 'admin', 'editor', 'viewer'] : m.role === 'owner' ? [] : ['admin', 'editor', 'viewer'];
+    myRole === 'owner'
+      ? ['owner', 'admin', 'editor', 'viewer']
+      : m.role === 'owner'
+        ? []
+        : ['admin', 'editor', 'viewer'];
 
   if (!open) return null;
   return (
@@ -143,9 +154,7 @@ export function MembersDialog({ open, workspaceId, myRole, mySub, backTo }: Prop
 
           <section className="card" aria-labelledby="members-h">
             <div className="card-head">
-              <h2 id="members-h">
-                Members {members && <span className="card-count">{members.length}</span>}
-              </h2>
+              <h2 id="members-h">Members {members && <span className="card-count">{members.length}</span>}</h2>
             </div>
             {members === null ? (
               <SkeletonRows rows={3} />

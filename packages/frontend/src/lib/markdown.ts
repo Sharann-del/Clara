@@ -11,7 +11,8 @@ import { embedBlock, embeddedDiagrams, parseEmbed, type DiagramEmbedRef } from '
 
 export { embedBlock, embeddedDiagrams, parseEmbed, type DiagramEmbedRef };
 
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+const esc = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
 export function safeHref(href: string | null | undefined): string | null {
   if (!href) return null;

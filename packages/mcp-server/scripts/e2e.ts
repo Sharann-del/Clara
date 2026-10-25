@@ -26,10 +26,23 @@ const region = process.env.AWS_REGION ?? 'eu-north-1';
 function stackOutputs(): Record<string, string> {
   const out = execFileSync(
     'aws',
-    ['cloudformation', 'describe-stacks', '--stack-name', 'ClaraStack', '--region', region, '--query', 'Stacks[0].Outputs', '--output', 'json'],
+    [
+      'cloudformation',
+      'describe-stacks',
+      '--stack-name',
+      'ClaraStack',
+      '--region',
+      region,
+      '--query',
+      'Stacks[0].Outputs',
+      '--output',
+      'json',
+    ],
     { encoding: 'utf8' },
   );
-  return Object.fromEntries((JSON.parse(out) as { OutputKey: string; OutputValue: string }[]).map((o) => [o.OutputKey, o.OutputValue]));
+  return Object.fromEntries(
+    (JSON.parse(out) as { OutputKey: string; OutputValue: string }[]).map((o) => [o.OutputKey, o.OutputValue]),
+  );
 }
 
 const needed = ['API_URL', 'MCP_URL', 'USER_POOL_ID', 'USER_POOL_CLIENT_ID'] as const;
@@ -48,7 +61,10 @@ const cognito = new CognitoIdentityProviderClient({ region });
 const runId = randomBytes(4).toString('hex');
 const password = `Aa1!${randomBytes(9).toString('base64url')}`;
 const personas: Persona[] = ['owner', 'editor', 'viewer', 'outsider'];
-const emails = Object.fromEntries(personas.map((p) => [p, `clara-mcp-e2e-${runId}-${p}@example.com`])) as Record<Persona, string>;
+const emails = Object.fromEntries(personas.map((p) => [p, `clara-mcp-e2e-${runId}-${p}@example.com`])) as Record<
+  Persona,
+  string
+>;
 const idTokens = {} as Record<Persona, string>;
 const tokenIds = {} as Record<Persona, string>;
 let workspaceId = '';
@@ -56,7 +72,10 @@ let workspaceId = '';
 async function rest(as: Persona, method: string, path: string, body?: unknown) {
   const res = await fetch(`${apiBase}${path}`, {
     method,
-    headers: { authorization: `Bearer ${idTokens[as]}`, ...(body !== undefined ? { 'content-type': 'application/json' } : {}) },
+    headers: {
+      authorization: `Bearer ${idTokens[as]}`,
+      ...(body !== undefined ? { 'content-type': 'application/json' } : {}),
+    },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   const text = await res.text();
@@ -72,9 +91,22 @@ async function must(as: Persona, method: string, path: string, body?: unknown) {
 const driver: Driver = {
   async setup() {
     for (const p of personas) {
-      await cognito.send(new SignUpCommand({ ClientId: env.USER_POOL_CLIENT_ID, Username: emails[p], Password: password, UserAttributes: [{ Name: 'email', Value: emails[p] }] }));
+      await cognito.send(
+        new SignUpCommand({
+          ClientId: env.USER_POOL_CLIENT_ID,
+          Username: emails[p],
+          Password: password,
+          UserAttributes: [{ Name: 'email', Value: emails[p] }],
+        }),
+      );
       await cognito.send(new AdminConfirmSignUpCommand({ UserPoolId: env.USER_POOL_ID, Username: emails[p] }));
-      const auth = await cognito.send(new InitiateAuthCommand({ ClientId: env.USER_POOL_CLIENT_ID, AuthFlow: 'USER_PASSWORD_AUTH', AuthParameters: { USERNAME: emails[p], PASSWORD: password } }));
+      const auth = await cognito.send(
+        new InitiateAuthCommand({
+          ClientId: env.USER_POOL_CLIENT_ID,
+          AuthFlow: 'USER_PASSWORD_AUTH',
+          AuthParameters: { USERNAME: emails[p], PASSWORD: password },
+        }),
+      );
       idTokens[p] = auth.AuthenticationResult!.IdToken!;
     }
     workspaceId = (await must('owner', 'POST', '/workspaces', { name: `mcp-e2e-${runId}` })).id;
@@ -89,13 +121,18 @@ const driver: Driver = {
     }
     // A Cognito session must not be usable as an MCP credential, nor an MCP token as a REST credential.
     const asRest = await fetch(`${apiBase}/me`, { headers: { authorization: `Bearer ${tokens.owner}` } });
-    if (asRest.status !== 401) throw new Error(`a personal access token was accepted by the REST API (${asRest.status})`);
+    if (asRest.status !== 401)
+      throw new Error(`a personal access token was accepted by the REST API (${asRest.status})`);
     return { workspaceId, tokens };
   },
   async post(token, body) {
     const res = await fetch(env.MCP_URL, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream', ...(token ? { authorization: `Bearer ${token}` } : {}) },
+      headers: {
+        'content-type': 'application/json',
+        accept: 'application/json, text/event-stream',
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify(body),
     });
     const text = await res.text();
@@ -112,7 +149,9 @@ const driver: Driver = {
     for (const p of personas) await rest(p, 'DELETE', `/tokens/${tokenIds[p]}`).catch(() => undefined);
     if (workspaceId) await rest('owner', 'DELETE', `/workspaces/${workspaceId}`).catch(() => undefined);
     for (const p of personas) {
-      await cognito.send(new AdminDeleteUserCommand({ UserPoolId: env.USER_POOL_ID, Username: emails[p] })).catch(() => undefined);
+      await cognito
+        .send(new AdminDeleteUserCommand({ UserPoolId: env.USER_POOL_ID, Username: emails[p] }))
+        .catch(() => undefined);
     }
   },
 };

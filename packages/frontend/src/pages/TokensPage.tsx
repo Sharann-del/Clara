@@ -35,7 +35,11 @@ export function TokensPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const load = () => api.listTokens().then(setTokens).catch((e) => setError(e.message));
+  const load = () =>
+    api
+      .listTokens()
+      .then(setTokens)
+      .catch((e) => setError(e.message));
   useEffect(() => {
     load();
   }, []);
@@ -60,7 +64,8 @@ export function TokensPage() {
   async function revoke(t: PersonalAccessToken) {
     const ok = await confirm({
       title: `Revoke “${t.name}”?`,
-      message: 'Anything using this token, like Claude Code, stops working immediately. Proposals it already made stay in Pending changes.',
+      message:
+        'Anything using this token, like Claude Code, stops working immediately. Proposals it already made stay in Pending changes.',
       confirmLabel: 'Revoke token',
       danger: true,
     });
@@ -83,22 +88,31 @@ export function TokensPage() {
         <div className="settings-body">
           <h1 style={{ fontSize: '1.5rem', margin: 0 }}>Access tokens for AI assistants</h1>
           <p className="muted">
-            A token lets an MCP client such as Claude act as you in Clara, with exactly your workspace roles. It can read
-            what you can read, but its writes are only proposals: you accept or reject each one under a workspace's
+            A token lets an MCP client such as Claude act as you in Clara, with exactly your workspace roles. It can
+            read what you can read, but its writes are only proposals: you accept or reject each one under a workspace's
             “Pending changes”.
           </p>
 
           {fresh && (
             <div className="panel" style={{ marginBottom: 16, borderColor: 'var(--accent)' }}>
               <strong>Copy your new token now — it won't be shown again.</strong>
-              <pre className="diff-text" style={{ userSelect: 'all', wordBreak: 'break-all', whiteSpace: 'pre-wrap' }}>{fresh}</pre>
+              <pre className="diff-text" style={{ userSelect: 'all', wordBreak: 'break-all', whiteSpace: 'pre-wrap' }}>
+                {fresh}
+              </pre>
               <button
                 className="btn"
-                onClick={() => navigator.clipboard.writeText(fresh).then(() => setCopied(true)).catch(() => undefined)}
+                onClick={() =>
+                  navigator.clipboard
+                    .writeText(fresh)
+                    .then(() => setCopied(true))
+                    .catch(() => undefined)
+                }
               >
                 {copied ? 'Copied' : 'Copy token'}
               </button>{' '}
-              <button className="btn" onClick={() => setFresh(null)}>Done</button>
+              <button className="btn" onClick={() => setFresh(null)}>
+                Done
+              </button>
             </div>
           )}
 
@@ -114,9 +128,15 @@ export function TokensPage() {
                 onChange={(e) => setName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && create()}
               />
-              <select className="input" value={String(days)} onChange={(e) => setDays(e.target.value === 'null' ? null : Number(e.target.value))}>
+              <select
+                className="input"
+                value={String(days)}
+                onChange={(e) => setDays(e.target.value === 'null' ? null : Number(e.target.value))}
+              >
                 {EXPIRY.map((o) => (
-                  <option key={o.label} value={String(o.days)}>Expires: {o.label}</option>
+                  <option key={o.label} value={String(o.days)}>
+                    Expires: {o.label}
+                  </option>
                 ))}
               </select>
               <button className="btn btn-primary" onClick={create} disabled={busy || !name.trim()}>
@@ -137,11 +157,14 @@ export function TokensPage() {
               <span>
                 <strong>{t.name}</strong> <code>{t.token_prefix}…</code>
                 <div className="muted" style={{ fontSize: 12 }}>
-                  created {fmt(t.created_at)} · expires {fmt(t.expires_at)} · last used {fmt(t.last_used_at)} · {status(t)}
+                  created {fmt(t.created_at)} · expires {fmt(t.expires_at)} · last used {fmt(t.last_used_at)} ·{' '}
+                  {status(t)}
                 </div>
               </span>
               {status(t) === 'active' && (
-                <button className="btn btn-danger" onClick={() => revoke(t)}>Revoke</button>
+                <button className="btn btn-danger" onClick={() => revoke(t)}>
+                  Revoke
+                </button>
               )}
             </div>
           ))}
@@ -149,7 +172,9 @@ export function TokensPage() {
           <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Icon name="code" /> Connect Claude Code
           </h3>
-          <pre className="diff-text" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{command}</pre>
+          <pre className="diff-text" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+            {command}
+          </pre>
           <p className="muted">
             Server URL: <code>{api.mcpUrl}</code> · header <code>Authorization: Bearer &lt;token&gt;</code>
           </p>

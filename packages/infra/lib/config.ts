@@ -83,8 +83,16 @@ export interface ClaraInfraConfig {
 }
 
 function list(value: unknown): string[] {
-  if (Array.isArray(value)) return value.map(String).map((s) => s.trim()).filter(Boolean);
-  if (typeof value === 'string') return value.split(',').map((s) => s.trim()).filter(Boolean);
+  if (Array.isArray(value))
+    return value
+      .map(String)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  if (typeof value === 'string')
+    return value
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
   return [];
 }
 
@@ -98,14 +106,16 @@ function positiveInt(node: Node, key: string, fallback: number): number {
   const raw = node.tryGetContext(key);
   if (raw === undefined) return fallback;
   const n = Number(raw);
-  if (!Number.isInteger(n) || n <= 0) throw new Error(`Context "${key}" must be a positive integer, got ${JSON.stringify(raw)}`);
+  if (!Number.isInteger(n) || n <= 0)
+    throw new Error(`Context "${key}" must be a positive integer, got ${JSON.stringify(raw)}`);
   return n;
 }
 
 function oneOf<T extends string>(node: Node, key: string, allowed: readonly T[], fallback: T): T {
   const raw = node.tryGetContext(key);
   if (raw === undefined) return fallback;
-  if (!allowed.includes(raw)) throw new Error(`Context "${key}" must be one of ${allowed.join(', ')}, got ${JSON.stringify(raw)}`);
+  if (!allowed.includes(raw))
+    throw new Error(`Context "${key}" must be one of ${allowed.join(', ')}, got ${JSON.stringify(raw)}`);
   return raw as T;
 }
 
@@ -129,8 +139,16 @@ export function resolveConfig(node: Node): ClaraInfraConfig {
     region: process.env.CDK_DEFAULT_REGION ?? 'us-east-1',
     maxAzs: 2,
     natMode: oneOf(node, 'natMode', ['instance', 'gateway'] as const, 'instance'),
-    natInstanceType: instanceType(node, 'natInstanceType', InstanceType.of(InstanceClass.BURSTABLE4_GRAVITON, InstanceSize.NANO)),
-    dbInstanceType: instanceType(node, 'dbInstanceType', InstanceType.of(InstanceClass.BURSTABLE4_GRAVITON, InstanceSize.MICRO)),
+    natInstanceType: instanceType(
+      node,
+      'natInstanceType',
+      InstanceType.of(InstanceClass.BURSTABLE4_GRAVITON, InstanceSize.NANO),
+    ),
+    dbInstanceType: instanceType(
+      node,
+      'dbInstanceType',
+      InstanceType.of(InstanceClass.BURSTABLE4_GRAVITON, InstanceSize.MICRO),
+    ),
     dbAllocatedStorageGb: positiveInt(node, 'dbAllocatedStorageGb', 20),
     dbMultiAz: bool(node.tryGetContext('dbMultiAz'), false),
     retainData: bool(node.tryGetContext('retainData'), false),

@@ -1,7 +1,13 @@
 import type pg from 'pg';
 import { query, withTransaction } from '../db.js';
 import { assertWorkspaceRole, BadRequestError, ConflictError, NotFoundError } from './authz.js';
-import { getDocument, createDocument, updateDocument, type DocumentCreateInput, type DocumentPatch } from './documents.js';
+import {
+  getDocument,
+  createDocument,
+  updateDocument,
+  type DocumentCreateInput,
+  type DocumentPatch,
+} from './documents.js';
 import {
   createDiagram,
   elementSchema,
@@ -132,14 +138,25 @@ export async function proposeDocumentCreate(
     resourceType: 'document',
     resourceId: null,
     operation: 'create',
-    payload: { proposed: { title: input.title ?? 'Untitled', contentMd: input.contentMd ?? '', tags: input.tags ?? [], folderId: input.folderId ?? null } },
+    payload: {
+      proposed: {
+        title: input.title ?? 'Untitled',
+        contentMd: input.contentMd ?? '',
+        tags: input.tags ?? [],
+        folderId: input.folderId ?? null,
+      },
+    },
     summary,
     proposedBy: actor.userId,
     tokenId: actor.tokenId,
   });
 }
 
-const docFields = (d: Record<string, any>): DocumentFields => ({ title: d.title, contentMd: d.content_md, tags: d.tags });
+const docFields = (d: Record<string, any>): DocumentFields => ({
+  title: d.title,
+  contentMd: d.content_md,
+  tags: d.tags,
+});
 
 export async function proposeDocumentUpdate(actor: Actor, id: string, patch: DocumentPatch, summary = '') {
   const doc = await getDocument(actor.userId, id, 'editor');
@@ -169,7 +186,10 @@ export function normalizeElements(elements: unknown[]): DiagramElement[] {
 async function assertLinksResolve(workspaceId: string, elements: DiagramElement[]) {
   const ids = [...new Set(elements.map((e) => e.linkedDiagramId).filter((v): v is string => !!v))];
   if (ids.length === 0) return;
-  const { rows } = await query('select id from diagrams where workspace_id = $1 and id = any($2::uuid[])', [workspaceId, ids]);
+  const { rows } = await query('select id from diagrams where workspace_id = $1 and id = any($2::uuid[])', [
+    workspaceId,
+    ids,
+  ]);
   const found = new Set(rows.map((r) => r.id));
   const missing = ids.filter((i) => !found.has(i));
   if (missing.length) throw new BadRequestError(`linkedDiagramId not found in this workspace: ${missing.join(', ')}`);
@@ -225,7 +245,8 @@ export async function proposeDiagramUpdate(actor: Actor, id: string, proposed: D
   if (proposed.parentDiagramId) {
     if (proposed.parentDiagramId === id) throw new BadRequestError('A diagram cannot be its own parent');
     const parent = await getDiagramRow(actor.userId, proposed.parentDiagramId, 'viewer');
-    if (parent.workspace_id !== diagram.workspace_id) throw new BadRequestError('Parent diagram is in a different workspace');
+    if (parent.workspace_id !== diagram.workspace_id)
+      throw new BadRequestError('Parent diagram is in a different workspace');
   }
   return insertProposal({
     workspaceId: diagram.workspace_id,
@@ -393,7 +414,13 @@ export async function acceptChange(userId: string, id: string, opts: { force?: b
         resourceId = created.id;
         // Skips replaceElements/setDiagramSource: they authorize against rows read outside this
         // transaction, which can't see the diagram created inside it yet.
-        if (p.elements?.length) await writeElements(c, created.id, p.elements.map((e) => elementSchema.parse(e)), userId);
+        if (p.elements?.length)
+          await writeElements(
+            c,
+            created.id,
+            p.elements.map((e) => elementSchema.parse(e)),
+            userId,
+          );
         if (p.source) await upsertSource(c, created.id, p.source.dslText, p.source.format);
       } else {
         const diagramId = row.resource_id!;
@@ -404,7 +431,13 @@ export async function acceptChange(userId: string, id: string, opts: { force?: b
         if ('folderId' in p) meta.folderId = p.folderId ?? null;
         if ('parentDiagramId' in p) meta.parentDiagramId = p.parentDiagramId ?? null;
         await updateDiagramMeta(userId, diagramId, meta, c);
-        if (p.elements) await writeElements(c, diagramId, p.elements.map((e) => elementSchema.parse(e)), userId);
+        if (p.elements)
+          await writeElements(
+            c,
+            diagramId,
+            p.elements.map((e) => elementSchema.parse(e)),
+            userId,
+          );
         if (p.source) await upsertSource(c, diagramId, p.source.dslText, p.source.format);
       }
     }

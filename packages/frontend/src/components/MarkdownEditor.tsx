@@ -98,13 +98,20 @@ export function MarkdownEditor({ value, onChange, workspaceId, onSaveNow, onCrea
   }
   function saveSelection() {
     const sel = window.getSelection();
-    if (sel && sel.rangeCount && richRef.current?.contains(sel.anchorNode)) savedRange.current = sel.getRangeAt(0).cloneRange();
+    if (sel && sel.rangeCount && richRef.current?.contains(sel.anchorNode))
+      savedRange.current = sel.getRangeAt(0).cloneRange();
   }
 
   // ---------------------------------------------------------- actions (both modes)
   async function askUrl(title: string, label: string, def = 'https://') {
     saveSelection();
-    return prompt({ title, label, defaultValue: def, confirmLabel: 'Insert', validate: (v) => (v.trim() ? undefined : 'Enter a URL') });
+    return prompt({
+      title,
+      label,
+      defaultValue: def,
+      confirmLabel: 'Insert',
+      validate: (v) => (v.trim() ? undefined : 'Enter a URL'),
+    });
   }
 
   const actions: Record<string, () => void | Promise<void>> = {
@@ -129,11 +136,15 @@ export function MarkdownEditor({ value, onChange, workspaceId, onSaveNow, onCrea
       insertHtml(`<a href="${esc(href)}">${esc(text)}</a>`);
     },
     codeblock: () =>
-      mode === 'source' ? applySource((e) => insertBlock(e, '```\ncode\n```', 'code')) : insertHtml('<pre><code>code</code></pre><p><br></p>'),
+      mode === 'source'
+        ? applySource((e) => insertBlock(e, '```\ncode\n```', 'code'))
+        : insertHtml('<pre><code>code</code></pre><p><br></p>'),
     table: () =>
       mode === 'source'
         ? applySource((e) => insertBlock(e, TABLE, 'Column'))
-        : insertHtml('<table><thead><tr><th>Column</th><th>Column</th></tr></thead><tbody><tr><td>Cell</td><td>Cell</td></tr></tbody></table><p><br></p>'),
+        : insertHtml(
+            '<table><thead><tr><th>Column</th><th>Column</th></tr></thead><tbody><tr><td>Cell</td><td>Cell</td></tr></tbody></table><p><br></p>',
+          ),
     image: async () => {
       const url = await askUrl('Insert image', 'Image URL (https://…)');
       const src = url && safeImageSrc(url);
@@ -189,7 +200,14 @@ export function MarkdownEditor({ value, onChange, workspaceId, onSaveNow, onCrea
       <div className="md-toolbar" role="toolbar" aria-label="Formatting">
         <div className="segmented" role="radiogroup" aria-label="Editor view">
           {(['source', 'rich'] as Mode[]).map((m) => (
-            <button key={m} type="button" role="radio" aria-checked={mode === m} className={mode === m ? 'on' : ''} onClick={() => switchMode(m)}>
+            <button
+              key={m}
+              type="button"
+              role="radio"
+              aria-checked={mode === m}
+              className={mode === m ? 'on' : ''}
+              onClick={() => switchMode(m)}
+            >
               {m === 'source' ? 'Markdown' : 'Rich text'}
             </button>
           ))}
@@ -208,7 +226,15 @@ export function MarkdownEditor({ value, onChange, workspaceId, onSaveNow, onCrea
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => actions[t[0]]()}
             >
-              {t[0] === 'ol' ? <span className="ol-glyph" aria-hidden="true">1.</span> : t[0] === 'hr' ? <span aria-hidden="true">—</span> : <Icon name={t[1]} />}
+              {t[0] === 'ol' ? (
+                <span className="ol-glyph" aria-hidden="true">
+                  1.
+                </span>
+              ) : t[0] === 'hr' ? (
+                <span aria-hidden="true">—</span>
+              ) : (
+                <Icon name={t[1]} />
+              )}
             </button>
           ),
         )}

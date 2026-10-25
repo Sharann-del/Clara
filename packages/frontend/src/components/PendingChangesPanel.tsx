@@ -21,7 +21,11 @@ export function PendingChangesPanel({ workspaceId, onChanged }: Props) {
   const toast = useToast();
 
   const load = useCallback(
-    () => api.listPendingChanges(workspaceId).then(setChanges).catch((e) => setError(e.message)),
+    () =>
+      api
+        .listPendingChanges(workspaceId)
+        .then(setChanges)
+        .catch((e) => setError(e.message)),
     [workspaceId],
   );
   useEffect(() => {
@@ -46,7 +50,9 @@ export function PendingChangesPanel({ workspaceId, onChanged }: Props) {
     try {
       if (action === 'accept') await api.acceptPendingChange(change.id, force);
       else await api.rejectPendingChange(change.id);
-      toast.success(action === 'accept' ? 'Accepted. The previous version is in history.' : 'Rejected. Nothing changed.');
+      toast.success(
+        action === 'accept' ? 'Accepted. The previous version is in history.' : 'Rejected. Nothing changed.',
+      );
       await load();
       onChanged();
     } catch (e) {
@@ -60,20 +66,24 @@ export function PendingChangesPanel({ workspaceId, onChanged }: Props) {
   return (
     <div>
       <p className="muted" style={{ margin: '0 0 8px', fontSize: 13.5 }}>
-        Nothing below has been applied yet. Accept applies it and saves the previous state to version history; Reject discards it.
+        Nothing below has been applied yet. Accept applies it and saves the previous state to version history; Reject
+        discards it.
       </p>
       {error && <div className="error-text">{error}</div>}
       {changes === null && !error && <SkeletonRows rows={2} height={80} />}
       {changes?.length === 0 && (
         <EmptyState icon="review" title="Nothing waiting for review" compact>
-          When an assistant connected over MCP proposes a change, it appears here. <Link to="/docs/mcp">Connect Claude</Link>
+          When an assistant connected over MCP proposes a change, it appears here.{' '}
+          <Link to="/docs/mcp">Connect Claude</Link>
         </EmptyState>
       )}
       {changes?.map((c) => (
         <div className="change-card" key={c.id}>
           <div className="change-head">
             <div>
-              <span className="tag tag-amber">{c.operation === 'create' ? 'new' : 'edit'} {c.resource_type}</span>{' '}
+              <span className="tag tag-amber">
+                {c.operation === 'create' ? 'new' : 'edit'} {c.resource_type}
+              </span>{' '}
               {c.operation === 'update' && c.resource_id ? (
                 <Link to={`/${c.resource_type}s/${c.resource_id}`}>{c.resource_name ?? 'Untitled'}</Link>
               ) : (

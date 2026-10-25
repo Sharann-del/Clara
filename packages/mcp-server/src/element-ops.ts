@@ -59,9 +59,14 @@ export function applyTextEdits(content: string, edits: { find: string; replace: 
   edits.forEach((edit, i) => {
     if (!edit.find) throw new BadRequestError(`Edit ${i + 1}: "find" must not be empty`);
     const first = out.indexOf(edit.find);
-    if (first === -1) throw new BadRequestError(`Edit ${i + 1}: text to replace was not found: ${JSON.stringify(edit.find.slice(0, 80))}`);
+    if (first === -1)
+      throw new BadRequestError(
+        `Edit ${i + 1}: text to replace was not found: ${JSON.stringify(edit.find.slice(0, 80))}`,
+      );
     if (out.indexOf(edit.find, first + 1) !== -1) {
-      throw new BadRequestError(`Edit ${i + 1}: text to replace appears more than once; include more surrounding context`);
+      throw new BadRequestError(
+        `Edit ${i + 1}: text to replace appears more than once; include more surrounding context`,
+      );
     }
     out = out.slice(0, first) + edit.replace + out.slice(first + edit.find.length);
   });

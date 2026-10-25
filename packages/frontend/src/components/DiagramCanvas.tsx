@@ -1,7 +1,17 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { DiagramElement } from '../lib/api';
 import type { ResolvedElement } from '../lib/states';
-import { DARK_PALETTE, connectorSegment, diagramBounds, elementBox, inkColor, lineY, shapeColors, wrapLabel, type Box } from '@clara/shared/render';
+import {
+  DARK_PALETTE,
+  connectorSegment,
+  diagramBounds,
+  elementBox,
+  inkColor,
+  lineY,
+  shapeColors,
+  wrapLabel,
+  type Box,
+} from '@clara/shared/render';
 import { Icon, type IconName } from './ui/Icon';
 import { colorFor } from './Presence';
 import { MOD } from '../lib/shortcuts';
@@ -47,7 +57,9 @@ const ghost = (el: ResolvedElement) => (el.hidden ? 0.25 : 1);
 const num = (v: unknown, fallback = 0) => (typeof v === 'number' ? v : fallback);
 const isTyping = (t: EventTarget | null) => {
   const el = t as HTMLElement | null;
-  return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+  return (
+    !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable)
+  );
 };
 
 const TOOLS: [Tool, IconName, string, string][] = [
@@ -83,7 +95,9 @@ export function DiagramCanvas({
 
   // Local-only render overrides while THIS user drags/resizes/creates — kept out of the shared
   // `elements` prop until mouseup, when the final position is persisted.
-  const [localGeom, setLocalGeom] = useState<Record<string, { x?: number; y?: number; width?: number; height?: number }>>({});
+  const [localGeom, setLocalGeom] = useState<
+    Record<string, { x?: number; y?: number; width?: number; height?: number }>
+  >({});
   const [creating, setCreating] = useState<DiagramElement | null>(null);
 
   const drag = useRef<
@@ -112,7 +126,12 @@ export function DiagramCanvas({
   function deleteSelected() {
     const ids = new Set(selectedIds);
     const toDelete = elements
-      .filter((e) => ids.has(e.id ?? '') || ids.has((e.geometry.fromId as string) ?? '__x') || ids.has((e.geometry.toId as string) ?? '__x'))
+      .filter(
+        (e) =>
+          ids.has(e.id ?? '') ||
+          ids.has((e.geometry.fromId as string) ?? '__x') ||
+          ids.has((e.geometry.toId as string) ?? '__x'),
+      )
       .map((e) => e.id!);
     onDeleteElements(toDelete);
     onSelectionChange([]);
@@ -132,8 +151,18 @@ export function DiagramCanvas({
         geometry: { ...s.geometry, x: num(s.geometry.x) + 24, y: num(s.geometry.y) + 24 },
       });
     }
-    for (const c of elements.filter((e) => e.type === 'connector' && map.has(e.geometry.fromId as string) && map.has(e.geometry.toId as string))) {
-      onCreateElement({ ...c, id: crypto.randomUUID(), geometry: { ...c.geometry, fromId: map.get(c.geometry.fromId as string), toId: map.get(c.geometry.toId as string) } });
+    for (const c of elements.filter(
+      (e) => e.type === 'connector' && map.has(e.geometry.fromId as string) && map.has(e.geometry.toId as string),
+    )) {
+      onCreateElement({
+        ...c,
+        id: crypto.randomUUID(),
+        geometry: {
+          ...c.geometry,
+          fromId: map.get(c.geometry.fromId as string),
+          toId: map.get(c.geometry.toId as string),
+        },
+      });
     }
     onSelectionChange([...map.values()]);
   }
@@ -165,7 +194,10 @@ export function DiagramCanvas({
     const { width: cw, height: ch } = svg.getBoundingClientRect();
     if (!cw || !ch) return;
     const pad = 48;
-    const z = Math.min(1, Math.max(0.2, Math.min((cw - pad * 2) / Math.max(b.width, 1), (ch - pad * 2) / Math.max(b.height, 1))));
+    const z = Math.min(
+      1,
+      Math.max(0.2, Math.min((cw - pad * 2) / Math.max(b.width, 1), (ch - pad * 2) / Math.max(b.height, 1))),
+    );
     setZoom(z);
     setPan({ x: (cw - b.width * z) / 2 - b.x * z, y: (ch - b.height * z) / 2 - b.y * z });
   }, [elements]);
@@ -179,7 +211,15 @@ export function DiagramCanvas({
   function startEditing(el: DiagramElement) {
     if (readOnly || el.type === 'connector') return;
     const b = elementBox(el);
-    setEditing({ id: el.id!, x: b.x, y: b.y, width: Math.max(b.width, 120), height: Math.max(b.height, 28), value: String(el.geometry.text ?? ''), kind: el.type });
+    setEditing({
+      id: el.id!,
+      x: b.x,
+      y: b.y,
+      width: Math.max(b.width, 120),
+      height: Math.max(b.height, 28),
+      value: String(el.geometry.text ?? ''),
+      kind: el.type,
+    });
   }
 
   function commitEditing(value: string | null) {
@@ -189,13 +229,20 @@ export function DiagramCanvas({
     if (e.id === null) {
       if (value.trim()) {
         const id = crypto.randomUUID();
-        onCreateElement({ id, type: 'text', geometry: { x: e.x, y: e.y + 14, text: value }, style: { fontSize: 14, color: '#0f172a' }, zIndex: 2 });
+        onCreateElement({
+          id,
+          type: 'text',
+          geometry: { x: e.x, y: e.y + 14, text: value },
+          style: { fontSize: 14, color: '#0f172a' },
+          zIndex: 2,
+        });
         onSelectionChange([id]);
       }
       return;
     }
     const el = elements.find((x) => x.id === e.id);
-    if (el && value !== String(el.geometry.text ?? '')) onUpdateElement(e.id, { geometry: { ...el.geometry, text: value } });
+    if (el && value !== String(el.geometry.text ?? ''))
+      onUpdateElement(e.id, { geometry: { ...el.geometry, text: value } });
   }
 
   useEffect(() => {
@@ -234,7 +281,10 @@ export function DiagramCanvas({
       } else if (e.key.startsWith('Arrow')) {
         e.preventDefault();
         const step = e.shiftKey ? 10 : 1;
-        nudge(e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0, e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0);
+        nudge(
+          e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0,
+          e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0,
+        );
       }
     }
     window.addEventListener('keydown', onKeyDown);
@@ -298,7 +348,13 @@ export function DiagramCanvas({
       if (!connectorFrom) {
         setConnectorFrom(el.id!);
       } else if (connectorFrom !== el.id) {
-        onCreateElement({ id: crypto.randomUUID(), type: 'connector', geometry: { fromId: connectorFrom, toId: el.id, text: '' }, style: { stroke: '#475569' }, zIndex: 0 });
+        onCreateElement({
+          id: crypto.randomUUID(),
+          type: 'connector',
+          geometry: { fromId: connectorFrom, toId: el.id, text: '' },
+          style: { stroke: '#475569' },
+          zIndex: 0,
+        });
         setConnectorFrom(null);
         setTool('select');
       }
@@ -307,7 +363,13 @@ export function DiagramCanvas({
     if (tool !== 'select') return;
 
     const isSelected = selectedIds.includes(el.id!);
-    const nextSelection = e.shiftKey ? (isSelected ? selectedIds.filter((id) => id !== el.id) : [...selectedIds, el.id!]) : isSelected ? selectedIds : [el.id!];
+    const nextSelection = e.shiftKey
+      ? isSelected
+        ? selectedIds.filter((id) => id !== el.id)
+        : [...selectedIds, el.id!]
+      : isSelected
+        ? selectedIds
+        : [el.id!];
     onSelectionChange(nextSelection);
     if (readOnly) return;
 
@@ -323,7 +385,14 @@ export function DiagramCanvas({
   function onResizeHandleMouseDown(e: React.MouseEvent, el: DiagramElement) {
     e.stopPropagation();
     const { x, y } = toWorld(e.clientX, e.clientY);
-    drag.current = { kind: 'resize', id: el.id!, startX: x, startY: y, origW: num(el.geometry.width, 120), origH: num(el.geometry.height, 60) };
+    drag.current = {
+      kind: 'resize',
+      id: el.id!,
+      startX: x,
+      startY: y,
+      origW: num(el.geometry.width, 120),
+      origH: num(el.geometry.height, 60),
+    };
   }
 
   function onMouseMove(e: React.MouseEvent) {
@@ -341,7 +410,16 @@ export function DiagramCanvas({
     } else if (d.kind === 'create') {
       setCreating((prev) =>
         prev
-          ? { ...prev, geometry: { ...prev.geometry, x: Math.min(d.startX, x), y: Math.min(d.startY, y), width: Math.max(4, Math.abs(x - d.startX)), height: Math.max(4, Math.abs(y - d.startY)) } }
+          ? {
+              ...prev,
+              geometry: {
+                ...prev.geometry,
+                x: Math.min(d.startX, x),
+                y: Math.min(d.startY, y),
+                width: Math.max(4, Math.abs(x - d.startX)),
+                height: Math.max(4, Math.abs(y - d.startY)),
+              },
+            }
           : prev,
       );
     } else if (d.kind === 'move') {
@@ -352,9 +430,17 @@ export function DiagramCanvas({
       }
       setLocalGeom((prev) => ({ ...prev, ...next }));
     } else if (d.kind === 'resize') {
-      setLocalGeom((prev) => ({ ...prev, [d.id]: { width: Math.max(20, d.origW + (x - d.startX)), height: Math.max(20, d.origH + (y - d.startY)) } }));
+      setLocalGeom((prev) => ({
+        ...prev,
+        [d.id]: { width: Math.max(20, d.origW + (x - d.startX)), height: Math.max(20, d.origH + (y - d.startY)) },
+      }));
     } else if (d.kind === 'marquee') {
-      setMarquee({ x: Math.min(d.startX, x), y: Math.min(d.startY, y), w: Math.abs(x - d.startX), h: Math.abs(y - d.startY) });
+      setMarquee({
+        x: Math.min(d.startX, x),
+        y: Math.min(d.startY, y),
+        w: Math.abs(x - d.startX),
+        h: Math.abs(y - d.startY),
+      });
     }
   }
 
@@ -386,7 +472,12 @@ export function DiagramCanvas({
         .filter((el) => el.type !== 'connector')
         .filter((el) => {
           const b = elementBox(el);
-          return b.x >= marquee.x && b.y >= marquee.y && b.x + b.width <= marquee.x + marquee.w && b.y + b.height <= marquee.y + marquee.h;
+          return (
+            b.x >= marquee.x &&
+            b.y >= marquee.y &&
+            b.x + b.width <= marquee.x + marquee.w &&
+            b.y + b.height <= marquee.y + marquee.h
+          );
         })
         .map((el) => el.id!);
       onSelectionChange(ids);
@@ -457,10 +548,24 @@ export function DiagramCanvas({
             </button>
           ))}
           <div style={{ flex: 1 }} />
-          <button type="button" className="canvas-tool-btn" title={`Duplicate (${MOD}+D)`} aria-label="Duplicate selection" disabled={!selectedIds.length} onClick={duplicateSelected}>
+          <button
+            type="button"
+            className="canvas-tool-btn"
+            title={`Duplicate (${MOD}+D)`}
+            aria-label="Duplicate selection"
+            disabled={!selectedIds.length}
+            onClick={duplicateSelected}
+          >
             <Icon name="copy" size={16} />
           </button>
-          <button type="button" className="canvas-tool-btn" title="Delete (Del)" aria-label="Delete selection" disabled={!selectedIds.length} onClick={deleteSelected}>
+          <button
+            type="button"
+            className="canvas-tool-btn"
+            title="Delete (Del)"
+            aria-label="Delete selection"
+            disabled={!selectedIds.length}
+            onClick={deleteSelected}
+          >
             <Icon name="trash" size={16} />
           </button>
         </div>
@@ -473,8 +578,21 @@ export function DiagramCanvas({
           height="100%"
           role="application"
           aria-roledescription="diagram canvas"
-          aria-label={readOnly ? 'Diagram (view only). Drag to pan.' : 'Diagram canvas. Tools: V select, R rectangle, O ellipse, T text, C connector. Tab moves between shapes; Enter edits text.'}
-          style={{ cursor: drag.current?.kind === 'pan' ? 'grabbing' : tool === 'select' ? (readOnly ? 'grab' : 'default') : 'crosshair' }}
+          aria-label={
+            readOnly
+              ? 'Diagram (view only). Drag to pan.'
+              : 'Diagram canvas. Tools: V select, R rectangle, O ellipse, T text, C connector. Tab moves between shapes; Enter edits text.'
+          }
+          style={{
+            cursor:
+              drag.current?.kind === 'pan'
+                ? 'grabbing'
+                : tool === 'select'
+                  ? readOnly
+                    ? 'grab'
+                    : 'default'
+                  : 'crosshair',
+          }}
           onMouseDown={onBackgroundMouseDown}
           onMouseMove={onMouseMove}
           onMouseUp={onMouseUp}
@@ -482,7 +600,15 @@ export function DiagramCanvas({
           onContextMenu={(e) => e.altKey && e.preventDefault()}
         >
           <defs>
-            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <marker
+              id="arrow"
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="7"
+              markerHeight="7"
+              orient="auto-start-reverse"
+            >
               <path d="M0,0 L10,5 L0,10 z" fill={P.connector} />
             </marker>
           </defs>
@@ -520,8 +646,25 @@ export function DiagramCanvas({
 
                 if (el.type === 'group') {
                   return (
-                    <g key={el.id} opacity={ghost(el)} className="canvas-shape" onMouseDown={(e) => onShapeMouseDown(e, el)} onDoubleClick={() => startEditing(el)} {...shapeProps(el, `Group: ${text}`)}>
-                      <rect x={x} y={y} width={w} height={h} fill="transparent" stroke={selected ? P.accent : P.group} strokeWidth={selected ? 2 : 1} strokeDasharray="6 4" rx={8} />
+                    <g
+                      key={el.id}
+                      opacity={ghost(el)}
+                      className="canvas-shape"
+                      onMouseDown={(e) => onShapeMouseDown(e, el)}
+                      onDoubleClick={() => startEditing(el)}
+                      {...shapeProps(el, `Group: ${text}`)}
+                    >
+                      <rect
+                        x={x}
+                        y={y}
+                        width={w}
+                        height={h}
+                        fill="transparent"
+                        stroke={selected ? P.accent : P.group}
+                        strokeWidth={selected ? 2 : 1}
+                        strokeDasharray="6 4"
+                        rx={8}
+                      />
                       {!isEditing && (
                         <text x={x + 8} y={y + 16} fontSize={12} fill={P.muted}>
                           {text}
@@ -538,7 +681,9 @@ export function DiagramCanvas({
                   fill,
                   stroke,
                   strokeWidth: selected ? 2.5 : 1.5,
-                  style: { cursor: readOnly ? (hasLink ? 'pointer' : 'default') : tool === 'connector' ? 'crosshair' : 'move' },
+                  style: {
+                    cursor: readOnly ? (hasLink ? 'pointer' : 'default') : tool === 'connector' ? 'crosshair' : 'move',
+                  },
                 };
                 return (
                   <g
@@ -546,7 +691,9 @@ export function DiagramCanvas({
                     opacity={ghost(el)}
                     className={`canvas-shape ${connectorFrom === el.id ? 'connector-source' : ''}`}
                     onMouseDown={(e) => onShapeMouseDown(e, el)}
-                    onDoubleClick={() => (hasLink && (readOnly || !selected) ? onDrillDown(el.linkedDiagramId as string) : startEditing(el))}
+                    onDoubleClick={() =>
+                      hasLink && (readOnly || !selected) ? onDrillDown(el.linkedDiagramId as string) : startEditing(el)
+                    }
                     {...shapeProps(el, `${el.type === 'ellipse' ? 'Ellipse' : 'Box'}: ${text || 'no label'}`)}
                   >
                     {el.type === 'ellipse' ? (
@@ -555,10 +702,24 @@ export function DiagramCanvas({
                       <rect x={x} y={y} width={w} height={h} rx={6} {...common} />
                     )}
                     {!isEditing && (
-                      <ShapeLabel text={text} x={x} y={y} w={w} h={h} ellipse={el.type === 'ellipse'} fill={colors.text} />
+                      <ShapeLabel
+                        text={text}
+                        x={x}
+                        y={y}
+                        w={w}
+                        h={h}
+                        ellipse={el.type === 'ellipse'}
+                        fill={colors.text}
+                      />
                     )}
                     {hasLink && (
-                      <g style={{ pointerEvents: 'none' }} stroke={stroke} strokeWidth={1.5} strokeLinecap="round" fill="none">
+                      <g
+                        style={{ pointerEvents: 'none' }}
+                        stroke={stroke}
+                        strokeWidth={1.5}
+                        strokeLinecap="round"
+                        fill="none"
+                      >
                         <path d={`M${x + w - 18} ${y + 6}h12v12`} />
                         <path d={`M${x + w - 6} ${y + 6}l-7 7`} />
                       </g>
@@ -596,14 +757,42 @@ export function DiagramCanvas({
                       e.stopPropagation();
                       if (tool === 'select') onSelectionChange(e.shiftKey ? [...selectedIds, el.id!] : [el.id!]);
                     }}
-                    onDoubleClick={() => !readOnly && setEditing({ id: el.id!, x: (x1 + x2) / 2 - 60, y: (y1 + y2) / 2 - 14, width: 120, height: 26, value: String(el.geometry.text ?? ''), kind: 'connector' })}
+                    onDoubleClick={() =>
+                      !readOnly &&
+                      setEditing({
+                        id: el.id!,
+                        x: (x1 + x2) / 2 - 60,
+                        y: (y1 + y2) / 2 - 14,
+                        width: 120,
+                        height: 26,
+                        value: String(el.geometry.text ?? ''),
+                        kind: 'connector',
+                      })
+                    }
                     style={{ cursor: 'pointer' }}
                   >
                     {/* Wide invisible hit area so thin arrows are easy to click. */}
                     <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="transparent" strokeWidth={12} />
-                    <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={selected ? P.accent : inkColor(el.style.stroke, P, P.connector)} strokeWidth={selected ? 2.5 : 1.5} markerEnd="url(#arrow)" />
+                    <line
+                      x1={x1}
+                      y1={y1}
+                      x2={x2}
+                      y2={y2}
+                      stroke={selected ? P.accent : inkColor(el.style.stroke, P, P.connector)}
+                      strokeWidth={selected ? 2.5 : 1.5}
+                      markerEnd="url(#arrow)"
+                    />
                     {Boolean(el.geometry.text) && editing?.id !== el.id && (
-                      <text x={(x1 + x2) / 2} y={(y1 + y2) / 2 - 4} fontSize={11} fill={P.connector} textAnchor="middle" stroke={P.halo} strokeWidth={3} paintOrder="stroke">
+                      <text
+                        x={(x1 + x2) / 2}
+                        y={(y1 + y2) / 2 - 4}
+                        fontSize={11}
+                        fill={P.connector}
+                        textAnchor="middle"
+                        stroke={P.halo}
+                        strokeWidth={3}
+                        paintOrder="stroke"
+                      >
                         {String(el.geometry.text)}
                       </text>
                     )}
@@ -611,10 +800,24 @@ export function DiagramCanvas({
                 );
               })}
 
-            {marquee && <rect x={marquee.x} y={marquee.y} width={marquee.w} height={marquee.h} fill="none" stroke={P.accent} strokeDasharray="4 3" />}
+            {marquee && (
+              <rect
+                x={marquee.x}
+                y={marquee.y}
+                width={marquee.w}
+                height={marquee.h}
+                fill="none"
+                stroke={P.accent}
+                strokeDasharray="4 3"
+              />
+            )}
 
             {Object.entries(remoteCursors).map(([userId, c]) => (
-              <g key={userId} style={{ pointerEvents: 'none' }} transform={`translate(${c.x},${c.y}) scale(${1 / zoom})`}>
+              <g
+                key={userId}
+                style={{ pointerEvents: 'none' }}
+                transform={`translate(${c.x},${c.y}) scale(${1 / zoom})`}
+              >
                 <path d="M0 0l13 6.5-5.5 1.6L5 14z" fill={colorFor(userId)} stroke={P.canvas} strokeWidth={1.2} />
                 <text x={12} y={22} fontSize={11} fontWeight={600} fill={colorFor(userId)}>
                   {c.email ?? userId.slice(0, 6)}
@@ -640,16 +843,38 @@ export function DiagramCanvas({
           </div>
         )}
         <div className="canvas-zoom" role="toolbar" aria-label="Zoom">
-          <button type="button" className="btn btn-icon btn-sm btn-ghost" onClick={() => zoomBy(1 / 1.15)} aria-label="Zoom out">
+          <button
+            type="button"
+            className="btn btn-icon btn-sm btn-ghost"
+            onClick={() => zoomBy(1 / 1.15)}
+            aria-label="Zoom out"
+          >
             <Icon name="zoomOut" />
           </button>
-          <button type="button" className="btn btn-sm btn-ghost canvas-zoom-pct" onClick={() => zoomBy(1 / zoom)} aria-label="Zoom to 100%" title="Zoom to 100%">
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost canvas-zoom-pct"
+            onClick={() => zoomBy(1 / zoom)}
+            aria-label="Zoom to 100%"
+            title="Zoom to 100%"
+          >
             {Math.round(zoom * 100)}%
           </button>
-          <button type="button" className="btn btn-icon btn-sm btn-ghost" onClick={() => zoomBy(1.15)} aria-label="Zoom in">
+          <button
+            type="button"
+            className="btn btn-icon btn-sm btn-ghost"
+            onClick={() => zoomBy(1.15)}
+            aria-label="Zoom in"
+          >
             <Icon name="zoomIn" />
           </button>
-          <button type="button" className="btn btn-icon btn-sm btn-ghost" onClick={fit} aria-label="Zoom to fit (0)" title="Zoom to fit (0)">
+          <button
+            type="button"
+            className="btn btn-icon btn-sm btn-ghost"
+            onClick={fit}
+            aria-label="Zoom to fit (0)"
+            title="Zoom to fit (0)"
+          >
             <Icon name="maximize" />
           </button>
         </div>
@@ -713,11 +938,33 @@ function InlineTextEditor({
 }
 
 /** A shape's label, word-wrapped to the shape (and shrunk if it still doesn't fit). */
-export function ShapeLabel({ text, x, y, w, h, ellipse, fill }: { text: string; x: number; y: number; w: number; h: number; ellipse: boolean; fill: string }) {
+export function ShapeLabel({
+  text,
+  x,
+  y,
+  w,
+  h,
+  ellipse,
+  fill,
+}: {
+  text: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  ellipse: boolean;
+  fill: string;
+}) {
   if (!text) return null;
   const wrap = wrapLabel(text, w, h, ellipse);
   return (
-    <text textAnchor="middle" dominantBaseline="central" fontSize={wrap.fontSize} fill={fill} style={{ pointerEvents: 'none', userSelect: 'none' }}>
+    <text
+      textAnchor="middle"
+      dominantBaseline="central"
+      fontSize={wrap.fontSize}
+      fill={fill}
+      style={{ pointerEvents: 'none', userSelect: 'none' }}
+    >
       {wrap.lines.map((line, i) => (
         <tspan key={i} x={x + w / 2} y={lineY(wrap, y + h / 2, i)}>
           {line}

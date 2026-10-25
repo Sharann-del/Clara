@@ -44,7 +44,8 @@ function writeJson(storage: Storage, key: string, value: unknown) {
  */
 export function PlaygroundPage() {
   usePageMeta('Playground', {
-    description: 'Write Clara DSL or Mermaid and see the diagram as you type. Export SVG, PNG or PDF and share a link. No sign-in needed.',
+    description:
+      'Write Clara DSL or Mermaid and see the diagram as you type. Export SVG, PNG or PDF and share a link. No sign-in needed.',
   });
   const toast = useToast();
   const { idToken } = useAuth();
@@ -64,10 +65,12 @@ export function PlaygroundPage() {
     (async () => {
       const fromHash = await decodeState(window.location.hash);
       const pending = readJson<PlaygroundState & { name?: string }>(sessionStorage, PENDING_SAVE_KEY);
-      const initial = fromHash ?? (params.get('save') ? pending : undefined) ?? readJson<PlaygroundState>(localStorage, DRAFT_KEY) ?? {
-        code: DEFAULT_EXAMPLE.code,
-        format: DEFAULT_EXAMPLE.format,
-      };
+      const initial = fromHash ??
+        (params.get('save') ? pending : undefined) ??
+        readJson<PlaygroundState>(localStorage, DRAFT_KEY) ?? {
+          code: DEFAULT_EXAMPLE.code,
+          format: DEFAULT_EXAMPLE.format,
+        };
       if (!live) return;
       setState(initial);
       if (params.get('save') && pending?.name) setName(pending.name);
@@ -103,7 +106,12 @@ export function PlaygroundPage() {
     writeJson(localStorage, DRAFT_KEY, persisted);
     let live = true;
     encodeState(persisted).then((hash) => {
-      if (live) window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}#${hash}`);
+      if (live)
+        window.history.replaceState(
+          window.history.state,
+          '',
+          `${window.location.pathname}${window.location.search}#${hash}`,
+        );
     });
     return () => {
       live = false;
@@ -129,7 +137,9 @@ export function PlaygroundPage() {
       toast.success('Share link copied. Anyone with it sees this diagram; nothing is stored on a server.');
     } catch {
       // Clipboard blocked: the same link is already in the address bar (kept in sync as you type).
-      toast.show('Couldn’t copy automatically. The share link is in your address bar; copy it from there.', { durationMs: 8000 });
+      toast.show('Couldn’t copy automatically. The share link is in your address bar; copy it from there.', {
+        durationMs: 8000,
+      });
     }
   }, [state, toast]);
 
@@ -180,7 +190,13 @@ export function PlaygroundPage() {
         <label className="sr-only" htmlFor="pg-name">
           Diagram name
         </label>
-        <input id="pg-name" className="input pg-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />
+        <input
+          id="pg-name"
+          className="input pg-name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={120}
+        />
         <div className="segmented" role="radiogroup" aria-label="Code format">
           {(['clara', 'mermaid'] as CodeFormat[]).map((f) => (
             <button
@@ -237,13 +253,25 @@ export function PlaygroundPage() {
 
       <div className="pg-tabs show-mobile" role="tablist" aria-label="View">
         {(['code', 'diagram'] as const).map((t) => (
-          <button key={t} type="button" role="tab" aria-selected={mobileTab === t} className={`tab-btn ${mobileTab === t ? 'active' : ''}`} onClick={() => setMobileTab(t)}>
+          <button
+            key={t}
+            type="button"
+            role="tab"
+            aria-selected={mobileTab === t}
+            className={`tab-btn ${mobileTab === t ? 'active' : ''}`}
+            onClick={() => setMobileTab(t)}
+          >
             {t === 'code' ? 'Code' : 'Diagram'}
           </button>
         ))}
       </div>
 
-      <div className="pg-body" ref={bodyRef} style={{ ['--split' as string]: `${split * 100}%` }} data-mobile-tab={mobileTab}>
+      <div
+        className="pg-body"
+        ref={bodyRef}
+        style={{ ['--split' as string]: `${split * 100}%` }}
+        data-mobile-tab={mobileTab}
+      >
         <section className="pg-code" aria-label="Code">
           <CodeEditor
             id="playground-code"
@@ -259,18 +287,24 @@ export function PlaygroundPage() {
               }
             }}
           />
-          <div id="playground-code-status" className={`code-status ${compiled?.issues.length ? 'error' : ''}`} aria-live="polite">
+          <div
+            id="playground-code-status"
+            className={`code-status ${compiled?.issues.length ? 'error' : ''}`}
+            aria-live="polite"
+          >
             {compiled ? describeCompile(compiled) : ' '}
           </div>
           <div className="pg-help">
             {state.format === 'clara' ? (
               <>
-                <code>node id "Label"</code> · <code>edge a -&gt; b "label"</code> · <code>group g "Name" {'{ a b }'}</code> ·{' '}
-                <code>direction LR</code> · <Link to="/docs/dsl">Reference</Link>
+                <code>node id "Label"</code> · <code>edge a -&gt; b "label"</code> ·{' '}
+                <code>group g "Name" {'{ a b }'}</code> · <code>direction LR</code> ·{' '}
+                <Link to="/docs/dsl">Reference</Link>
               </>
             ) : (
               <>
-                <code>flowchart LR</code> · <code>A[Box] --&gt;|label| B(Round)</code> · <Link to="/docs/mermaid">What's supported</Link>
+                <code>flowchart LR</code> · <code>A[Box] --&gt;|label| B(Round)</code> ·{' '}
+                <Link to="/docs/mermaid">What's supported</Link>
               </>
             )}
           </div>
@@ -293,12 +327,23 @@ export function PlaygroundPage() {
         <section className="pg-stage" aria-label="Diagram preview">
           <DiagramViewer
             elements={compiled?.elements ?? []}
-            emptyText={state.code.trim() ? 'No nodes yet. Check the messages under the editor.' : 'Start typing, or pick an example.'}
+            emptyText={
+              state.code.trim()
+                ? 'No nodes yet. Check the messages under the editor.'
+                : 'Start typing, or pick an example.'
+            }
           />
         </section>
       </div>
 
-      {saveOpen && <SaveToClaraDialog state={state} name={name} onClose={() => setSaveOpen(false)} elements={compiled?.elements ?? []} />}
+      {saveOpen && (
+        <SaveToClaraDialog
+          state={state}
+          name={name}
+          onClose={() => setSaveOpen(false)}
+          elements={compiled?.elements ?? []}
+        />
+      )}
     </div>
   );
 }

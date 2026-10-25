@@ -11,9 +11,7 @@ const kinds = { documents: 'document', diagrams: 'diagram' } as const;
 
 /** Anyone who can edit an item can share it (like most document tools). */
 async function loadForSharing(userId: string, kind: ResourceKind, id: string, min: 'viewer' | 'editor' = 'editor') {
-  return kind === 'document'
-    ? (await loadDocument(userId, id, min)).doc
-    : (await loadDiagram(userId, id, min)).diagram;
+  return kind === 'document' ? (await loadDocument(userId, id, min)).doc : (await loadDiagram(userId, id, min)).diagram;
 }
 
 /**
@@ -31,7 +29,11 @@ export async function sharingRoutes(app: FastifyInstance) {
         [kind, id],
       );
       const grants = await Promise.all(
-        rows.map(async (r) => ({ ...r, email: await emailForUser(r.user_id), workspace_role: (await workspaceRole(r.user_id, item.workspace_id)) ?? null })),
+        rows.map(async (r) => ({
+          ...r,
+          email: await emailForUser(r.user_id),
+          workspace_role: (await workspaceRole(r.user_id, item.workspace_id)) ?? null,
+        })),
       );
       return grants;
     });
@@ -66,7 +68,11 @@ export async function sharingRoutes(app: FastifyInstance) {
       const { id, userId } = req.params as { id: string; userId: string };
       // People may always remove their own access; otherwise editors manage sharing.
       if (userId !== req.user!.sub) await loadForSharing(req.user!.sub, kind, id);
-      await query('delete from permissions where resource_type = $1 and resource_id = $2 and user_id = $3', [kind, id, userId]);
+      await query('delete from permissions where resource_type = $1 and resource_id = $2 and user_id = $3', [
+        kind,
+        id,
+        userId,
+      ]);
       reply.code(204).send();
     });
 

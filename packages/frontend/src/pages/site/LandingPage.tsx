@@ -44,9 +44,9 @@ export function LandingPage() {
               <mark className="hl">System design</mark> you can <em>type</em>, zoom into, and hand to Claude.
             </h1>
             <p className="lede">
-              Clara keeps architecture docs and diagrams in one place. Write a diagram as code, drill from the whole system
-              down to a single service, walk people through how it changes, and let AI assistants propose edits that land
-              only when you approve them.
+              Clara keeps architecture docs and diagrams in one place. Write a diagram as code, drill from the whole
+              system down to a single service, walk people through how it changes, and let AI assistants propose edits
+              that land only when you approve them.
             </p>
             <div className="cta-row">
               <Link to="/editor" className="btn btn-primary btn-lg">
@@ -68,8 +68,8 @@ export function LandingPage() {
             <mark className="hl">One place</mark> for the doc, the diagram, and the decision.
           </h2>
           <p className="lede" style={{ marginBottom: 0 }}>
-            Design docs rot when the diagram lives in one tool and the reasoning in another. Clara keeps them together and
-            keeps them editable as text.
+            Design docs rot when the diagram lives in one tool and the reasoning in another. Clara keeps them together
+            and keeps them editable as text.
           </p>
         </div>
 
@@ -78,8 +78,8 @@ export function LandingPage() {
             <span className="eyebrow">```clara-diagram</span>
             <h3>Docs and diagrams, side by side</h3>
             <p>
-              Write in markdown, switch to a rich-text view when you prefer, and drop a diagram straight into the page. The
-              embed renders the diagram live, so the doc never shows a stale screenshot.
+              Write in markdown, switch to a rich-text view when you prefer, and drop a diagram straight into the page.
+              The embed renders the diagram live, so the doc never shows a stale screenshot.
             </p>
             <ul className="feature-points">
               <li>Folders and tags across documents and diagrams</li>
@@ -95,8 +95,9 @@ export function LandingPage() {
             <span className="eyebrow">edge api -&gt; db "SQL"</span>
             <h3>Diagrams as code, and back again</h3>
             <p>
-              Describe nodes, edges and groups in a few lines of Clara DSL, or paste a Mermaid flowchart. Clara lays it out
-              automatically and gives you an editable canvas, and exports back to Mermaid whenever you need it elsewhere.
+              Describe nodes, edges and groups in a few lines of Clara DSL, or paste a Mermaid flowchart. Clara lays it
+              out automatically and gives you an editable canvas, and exports back to Mermaid whenever you need it
+              elsewhere.
             </p>
             <ul className="feature-points">
               <li>Top-down or left-to-right layout</li>
@@ -128,8 +129,8 @@ export function LandingPage() {
             <span className="eyebrow">state "Migrating"</span>
             <h3>Explain how the system changes</h3>
             <p>
-              Give one diagram named states such as today, migrating and target. Each state shows, hides, moves or restyles
-              elements. Step through them in a meeting, or let them play on a timer.
+              Give one diagram named states such as today, migrating and target. Each state shows, hides, moves or
+              restyles elements. Step through them in a meeting, or let them play on a timer.
             </p>
             <ul className="feature-points">
               <li>Present mode with smooth transitions</li>
@@ -144,8 +145,8 @@ export function LandingPage() {
             <span className="eyebrow">presence.joined</span>
             <h3>Edit together, live</h3>
             <p>
-              See who else is in a document or diagram, follow their cursors, and watch shapes move as they drag them. Two
-              people editing different shapes never get in each other's way.
+              See who else is in a document or diagram, follow their cursors, and watch shapes move as they drag them.
+              Two people editing different shapes never get in each other's way.
             </p>
             <ul className="feature-points">
               <li>Workspace roles: owner, admin, editor, viewer</li>
@@ -160,8 +161,8 @@ export function LandingPage() {
             <span className="eyebrow">status: pending_review</span>
             <h3>AI edits over MCP, with a human in the loop</h3>
             <p>
-              Connect Claude Code or any MCP client with a personal access token. It can read what you can read, and when it
-              writes, the change waits as a diff for someone on your team to accept or reject.
+              Connect Claude Code or any MCP client with a personal access token. It can read what you can read, and
+              when it writes, the change waits as a diff for someone on your team to accept or reject.
             </p>
             <ul className="feature-points">
               <li>Same roles as the web app; a token carries no extra power</li>
@@ -186,26 +187,36 @@ export function LandingPage() {
           <ol className="steps">
             <li className="step">
               <h3>Claude proposes</h3>
-              <p>It calls a tool such as update_diagram or create_document with your token. Clara checks you have editor access.</p>
+              <p>
+                It calls a tool such as update_diagram or create_document with your token. Clara checks you have editor
+                access.
+              </p>
             </li>
             <li className="step pending">
               <h3>Clara stages a diff</h3>
-              <p>The proposal is saved as a pending change with a snapshot of what it was based on. Nothing else is touched.</p>
+              <p>
+                The proposal is saved as a pending change with a snapshot of what it was based on. Nothing else is
+                touched.
+              </p>
             </li>
             <li className="step pending">
               <h3>A person reviews</h3>
-              <p>Line diffs for documents; added, changed and removed shapes for diagrams. Stale proposals are flagged.</p>
+              <p>
+                Line diffs for documents; added, changed and removed shapes for diagrams. Stale proposals are flagged.
+              </p>
             </li>
             <li className="step done">
               <h3>Accept or reject</h3>
-              <p>Accepting applies it as the reviewer and saves the previous version to history. Rejecting discards it.</p>
+              <p>
+                Accepting applies it as the reviewer and saves the previous version to history. Rejecting discards it.
+              </p>
             </li>
           </ol>
           <div className="review-facts">
             <div className="review-fact">
               <strong>Never stale by accident</strong>
-              If someone edited the doc after the proposal, Clara shows the diff against the current version and asks before
-              overwriting.
+              If someone edited the doc after the proposal, Clara shows the diff against the current version and asks
+              before overwriting.
             </div>
             <div className="review-fact">
               <strong>Always reversible</strong>
@@ -241,7 +252,9 @@ export function LandingPage() {
       <div className="wrap">
         <section className="closing" aria-labelledby="closing-title">
           <div>
-            <h2 id="closing-title">Write the system down once. <mark className="hl">Keep it true.</mark></h2>
+            <h2 id="closing-title">
+              Write the system down once. <mark className="hl">Keep it true.</mark>
+            </h2>
             <p>Free while Clara is in early access. No card needed.</p>
           </div>
           <div className="cta-row">

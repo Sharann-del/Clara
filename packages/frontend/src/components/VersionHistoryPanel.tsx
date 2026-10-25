@@ -8,7 +8,14 @@ import { useConfirm } from './ui/ConfirmProvider';
 import { EmptyState, SkeletonRows } from './EmptyState';
 import { DiagramViewer } from './DiagramViewer';
 import { MarkdownView } from './MarkdownView';
-import { api, errorMessage, normalizeElement, type DiagramElement, type VersionFull, type VersionSummary } from '../lib/api';
+import {
+  api,
+  errorMessage,
+  normalizeElement,
+  type DiagramElement,
+  type VersionFull,
+  type VersionSummary,
+} from '../lib/api';
 import { timeAgo } from '../lib/time';
 
 interface Props {
@@ -25,7 +32,16 @@ interface Props {
 }
 
 /** Version list with a preview and a diff against the current state before restoring. */
-export function VersionHistoryPanel({ open, onClose, resourceKind, resourceId, current, canRestore, onRestored, backTo }: Props) {
+export function VersionHistoryPanel({
+  open,
+  onClose,
+  resourceKind,
+  resourceId,
+  current,
+  canRestore,
+  onRestored,
+  backTo,
+}: Props) {
   const toast = useToast();
   const { confirm } = useConfirm();
   const [versions, setVersions] = useState<VersionSummary[] | null>(null);
@@ -80,7 +96,12 @@ export function VersionHistoryPanel({ open, onClose, resourceKind, resourceId, c
 
   if (!open) return null;
   return (
-    <SubPage title="Version history" description="Every save keeps the previous version. Preview one, then restore it if you need to." backTo={backTo} size="lg">
+    <SubPage
+      title="Version history"
+      description="Every save keeps the previous version. Preview one, then restore it if you need to."
+      backTo={backTo}
+      size="lg"
+    >
       {error && <div className="error-text">{error}</div>}
       {versions === null ? (
         <SkeletonRows rows={4} />
@@ -122,7 +143,14 @@ export function VersionHistoryPanel({ open, onClose, resourceKind, resourceId, c
                 <div className="history-toolbar">
                   <div className="segmented" role="radiogroup" aria-label="Show">
                     {(['changes', 'preview'] as const).map((v) => (
-                      <button key={v} type="button" role="radio" aria-checked={view === v} className={view === v ? 'on' : ''} onClick={() => setView(v)}>
+                      <button
+                        key={v}
+                        type="button"
+                        role="radio"
+                        aria-checked={view === v}
+                        className={view === v ? 'on' : ''}
+                        onClick={() => setView(v)}
+                      >
                         {v === 'changes' ? 'Changes since' : 'Preview'}
                       </button>
                     ))}
@@ -147,7 +175,15 @@ export function VersionHistoryPanel({ open, onClose, resourceKind, resourceId, c
   );
 }
 
-function DocumentVersion({ snapshot, current, view }: { snapshot: Record<string, any>; current: Props['current']; view: 'changes' | 'preview' }) {
+function DocumentVersion({
+  snapshot,
+  current,
+  view,
+}: {
+  snapshot: Record<string, any>;
+  current: Props['current'];
+  view: 'changes' | 'preview';
+}) {
   const then = String(snapshot.content_md ?? '');
   if (view === 'preview') {
     return (
@@ -162,7 +198,8 @@ function DocumentVersion({ snapshot, current, view }: { snapshot: Record<string,
   return (
     <div>
       <p className="muted" style={{ marginTop: 0 }}>
-        <del>red</del> is in this version but not now; <ins>green</ins> was added since. Restoring removes the green and brings back the red.
+        <del>red</del> is in this version but not now; <ins>green</ins> was added since. Restoring removes the green and
+        brings back the red.
       </p>
       {snapshot.title !== current.title && (
         <div className="diff-row">
@@ -178,7 +215,10 @@ function DocumentVersion({ snapshot, current, view }: { snapshot: Record<string,
             const cls = part.added ? 'diff-add' : part.removed ? 'diff-del' : 'diff-same';
             const mark = part.added ? '+ ' : part.removed ? '- ' : '  ';
             const lines = part.value.replace(/\n$/, '').split('\n');
-            const shown = !part.added && !part.removed && lines.length > 6 ? [...lines.slice(0, 2), `… ${lines.length - 4} unchanged lines …`, ...lines.slice(-2)] : lines;
+            const shown =
+              !part.added && !part.removed && lines.length > 6
+                ? [...lines.slice(0, 2), `… ${lines.length - 4} unchanged lines …`, ...lines.slice(-2)]
+                : lines;
             return shown.map((line, j) => (
               <div className={cls} key={`${i}-${j}`}>
                 {line.startsWith('…') ? line : mark + line}
@@ -191,8 +231,19 @@ function DocumentVersion({ snapshot, current, view }: { snapshot: Record<string,
   );
 }
 
-function DiagramVersion({ snapshot, current, view }: { snapshot: Record<string, any>; current: Props['current']; view: 'changes' | 'preview' }) {
-  const then = useMemo(() => ((snapshot.elements ?? []) as Record<string, unknown>[]).map(normalizeElement), [snapshot]);
+function DiagramVersion({
+  snapshot,
+  current,
+  view,
+}: {
+  snapshot: Record<string, any>;
+  current: Props['current'];
+  view: 'changes' | 'preview';
+}) {
+  const then = useMemo(
+    () => ((snapshot.elements ?? []) as Record<string, unknown>[]).map(normalizeElement),
+    [snapshot],
+  );
   const diff = useMemo(() => diffElements(then, current.elements ?? []), [then, current.elements]);
   if (view === 'preview') {
     return (
@@ -223,7 +274,8 @@ function DiagramVersion({ snapshot, current, view }: { snapshot: Record<string, 
           ))}
           {diff.changed.map((c) => (
             <li key={`c${c.id}`}>
-              <span className="diff-chg">changed</span> {describeElement(c.after)} <span className="muted">({c.fields.join(', ')})</span>
+              <span className="diff-chg">changed</span> {describeElement(c.after)}{' '}
+              <span className="muted">({c.fields.join(', ')})</span>
             </li>
           ))}
         </ul>

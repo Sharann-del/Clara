@@ -24,7 +24,9 @@ const LIMITS: [string, string][] = [
 ];
 
 export function PricingPage() {
-  usePageMeta('Pricing', { description: 'Clara is free during early access: every feature, every workspace, no card needed.' });
+  usePageMeta('Pricing', {
+    description: 'Clara is free during early access: every feature, every workspace, no card needed.',
+  });
   return (
     <SiteLayout>
       <div className="page wrap">
@@ -32,8 +34,8 @@ export function PricingPage() {
           <span className="eyebrow">price: 0</span>
           <h1>Free while Clara is in early access.</h1>
           <p className="lede">
-            Every feature is included for everyone. The few limits below exist to keep the service healthy, not to push you to
-            an upgrade.
+            Every feature is included for everyone. The few limits below exist to keep the service healthy, not to push
+            you to an upgrade.
           </p>
         </div>
 
@@ -62,8 +64,8 @@ export function PricingPage() {
           <section className="plan" aria-labelledby="plan-later">
             <h2 id="plan-later">If that changes</h2>
             <p style={{ margin: 0, color: 'var(--ink-2)', lineHeight: 1.65 }}>
-              If paid plans are ever introduced, they'll be announced well in advance on this page, and you'll always be able to
-              export your documents as markdown and your diagrams as Mermaid, SVG, PNG or PDF.
+              If paid plans are ever introduced, they'll be announced well in advance on this page, and you'll always be
+              able to export your documents as markdown and your diagrams as Mermaid, SVG, PNG or PDF.
             </p>
             <p style={{ margin: 0, color: 'var(--ink-2)', lineHeight: 1.65 }}>
               Clara is built as a cloud architecture project and runs on a small AWS footprint. The{' '}

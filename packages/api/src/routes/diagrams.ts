@@ -87,9 +87,9 @@ export async function diagramRoutes(app: FastifyInstance) {
 
   app.put('/diagrams/:id/source', async (req) => {
     const { id } = req.params as { id: string };
-    const body = z.object({ dslText: z.string(), format: z.enum(['clara', 'mermaid']).default('clara') }).parse(
-      req.body,
-    );
+    const body = z
+      .object({ dslText: z.string(), format: z.enum(['clara', 'mermaid']).default('clara') })
+      .parse(req.body);
     return setDiagramSource(req.user!.sub, id, body.dslText, body.format);
   });
 
@@ -99,9 +99,9 @@ export async function diagramRoutes(app: FastifyInstance) {
 
     const format = ((req.query as { format?: string }).format ?? 'svg').toLowerCase();
     if (format !== 'svg') {
-      return reply
-        .code(400)
-        .send({ error: 'Only svg export is implemented server-side; PNG/PDF are exported client-side from the canvas.' });
+      return reply.code(400).send({
+        error: 'Only svg export is implemented server-side; PNG/PDF are exported client-side from the canvas.',
+      });
     }
 
     const elements = await query<DiagramElementRow>(

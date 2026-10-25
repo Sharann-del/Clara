@@ -1,7 +1,14 @@
 import type pg from 'pg';
 import { z } from 'zod';
 import { query, withTransaction } from '../db.js';
-import { assertFolderInWorkspace, assertResourceRole, assertWorkspaceRole, BadRequestError, NotFoundError, type Role } from './authz.js';
+import {
+  assertFolderInWorkspace,
+  assertResourceRole,
+  assertWorkspaceRole,
+  BadRequestError,
+  NotFoundError,
+  type Role,
+} from './authz.js';
 import { recordVersion } from './versions.js';
 import { listStates } from './states.js';
 import { normalizeElement } from '@clara/shared/elements';
@@ -48,7 +55,10 @@ export async function listDiagrams(userId: string, workspaceId: string, folderId
 
 /** Loads a diagram row and the caller's effective role on it (workspace role or a direct share). */
 export async function loadDiagram(userId: string, id: string, min: Role = 'viewer') {
-  const { rows } = await query<Record<string, any> & { id: string; workspace_id: string }>('select * from diagrams where id = $1', [id]);
+  const { rows } = await query<Record<string, any> & { id: string; workspace_id: string }>(
+    'select * from diagrams where id = $1',
+    [id],
+  );
   const diagram = rows[0];
   if (!diagram) throw new NotFoundError('Not found');
   const role = await assertResourceRole(userId, 'diagram', diagram, min);
@@ -111,7 +121,8 @@ export async function createDiagram(
 async function assertParentDiagram(parentId: string, workspaceId: string, selfId?: string) {
   if (parentId === selfId) throw new BadRequestError('A diagram cannot be its own parent');
   const { rows } = await query<{ workspace_id: string }>('select workspace_id from diagrams where id = $1', [parentId]);
-  if (!rows[0] || rows[0].workspace_id !== workspaceId) throw new BadRequestError('Parent diagram not found in this workspace');
+  if (!rows[0] || rows[0].workspace_id !== workspaceId)
+    throw new BadRequestError('Parent diagram not found in this workspace');
 }
 
 export async function updateDiagramMeta(userId: string, id: string, patch: DiagramPatch, client?: pg.PoolClient) {
@@ -238,7 +249,12 @@ export async function upsertSource(
 
 export async function setDiagramSource(userId: string, id: string, dslText: string, format: 'clara' | 'mermaid') {
   await getDiagramRow(userId, id, 'editor');
-  return upsertSource({ query: ((t: string, p?: unknown[]) => query(t, p ?? [])) as pg.PoolClient['query'] }, id, dslText, format);
+  return upsertSource(
+    { query: ((t: string, p?: unknown[]) => query(t, p ?? [])) as pg.PoolClient['query'] },
+    id,
+    dslText,
+    format,
+  );
 }
 
 export interface HierarchyNode {
@@ -270,10 +286,10 @@ export async function traverseHierarchy(
     let parentId: string | null = root.parent_diagram_id;
     while (parentId && !seen.has(parentId) && ancestors.length < maxDepth) {
       seen.add(parentId);
-      const { rows } = await query('select id, name, parent_diagram_id from diagrams where id = $1 and workspace_id = $2', [
-        parentId,
-        workspaceId,
-      ]);
+      const { rows } = await query(
+        'select id, name, parent_diagram_id from diagrams where id = $1 and workspace_id = $2',
+        [parentId, workspaceId],
+      );
       if (!rows[0]) break;
       ancestors.unshift({ id: rows[0].id, name: rows[0].name });
       parentId = rows[0].parent_diagram_id;

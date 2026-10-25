@@ -15,7 +15,11 @@ export interface SignupPolicy {
 export type SignupDecision = { ok: true } | { ok: false; reason: string };
 
 export function parsePolicy(env: Record<string, string | undefined>): SignupPolicy {
-  const split = (v: string | undefined) => (v ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+  const split = (v: string | undefined) =>
+    (v ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
   const mode = env.SIGNUP_MODE === 'allowlist' || env.SIGNUP_MODE === 'invite' ? env.SIGNUP_MODE : 'open';
   return {
     mode,
@@ -24,7 +28,11 @@ export function parsePolicy(env: Record<string, string | undefined>): SignupPoli
   };
 }
 
-export function checkSignup(policy: SignupPolicy, email: string | undefined, inviteCode: string | undefined): SignupDecision {
+export function checkSignup(
+  policy: SignupPolicy,
+  email: string | undefined,
+  inviteCode: string | undefined,
+): SignupDecision {
   if (policy.mode === 'open') return { ok: true };
 
   if (policy.mode === 'allowlist') {

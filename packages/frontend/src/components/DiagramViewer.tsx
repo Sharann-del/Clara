@@ -47,7 +47,14 @@ export function DiagramViewer({
   const gesture = useRef<{ x: number; y: number; dist?: number; view: typeof view; moved: boolean } | null>(null);
 
   const rendered = useMemo(
-    () => renderDiagramSvg(elements, { background: null, padding: 24, dataAttributes: true, highlights, palette: DARK_PALETTE }),
+    () =>
+      renderDiagramSvg(elements, {
+        background: null,
+        padding: 24,
+        dataAttributes: true,
+        highlights,
+        palette: DARK_PALETTE,
+      }),
     [elements, highlights],
   );
   const empty = elements.filter((e) => !e.hidden).length === 0;
@@ -108,7 +115,13 @@ export function DiagramViewer({
     if (pts.length === 1) gesture.current = { x: e.clientX, y: e.clientY, view, moved: false };
     else if (pts.length === 2) {
       const [a, b] = pts;
-      gesture.current = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, dist: Math.hypot(a.x - b.x, a.y - b.y), view, moved: true };
+      gesture.current = {
+        x: (a.x + b.x) / 2,
+        y: (a.y + b.y) / 2,
+        dist: Math.hypot(a.x - b.x, a.y - b.y),
+        view,
+        moved: true,
+      };
     }
   }
 
@@ -205,7 +218,11 @@ export function DiagramViewer({
         ) : (
           <div
             className="viewer-content"
-            style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.k})`, width: rendered.width, height: rendered.height }}
+            style={{
+              transform: `translate(${view.x}px, ${view.y}px) scale(${view.k})`,
+              width: rendered.width,
+              height: rendered.height,
+            }}
             // Safe: renderDiagramSvg escapes all text and only passes through validated colour values.
             dangerouslySetInnerHTML={{ __html: rendered.svg }}
           />

@@ -39,7 +39,10 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   const pendingRef = useRef<Pending | null>(null);
   pendingRef.current = pending;
 
-  const confirm = useCallback((opts: ConfirmOptions) => new Promise<boolean>((resolve) => setPending({ kind: 'confirm', opts, resolve })), []);
+  const confirm = useCallback(
+    (opts: ConfirmOptions) => new Promise<boolean>((resolve) => setPending({ kind: 'confirm', opts, resolve })),
+    [],
+  );
   const prompt = useCallback(
     (opts: PromptOptions) =>
       new Promise<string | null>((resolve) => {
@@ -77,7 +80,13 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
         title={o?.title ?? ''}
         description={o?.message}
         size="sm"
-        initialFocusSelector={pending?.kind === 'prompt' ? 'input' : pending?.opts && (pending.opts as ConfirmOptions).danger ? '.dialog-footer .btn:not(.btn-danger-solid)' : '.dialog-footer .btn-primary'}
+        initialFocusSelector={
+          pending?.kind === 'prompt'
+            ? 'input'
+            : pending?.opts && (pending.opts as ConfirmOptions).danger
+              ? '.dialog-footer .btn:not(.btn-danger-solid)'
+              : '.dialog-footer .btn-primary'
+        }
         footer={
           <>
             <button type="button" className="btn" onClick={() => close(false)}>

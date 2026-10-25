@@ -34,7 +34,10 @@ test('element created inside a state is visible only in that state, not Base or 
   const circle = { ...box('c'), type: 'ellipse' as const };
   const { base, states } = createInState([box('a')], [state('current'), state('future')], 'future', circle);
 
-  const visible = (s?: DiagramState) => resolveElements(base, s).filter((e) => !e.hidden).map((e) => e.id);
+  const visible = (s?: DiagramState) =>
+    resolveElements(base, s)
+      .filter((e) => !e.hidden)
+      .map((e) => e.id);
   assert.deepEqual(visible(undefined), ['a']);
   assert.deepEqual(visible(states[0]), ['a']);
   assert.deepEqual(visible(states[1]), ['a', 'c']);
@@ -66,7 +69,13 @@ test('deleting in a state hides only there; un-hiding a state-created element cl
 });
 
 test('connector to a state-only element is hidden outside that state', () => {
-  const conn: DiagramElement = { id: 'k', type: 'connector', geometry: { fromId: 'a', toId: 'c' }, style: {}, zIndex: 0 };
+  const conn: DiagramElement = {
+    id: 'k',
+    type: 'connector',
+    geometry: { fromId: 'a', toId: 'c' },
+    style: {},
+    zIndex: 0,
+  };
   const { base, states } = createInState([box('a'), conn], [state('future')], 'future', box('c'));
   assert.equal(resolveElements(base, undefined).find((e) => e.id === 'k')!.hidden, true);
   assert.equal(resolveElements(base, states[0]).find((e) => e.id === 'k')!.hidden, undefined);
@@ -75,7 +84,10 @@ test('connector to a state-only element is hidden outside that state', () => {
 test('present walkthrough is Base first, then states in order, counting N+1 steps', () => {
   const states = [state('current'), state('interim'), state('future')];
   const steps = buildSteps(states);
-  assert.deepEqual(steps.map((s) => s.name), ['Base', 'current', 'interim', 'future']);
+  assert.deepEqual(
+    steps.map((s) => s.name),
+    ['Base', 'current', 'interim', 'future'],
+  );
   assert.equal(steps.length, states.length + 1);
   assert.equal(steps[0].state, undefined);
   assert.equal(steps[2].state, states[1]);

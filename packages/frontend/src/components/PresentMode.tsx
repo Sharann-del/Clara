@@ -47,19 +47,19 @@ export function PresentMode({ base, states, startIndex, onClose }: Props) {
     };
   }, [index, targets]);
 
-  const go = useCallback(
-    (dir: -1 | 1) => setIndex((i) => stepBy(i, dir, steps.length)),
-    [steps.length],
-  );
+  const go = useCallback((dir: -1 | 1) => setIndex((i) => stepBy(i, dir, steps.length)), [steps.length]);
 
   // Timed auto-play.
   useEffect(() => {
     if (!playing) return;
-    const timer = setTimeout(() => {
-      if (index < steps.length - 1) setIndex(index + 1);
-      else if (loop) setIndex(0);
-      else setPlaying(false);
-    }, Math.max(0.5, seconds) * 1000);
+    const timer = setTimeout(
+      () => {
+        if (index < steps.length - 1) setIndex(index + 1);
+        else if (loop) setIndex(0);
+        else setPlaying(false);
+      },
+      Math.max(0.5, seconds) * 1000,
+    );
     return () => clearTimeout(timer);
   }, [playing, index, seconds, loop, steps.length]);
 
@@ -80,14 +80,19 @@ export function PresentMode({ base, states, startIndex, onClose }: Props) {
 
   // Fixed camera: bounds across ALL states, so nothing jumps or gets clipped between steps.
   const viewBox = useMemo(() => {
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
     for (const list of targets) {
       for (const r of list) {
         if (r.el.type === 'connector') continue;
         const w = r.el.type === 'text' ? 120 : r.width;
         const h = r.el.type === 'text' ? 20 : r.height;
-        minX = Math.min(minX, r.x); minY = Math.min(minY, r.y - (r.el.type === 'text' ? 14 : 0));
-        maxX = Math.max(maxX, r.x + w); maxY = Math.max(maxY, r.y + h);
+        minX = Math.min(minX, r.x);
+        minY = Math.min(minY, r.y - (r.el.type === 'text' ? 14 : 0));
+        maxX = Math.max(maxX, r.x + w);
+        maxY = Math.max(maxY, r.y + h);
       }
     }
     if (!isFinite(minX)) return '0 0 800 600';
@@ -115,7 +120,15 @@ export function PresentMode({ base, states, startIndex, onClose }: Props) {
       </div>
       <svg className="present-svg" viewBox={viewBox} preserveAspectRatio="xMidYMid meet">
         <defs>
-          <marker id="present-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <marker
+            id="present-arrow"
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
             <path d="M0,0 L10,5 L0,10 z" fill={P.connector} />
           </marker>
         </defs>
@@ -127,7 +140,14 @@ export function PresentMode({ base, states, startIndex, onClose }: Props) {
             const text = String(el.geometry.text ?? '');
             if (el.type === 'text')
               return (
-                <text key={el.id} x={x} y={y} opacity={opacity} fontSize={num(el.style.fontSize, 14)} fill={inkColor(el.style.color, P)}>
+                <text
+                  key={el.id}
+                  x={x}
+                  y={y}
+                  opacity={opacity}
+                  fontSize={num(el.style.fontSize, 14)}
+                  fill={inkColor(el.style.color, P)}
+                >
                   {text}
                 </text>
               );
@@ -135,14 +155,24 @@ export function PresentMode({ base, states, startIndex, onClose }: Props) {
               return (
                 <g key={el.id} opacity={opacity}>
                   <rect x={x} y={y} width={w} height={h} fill="none" stroke={P.group} strokeDasharray="6 4" rx={8} />
-                  <text x={x + 8} y={y + 16} fontSize={12} fill={P.muted}>{text}</text>
+                  <text x={x + 8} y={y + 16} fontSize={12} fill={P.muted}>
+                    {text}
+                  </text>
                 </g>
               );
             const c = shapeColors(r.fill, r.stroke, P);
             return (
               <g key={el.id} opacity={opacity}>
                 {el.type === 'ellipse' ? (
-                  <ellipse cx={x + w / 2} cy={y + h / 2} rx={w / 2} ry={h / 2} fill={c.fill} stroke={c.stroke} strokeWidth={1.5} />
+                  <ellipse
+                    cx={x + w / 2}
+                    cy={y + h / 2}
+                    rx={w / 2}
+                    ry={h / 2}
+                    fill={c.fill}
+                    stroke={c.stroke}
+                    strokeWidth={1.5}
+                  />
                 ) : (
                   <rect x={x} y={y} width={w} height={h} rx={6} fill={c.fill} stroke={c.stroke} strokeWidth={1.5} />
                 )}
@@ -159,7 +189,13 @@ export function PresentMode({ base, states, startIndex, onClose }: Props) {
               <g key={r.el.id} opacity={r.opacity}>
                 <line {...p} stroke={P.connector} strokeWidth={1.5} markerEnd="url(#present-arrow)" />
                 {Boolean(r.el.geometry.text) && (
-                  <text x={(p.x1 + p.x2) / 2} y={(p.y1 + p.y2) / 2 - 4} fontSize={11} fill={P.connector} textAnchor="middle">
+                  <text
+                    x={(p.x1 + p.x2) / 2}
+                    y={(p.y1 + p.y2) / 2 - 4}
+                    fontSize={11}
+                    fill={P.connector}
+                    textAnchor="middle"
+                  >
                     {String(r.el.geometry.text)}
                   </text>
                 )}
@@ -169,17 +205,32 @@ export function PresentMode({ base, states, startIndex, onClose }: Props) {
       </svg>
 
       <div className="present-controls">
-        <button className="btn" disabled={index === 0} onClick={() => go(-1)}>← Prev</button>
-        <button className="btn" onClick={() => setPlaying((p) => !p)}>{playing ? '⏸ Pause' : '▶ Auto-play'}</button>
-        <button className="btn" disabled={index === steps.length - 1} onClick={() => go(1)}>Next →</button>
+        <button className="btn" disabled={index === 0} onClick={() => go(-1)}>
+          ← Prev
+        </button>
+        <button className="btn" onClick={() => setPlaying((p) => !p)}>
+          {playing ? '⏸ Pause' : '▶ Auto-play'}
+        </button>
+        <button className="btn" disabled={index === steps.length - 1} onClick={() => go(1)}>
+          Next →
+        </button>
         <label className="muted" style={{ fontSize: 12 }}>
           Seconds per state{' '}
-          <input type="number" min={0.5} step={0.5} value={seconds} style={{ width: 56 }} onChange={(e) => setSeconds(Number(e.target.value) || 1)} />
+          <input
+            type="number"
+            min={0.5}
+            step={0.5}
+            value={seconds}
+            style={{ width: 56 }}
+            onChange={(e) => setSeconds(Number(e.target.value) || 1)}
+          />
         </label>
         <label className="muted" style={{ fontSize: 12 }}>
           <input type="checkbox" checked={loop} onChange={(e) => setLoop(e.target.checked)} /> Loop
         </label>
-        <button className="btn" onClick={onClose}>Exit (Esc)</button>
+        <button className="btn" onClick={onClose}>
+          Exit (Esc)
+        </button>
       </div>
     </div>
   );

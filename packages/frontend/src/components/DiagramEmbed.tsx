@@ -65,7 +65,12 @@ export function DiagramEmbed({ id, height = 320, publicToken }: { id: string; he
       </figcaption>
       <div className="embed-body">
         {state.data ? (
-          <DiagramViewer elements={state.data.elements} className="viewer-inline" maxFitScale={1} label={`Embedded diagram: ${state.data.name}`} />
+          <DiagramViewer
+            elements={state.data.elements}
+            className="viewer-inline"
+            maxFitScale={1}
+            label={`Embedded diagram: ${state.data.name}`}
+          />
         ) : (
           <span className="skeleton" style={{ position: 'absolute', inset: 0, borderRadius: 0 }} />
         )}

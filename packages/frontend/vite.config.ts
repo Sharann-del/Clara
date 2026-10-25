@@ -41,7 +41,8 @@ function seoFiles(siteUrl: string): Plugin {
       }
       const today = new Date().toISOString().slice(0, 10);
       const urls = PUBLIC_ROUTES.map(
-        (r) => `  <url><loc>${siteUrl}${r}</loc><lastmod>${today}</lastmod><priority>${r === '/' ? '1.0' : r === '/editor' ? '0.9' : '0.6'}</priority></url>`,
+        (r) =>
+          `  <url><loc>${siteUrl}${r}</loc><lastmod>${today}</lastmod><priority>${r === '/' ? '1.0' : r === '/editor' ? '0.9' : '0.6'}</priority></url>`,
       ).join('\n');
       this.emitFile({
         type: 'asset',

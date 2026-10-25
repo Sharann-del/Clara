@@ -78,7 +78,12 @@ export function ProductTour({ steps, onDone }: { steps: TourStep[]; onDone: () =
     <div className="tour" role="dialog" aria-modal="false" aria-labelledby="tour-title" aria-describedby="tour-body">
       <div
         className="tour-ring"
-        style={{ top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2 }}
+        style={{
+          top: rect.top - pad,
+          left: rect.left - pad,
+          width: rect.width + pad * 2,
+          height: rect.height + pad * 2,
+        }}
         aria-hidden="true"
       />
       <div className="tour-card" style={{ top, left, width: cardW }}>
@@ -107,7 +112,8 @@ export function ProductTour({ steps, onDone }: { steps: TourStep[]; onDone: () =
             autoFocus
             onClick={() => (index === visible.length - 1 ? finish() : setIndex(index + 1))}
           >
-            {index === visible.length - 1 ? 'Done' : 'Next'} {index < visible.length - 1 && <Icon name="arrowRight" size={13} />}
+            {index === visible.length - 1 ? 'Done' : 'Next'}{' '}
+            {index < visible.length - 1 && <Icon name="arrowRight" size={13} />}
           </button>
         </div>
       </div>

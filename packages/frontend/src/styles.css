@@ -155,11 +155,15 @@ pre {
   font-family: var(--font-mono);
   font-size: 0.86em;
   /* JetBrains Mono would draw -> as an arrow glyph; in a code tool people must see what they type. */
-  font-feature-settings: 'calt' 0, 'liga' 0;
+  font-feature-settings:
+    'calt' 0,
+    'liga' 0;
 }
 .code-input,
 .md-source {
-  font-feature-settings: 'calt' 0, 'liga' 0;
+  font-feature-settings:
+    'calt' 0,
+    'liga' 0;
 }
 code {
   background: var(--surface-3);
@@ -285,7 +289,9 @@ button {
   color: var(--muted);
 }
 .btn-primary:focus-visible {
-  box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--cobalt);
+  box-shadow:
+    0 0 0 2px var(--paper),
+    0 0 0 4px var(--cobalt);
 }
 .btn-danger {
   color: var(--red);
@@ -1773,7 +1779,9 @@ del,
 .tour-ring {
   position: fixed;
   border-radius: var(--r-md);
-  box-shadow: 0 0 0 3px var(--cobalt), 0 0 0 9999px var(--scrim);
+  box-shadow:
+    0 0 0 3px var(--cobalt),
+    0 0 0 9999px var(--scrim);
   transition: all 0.32s var(--ease-out);
 }
 .tour-card {
@@ -2658,7 +2666,9 @@ text.canvas-shape:focus-visible {
   transform: scale(1.1);
 }
 .swatch.on {
-  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink);
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--ink);
 }
 .swatch:focus-visible {
   outline: none;

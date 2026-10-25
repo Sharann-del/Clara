@@ -33,7 +33,10 @@ export async function runScenario(d: Driver, log: (s: string) => void = console.
 
   const call = async (persona: Persona, name: string, args: Record<string, unknown> = {}) => {
     const { status, json } = await d.post(tokens[persona], {
-      jsonrpc: '2.0', id: rpcId++, method: 'tools/call', params: { name, arguments: args },
+      jsonrpc: '2.0',
+      id: rpcId++,
+      method: 'tools/call',
+      params: { name, arguments: args },
     });
     assert.equal(status, 200, `${name} HTTP ${status}: ${JSON.stringify(json)}`);
     const result = json.result;
@@ -49,8 +52,19 @@ export async function runScenario(d: Driver, log: (s: string) => void = console.
 
     const list = await d.post(tokens.viewer, { jsonrpc: '2.0', id: 1, method: 'tools/list' });
     const toolNames: string[] = list.json.result.tools.map((t: any) => t.name);
-    for (const t of ['list_workspaces', 'list_documents', 'read_document', 'create_document', 'update_document',
-      'list_diagrams', 'read_diagram', 'create_diagram', 'update_diagram', 'traverse_diagram_hierarchy', 'import_mermaid']) {
+    for (const t of [
+      'list_workspaces',
+      'list_documents',
+      'read_document',
+      'create_document',
+      'update_document',
+      'list_diagrams',
+      'read_diagram',
+      'create_diagram',
+      'update_diagram',
+      'traverse_diagram_hierarchy',
+      'import_mermaid',
+    ]) {
       assert.ok(toolNames.includes(t), `missing tool ${t}`);
     }
     step(`tools/list exposes ${toolNames.length} tools`);
@@ -71,7 +85,10 @@ export async function runScenario(d: Driver, log: (s: string) => void = console.
 
     // --- document: propose -> nothing applied -> accept -------------------
     const created = await call('editor', 'create_document', {
-      workspace_id: workspaceId, title: 'Payments design', content_md: '# Payments\n\nUses Stripe.\n', tags: ['payments'],
+      workspace_id: workspaceId,
+      title: 'Payments design',
+      content_md: '# Payments\n\nUses Stripe.\n',
+      tags: ['payments'],
       summary: 'Initial draft',
     });
     assert.equal(created.data.status, 'pending_review');
@@ -99,17 +116,25 @@ export async function runScenario(d: Driver, log: (s: string) => void = console.
 
     // --- document update: text edit, version snapshot ---------------------
     const upd = await call('editor', 'update_document', {
-      document_id: docId, text_edits: [{ find: 'Stripe', replace: 'Adyen' }], summary: 'Switch PSP',
+      document_id: docId,
+      text_edits: [{ find: 'Stripe', replace: 'Adyen' }],
+      summary: 'Switch PSP',
     });
     assert.equal(upd.data.status, 'pending_review');
-    assert.equal((await call('owner', 'read_document', { document_id: docId })).data.contentMd, '# Payments\n\nUses Stripe.\n');
+    assert.equal(
+      (await call('owner', 'read_document', { document_id: docId })).data.contentMd,
+      '# Payments\n\nUses Stripe.\n',
+    );
     const before = await d.versionCount('documents', docId);
     const [updPending] = await d.listPending('owner', workspaceId);
     assert.equal(updPending.stale, false);
     assert.equal(updPending.current.contentMd, '# Payments\n\nUses Stripe.\n');
     assert.equal(updPending.diff_payload.proposed.contentMd, '# Payments\n\nUses Adyen.\n');
     assert.equal((await d.accept('owner', upd.data.changeId)).status, 200);
-    assert.equal((await call('owner', 'read_document', { document_id: docId })).data.contentMd, '# Payments\n\nUses Adyen.\n');
+    assert.equal(
+      (await call('owner', 'read_document', { document_id: docId })).data.contentMd,
+      '# Payments\n\nUses Adyen.\n',
+    );
     assert.equal(await d.versionCount('documents', docId), before + 1);
     step('update_document diff shown against live content; accept applies it and snapshots a version');
 
@@ -140,7 +165,11 @@ export async function runScenario(d: Driver, log: (s: string) => void = console.
 
     // --- diagrams: mermaid import (new), C4 child, traversal --------------
     const mm = 'flowchart TD\n  A[Web App] --> B[API Gateway]\n  B -->|SQL| C[Postgres]';
-    const imp = await call('editor', 'import_mermaid', { workspace_id: workspaceId, name: 'System context', mermaid_source: mm });
+    const imp = await call('editor', 'import_mermaid', {
+      workspace_id: workspaceId,
+      name: 'System context',
+      mermaid_source: mm,
+    });
     assert.equal(imp.data.parsed.nodes, 3);
     assert.equal(imp.data.parsed.edges, 2);
     const impAccepted = await d.accept('owner', imp.data.changeId);
@@ -153,13 +182,16 @@ export async function runScenario(d: Driver, log: (s: string) => void = console.
     step('import_mermaid -> accept builds a laid-out diagram with its Mermaid source');
 
     const child = await call('editor', 'create_diagram', {
-      workspace_id: workspaceId, name: 'API Gateway internals', parent_diagram_id: rootId,
+      workspace_id: workspaceId,
+      name: 'API Gateway internals',
+      parent_diagram_id: rootId,
       elements: [{ type: 'rect', geometry: { x: 10, y: 10, width: 120, height: 50, text: 'Auth' }, style: {} }],
     });
     const childId: string = (await d.accept('owner', child.data.changeId)).body.resource_id;
     const gateway = root.data.elements.find((e: any) => e.geometry.text === 'API Gateway');
     const link = await call('editor', 'update_diagram', {
-      diagram_id: rootId, update_elements: [{ id: gateway.id, linkedDiagramId: childId, geometry: { text: 'API Gateway (see detail)' } }],
+      diagram_id: rootId,
+      update_elements: [{ id: gateway.id, linkedDiagramId: childId, geometry: { text: 'API Gateway (see detail)' } }],
     });
     // The pending diagram diff must be an element-level change, not a rewrite.
     const [linkPending] = await d.listPending('owner', workspaceId);
@@ -180,25 +212,54 @@ export async function runScenario(d: Driver, log: (s: string) => void = console.
 
     // A later, unrelated accepted edit (moving a different shape) must not drop the link.
     const web = root.data.elements.find((e: any) => e.geometry.text === 'Web App');
-    const move = await call('editor', 'update_diagram', { diagram_id: rootId, update_elements: [{ id: web.id, geometry: { x: 777 } }] });
+    const move = await call('editor', 'update_diagram', {
+      diagram_id: rootId,
+      update_elements: [{ id: web.id, geometry: { x: 777 } }],
+    });
     assert.equal((await d.accept('owner', move.data.changeId)).status, 200);
     const afterMove = (await d.getDiagram(rootId)).elements.map(normalizeElement);
-    assert.equal(afterMove.find((e: any) => e.id === gateway.id)?.linkedDiagramId, childId, 'link preserved across later edits');
+    assert.equal(
+      afterMove.find((e: any) => e.id === gateway.id)?.linkedDiagramId,
+      childId,
+      'link preserved across later edits',
+    );
     assert.equal(afterMove.find((e: any) => e.id === web.id)?.geometry.x, 777);
-    assert.equal((await call('viewer', 'read_diagram', { diagram_id: rootId })).data.elements.find((e: any) => e.id === gateway.id).linkedDiagramId, childId);
+    assert.equal(
+      (await call('viewer', 'read_diagram', { diagram_id: rootId })).data.elements.find((e: any) => e.id === gateway.id)
+        .linkedDiagramId,
+      childId,
+    );
     step('the link reads back as linkedDiagramId the way the canvas loads it, and survives later accepted edits');
 
     const tree = await call('viewer', 'traverse_diagram_hierarchy', { diagram_id: rootId, direction: 'down' });
-    assert.deepEqual(tree.data.descendants.map((n: any) => n.id), [childId]);
+    assert.deepEqual(
+      tree.data.descendants.map((n: any) => n.id),
+      [childId],
+    );
     const up = await call('viewer', 'traverse_diagram_hierarchy', { diagram_id: childId, direction: 'up' });
-    assert.deepEqual(up.data.ancestors.map((n: any) => n.id), [rootId]);
+    assert.deepEqual(
+      up.data.ancestors.map((n: any) => n.id),
+      [rootId],
+    );
     step('traverse_diagram_hierarchy walks parents and children');
 
     assert.equal((await call('viewer', 'update_diagram', { diagram_id: rootId, name: 'x' })).isError, true);
-    const bad = await call('editor', 'update_diagram', { diagram_id: rootId, remove_element_ids: ['3f2b8a52-9f1f-4c37-a9a8-5d2f7b0d1c11'] });
+    const bad = await call('editor', 'update_diagram', {
+      diagram_id: rootId,
+      remove_element_ids: ['3f2b8a52-9f1f-4c37-a9a8-5d2f7b0d1c11'],
+    });
     assert.equal(bad.isError, true);
     assert.match(bad.text, /Unknown element id/);
-    assert.equal((await call('editor', 'import_mermaid', { workspace_id: workspaceId, name: 'x', mermaid_source: 'sequenceDiagram\n A->>B: hi' })).isError, true);
+    assert.equal(
+      (
+        await call('editor', 'import_mermaid', {
+          workspace_id: workspaceId,
+          name: 'x',
+          mermaid_source: 'sequenceDiagram\n A->>B: hi',
+        })
+      ).isError,
+      true,
+    );
     step('viewer writes, unknown element ids and unsupported Mermaid come back as tool errors');
   } finally {
     await d.cleanup();

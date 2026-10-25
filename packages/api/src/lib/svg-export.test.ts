@@ -3,7 +3,12 @@ import assert from 'node:assert/strict';
 import { renderDiagramSvg, type DiagramElementRow } from './svg-export.js';
 
 const row = (id: string, extra: Partial<DiagramElementRow>): DiagramElementRow => ({
-  id, type: 'rect', geometry: {}, style: {}, z_index: 0, ...extra,
+  id,
+  type: 'rect',
+  geometry: {},
+  style: {},
+  z_index: 0,
+  ...extra,
 });
 
 test('server SVG export draws connectors stored as fromId/toId (snake_case rows)', () => {

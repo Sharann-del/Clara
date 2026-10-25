@@ -95,11 +95,15 @@ export function ShareDialog({ open, kind, id, name, workspaceName, canManage, ba
 
   if (!open) return null;
   return (
-    <SubPage title={`Share “${name}”`} description="Who can open it, and whether there’s a public read-only link." backTo={backTo}>
+    <SubPage
+      title={`Share “${name}”`}
+      description="Who can open it, and whether there’s a public read-only link."
+      backTo={backTo}
+    >
       {unsupported ? (
         <p className="muted" style={{ fontSize: 14 }}>
-          Sharing single items needs a newer Clara API than this one. Until it's deployed, invite people to the workspace from
-          Members.
+          Sharing single items needs a newer Clara API than this one. Until it's deployed, invite people to the
+          workspace from Members.
         </p>
       ) : grants === null ? (
         <SkeletonRows rows={2} />
@@ -167,11 +171,22 @@ export function ShareDialog({ open, kind, id, name, workspaceName, canManage, ba
               <form onSubmit={add} className="invite-row">
                 <label className="field" style={{ flex: 1 }}>
                   Add a person
-                  <input className="input" type="email" placeholder="name@company.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  <input
+                    className="input"
+                    type="email"
+                    placeholder="name@company.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
                 </label>
                 <label className="field">
                   Access
-                  <select className="input" value={role} onChange={(e) => setRole(e.target.value as 'viewer' | 'editor')}>
+                  <select
+                    className="input"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value as 'viewer' | 'editor')}
+                  >
                     <option value="viewer">Can view</option>
                     <option value="editor">Can edit</option>
                   </select>
@@ -189,7 +204,15 @@ export function ShareDialog({ open, kind, id, name, workspaceName, canManage, ba
           <section className="share-section" aria-labelledby="share-public">
             <h3 id="share-public">Public link</h3>
             {links.length === 0 ? (
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: 10,
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                }}
+              >
                 <span className="muted" style={{ fontSize: 13.5 }}>
                   Off. Anyone with a link could view this {kind} without signing in.
                 </span>
@@ -205,7 +228,13 @@ export function ShareDialog({ open, kind, id, name, workspaceName, canManage, ba
                   <label className="sr-only" htmlFor={`link-${l.id}`}>
                     Public link
                   </label>
-                  <input id={`link-${l.id}`} className="input" readOnly value={publicUrl(l.token)} onFocus={(e) => e.currentTarget.select()} />
+                  <input
+                    id={`link-${l.id}`}
+                    className="input"
+                    readOnly
+                    value={publicUrl(l.token)}
+                    onFocus={(e) => e.currentTarget.select()}
+                  />
                   <button
                     type="button"
                     className="btn"
@@ -228,7 +257,10 @@ export function ShareDialog({ open, kind, id, name, workspaceName, canManage, ba
             )}
             {links.length > 0 && (
               <p className="field-hint" style={{ margin: '6px 0 0' }}>
-                Read-only. {kind === 'document' ? 'Diagrams embedded in the document are visible through the link too.' : 'Linked child diagrams need their own links.'}
+                Read-only.{' '}
+                {kind === 'document'
+                  ? 'Diagrams embedded in the document are visible through the link too.'
+                  : 'Linked child diagrams need their own links.'}
               </p>
             )}
           </section>

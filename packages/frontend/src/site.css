@@ -678,12 +678,22 @@ mark.hl {
   animation: drift-b 9s ease-in-out infinite;
 }
 @keyframes drift-a {
-  0%, 100% { transform: translate(18%, 30%); }
-  50% { transform: translate(52%, 58%); }
+  0%,
+  100% {
+    transform: translate(18%, 30%);
+  }
+  50% {
+    transform: translate(52%, 58%);
+  }
 }
 @keyframes drift-b {
-  0%, 100% { transform: translate(140%, 140%); }
-  50% { transform: translate(95%, 60%); }
+  0%,
+  100% {
+    transform: translate(140%, 140%);
+  }
+  50% {
+    transform: translate(95%, 60%);
+  }
 }
 .presence-row {
   display: flex;

@@ -3,7 +3,11 @@ import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/
 import { authenticateToken } from '../../api/src/lib/tokens.js';
 import { createMcpServer } from './tools.js';
 
-const json = (statusCode: number, body: unknown, headers: Record<string, string> = {}): APIGatewayProxyStructuredResultV2 => ({
+const json = (
+  statusCode: number,
+  body: unknown,
+  headers: Record<string, string> = {},
+): APIGatewayProxyStructuredResultV2 => ({
   statusCode,
   headers: { 'content-type': 'application/json', ...headers },
   body: JSON.stringify(body),
@@ -37,7 +41,11 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
   }
 
   const url = `https://${event.requestContext.domainName}${event.rawPath}${event.rawQueryString ? `?${event.rawQueryString}` : ''}`;
-  const body = event.body ? (event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString('utf8') : event.body) : undefined;
+  const body = event.body
+    ? event.isBase64Encoded
+      ? Buffer.from(event.body, 'base64').toString('utf8')
+      : event.body
+    : undefined;
   const request = new Request(url, { method, headers: event.headers as Record<string, string>, body });
 
   const server = createMcpServer({ userId: auth.userId, tokenId: auth.tokenId });

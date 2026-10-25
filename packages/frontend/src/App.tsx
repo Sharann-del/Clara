@@ -55,32 +55,32 @@ export default function App() {
   const { pathname } = useLocation();
   return (
     <ErrorBoundary resetKey={pathname}>
-    <Suspense fallback={<PageLoading />}>
-      <Routes>
-        <Route path="/" element={<RootRoute />} />
-        <Route path="/editor" element={<PlaygroundPage />} />
-        <Route path="/pricing" element={<PricingPage />} />
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="/docs" element={<DocsPage />} />
-        <Route path="/docs/:section" element={<DocsPage />} />
-        <Route path="/privacy" element={<PrivacyPage />} />
-        <Route path="/terms" element={<TermsPage />} />
-        <Route path="/signin" element={<SignInPage />} />
-        <Route path="/signup" element={<SignUpPage />} />
-        <Route path="/s/:token" element={<PublicViewPage />} />
-        <Route element={<AppArea />}>
-          <Route path="/app" element={<HomePage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          {/* Sub-pages (/share, /history, /members, /pending) render inside these so editor state survives. */}
-          <Route path="/workspaces/:workspaceId/*" element={<WorkspacePage />} />
-          <Route path="/documents/:documentId/*" element={<DocumentPage />} />
-          <Route path="/diagrams/:diagramId/*" element={<DiagramPage />} />
-          <Route path="/settings/tokens" element={<TokensPage />} />
-          <Route path="/shortcuts" element={<ShortcutsPage />} />
-        </Route>
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-    </Suspense>
+      <Suspense fallback={<PageLoading />}>
+        <Routes>
+          <Route path="/" element={<RootRoute />} />
+          <Route path="/editor" element={<PlaygroundPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/docs" element={<DocsPage />} />
+          <Route path="/docs/:section" element={<DocsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/signin" element={<SignInPage />} />
+          <Route path="/signup" element={<SignUpPage />} />
+          <Route path="/s/:token" element={<PublicViewPage />} />
+          <Route element={<AppArea />}>
+            <Route path="/app" element={<HomePage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            {/* Sub-pages (/share, /history, /members, /pending) render inside these so editor state survives. */}
+            <Route path="/workspaces/:workspaceId/*" element={<WorkspacePage />} />
+            <Route path="/documents/:documentId/*" element={<DocumentPage />} />
+            <Route path="/diagrams/:diagramId/*" element={<DiagramPage />} />
+            <Route path="/settings/tokens" element={<TokensPage />} />
+            <Route path="/shortcuts" element={<ShortcutsPage />} />
+          </Route>
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </Suspense>
     </ErrorBoundary>
   );
 }

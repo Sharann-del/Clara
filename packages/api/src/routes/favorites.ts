@@ -31,13 +31,20 @@ export async function favoriteRoutes(app: FastifyInstance) {
     const { kind, id } = req.params as { kind: string; id: string };
     if (kindOf(kind) === 'document') await loadDocument(req.user!.sub, id);
     else await loadDiagram(req.user!.sub, id);
-    await query('insert into favorites (user_id, resource_type, resource_id) values ($1, $2, $3) on conflict do nothing', [req.user!.sub, kind, id]);
+    await query(
+      'insert into favorites (user_id, resource_type, resource_id) values ($1, $2, $3) on conflict do nothing',
+      [req.user!.sub, kind, id],
+    );
     reply.code(204).send();
   });
 
   app.delete('/favorites/:kind/:id', async (req, reply) => {
     const { kind, id } = req.params as { kind: string; id: string };
-    await query('delete from favorites where user_id = $1 and resource_type = $2 and resource_id = $3', [req.user!.sub, kindOf(kind), id]);
+    await query('delete from favorites where user_id = $1 and resource_type = $2 and resource_id = $3', [
+      req.user!.sub,
+      kindOf(kind),
+      id,
+    ]);
     reply.code(204).send();
   });
 }

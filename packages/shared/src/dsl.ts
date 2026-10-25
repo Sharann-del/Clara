@@ -96,14 +96,21 @@ export function parseClaraDsl(text: string, issues?: ParseIssue[]): DslGraph {
       continue;
     }
 
-    issues?.push({ line: index + 1, message: `Not understood: "${line.length > 60 ? `${line.slice(0, 57)}...` : line}"` });
+    issues?.push({
+      line: index + 1,
+      message: `Not understood: "${line.length > 60 ? `${line.slice(0, 57)}...` : line}"`,
+    });
   }
 
   if (issues) {
     const known = new Set(nodes.map((n) => n.id));
     edges.forEach((e, i) => {
       const missing = [e.from, e.to].filter((id) => !known.has(id));
-      if (missing.length) issues.push({ line: edgeLines[i], message: `Edge skipped: no node named ${missing.map((id) => `"${id}"`).join(' or ')}` });
+      if (missing.length)
+        issues.push({
+          line: edgeLines[i],
+          message: `Edge skipped: no node named ${missing.map((id) => `"${id}"`).join(' or ')}`,
+        });
     });
     issues.sort((a, b) => a.line - b.line);
   }
@@ -145,7 +152,13 @@ export function layoutToElements(graph: DslGraph): DiagramElement[] {
     elements.push({
       id: elId,
       type: 'rect',
-      geometry: { x: pos.x - pos.width / 2, y: pos.y - pos.height / 2, width: pos.width, height: pos.height, text: node.label },
+      geometry: {
+        x: pos.x - pos.width / 2,
+        y: pos.y - pos.height / 2,
+        width: pos.width,
+        height: pos.height,
+        text: node.label,
+      },
       style: { fill: '#eff6ff', stroke: '#2563eb' },
       zIndex: 1,
     });
@@ -175,9 +188,7 @@ export function layoutToElements(graph: DslGraph): DiagramElement[] {
 
   for (const group of graph.groups) {
     const memberEls = group.memberIds.map((id) => idByDslId.get(id)).filter(Boolean) as string[];
-    const positions = memberEls
-      .map((id) => elements.find((e) => e.id === id))
-      .filter(Boolean) as DiagramElement[];
+    const positions = memberEls.map((id) => elements.find((e) => e.id === id)).filter(Boolean) as DiagramElement[];
     if (positions.length === 0) continue;
     const xs = positions.map((p) => Number(p.geometry.x));
     const ys = positions.map((p) => Number(p.geometry.y));
@@ -257,7 +268,10 @@ export function parseMermaid(text: string, issues?: ParseIssue[]): DslGraph {
   // Other Mermaid diagram types: refuse the whole source rather than read their header as a node.
   const kind = statements[0]?.text.match(NON_FLOWCHART)?.[0];
   if (kind) {
-    issues?.push({ line: statements[0].line, message: `Only flowcharts are supported; "${kind}" diagrams can't be imported` });
+    issues?.push({
+      line: statements[0].line,
+      message: `Only flowcharts are supported; "${kind}" diagrams can't be imported`,
+    });
     return { nodes: [], edges: [], groups: [] };
   }
 
@@ -280,9 +294,7 @@ export function parseMermaid(text: string, issues?: ParseIssue[]): DslGraph {
       continue;
     }
 
-    const m = line.match(
-      new RegExp(`^${nodeRef.source}\\s*--[->]*>(?:\\|([^|]*)\\|)?\\s*${nodeRef.source}$`),
-    );
+    const m = line.match(new RegExp(`^${nodeRef.source}\\s*--[->]*>(?:\\|([^|]*)\\|)?\\s*${nodeRef.source}$`));
     if (!m) {
       const unsupported = /^(subgraph|end|classDef|class|style|linkStyle|click|direction)\b/i.test(line);
       issues?.push({
@@ -310,7 +322,11 @@ export function parseMermaid(text: string, issues?: ParseIssue[]): DslGraph {
 
 /** Mermaid-safe label text: no quotes (they delimit the label) and no brackets/pipes. */
 function mermaidLabel(text: string): string {
-  return text.replace(/"/g, "'").replace(/[[\]|]/g, '').replace(/\s+/g, ' ').trim();
+  return text
+    .replace(/"/g, "'")
+    .replace(/[[\]|]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /**

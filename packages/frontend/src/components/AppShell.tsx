@@ -32,7 +32,18 @@ interface Props {
   children: ReactNode;
 }
 
-export function AppShell({ workspace, sidebar, title, actions, sidebarMode = 'docked', pendingCount, showPending, showMembers, bleed, children }: Props) {
+export function AppShell({
+  workspace,
+  sidebar,
+  title,
+  actions,
+  sidebarMode = 'docked',
+  pendingCount,
+  showPending,
+  showMembers,
+  bleed,
+  children,
+}: Props) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
   useEffect(() => setDrawerOpen(false), [location.pathname]);
@@ -49,7 +60,13 @@ export function AppShell({ workspace, sidebar, title, actions, sidebarMode = 'do
         Skip to content
       </a>
       <aside className="shell-sidebar" id="app-sidebar" aria-label="Navigation">
-        <Sidebar workspace={workspace} pendingCount={pendingCount} showPending={showPending} showMembers={showMembers} onClose={() => setDrawerOpen(false)}>
+        <Sidebar
+          workspace={workspace}
+          pendingCount={pendingCount}
+          showPending={showPending}
+          showMembers={showMembers}
+          onClose={() => setDrawerOpen(false)}
+        >
           {sidebar}
         </Sidebar>
       </aside>
@@ -102,7 +119,12 @@ function Sidebar({
   const navigate = useNavigate();
 
   async function newWorkspace() {
-    const name = await prompt({ title: 'New workspace', label: 'Name', placeholder: 'e.g. Platform team', confirmLabel: 'Create workspace' });
+    const name = await prompt({
+      title: 'New workspace',
+      label: 'Name',
+      placeholder: 'e.g. Platform team',
+      confirmLabel: 'Create workspace',
+    });
     if (!name) return;
     try {
       const ws = await api.createWorkspace(name);
@@ -117,7 +139,12 @@ function Sidebar({
     <div className="sidebar-inner">
       <div className="sidebar-top">
         <Logo to="/" />
-        <button type="button" className="btn btn-ghost btn-icon btn-sm shell-close-btn" aria-label="Close navigation" onClick={onClose}>
+        <button
+          type="button"
+          className="btn btn-ghost btn-icon btn-sm shell-close-btn"
+          aria-label="Close navigation"
+          onClick={onClose}
+        >
           <Icon name="x" />
         </button>
       </div>
@@ -136,7 +163,11 @@ function Sidebar({
           </>
         }
         items={[
-          ...(workspaces ?? []).map((w) => ({ label: w.name, icon: 'folder' as const, onSelect: () => navigate(`/workspaces/${w.id}`) })),
+          ...(workspaces ?? []).map((w) => ({
+            label: w.name,
+            icon: 'folder' as const,
+            onSelect: () => navigate(`/workspaces/${w.id}`),
+          })),
           'separator' as const,
           { label: 'New workspace…', icon: 'plus', onSelect: newWorkspace },
         ]}

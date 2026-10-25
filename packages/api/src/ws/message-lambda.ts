@@ -56,7 +56,13 @@ const messageSchema = z.discriminatedUnion('action', [
     }),
   }),
   // Ephemeral, unpersisted — a live preview of a drag/resize in progress.
-  z.object({ action: z.literal('element.moving'), id: z.string(), x: z.number(), y: z.number(), stateId: z.string().uuid().nullish() }),
+  z.object({
+    action: z.literal('element.moving'),
+    id: z.string(),
+    x: z.number(),
+    y: z.number(),
+    stateId: z.string().uuid().nullish(),
+  }),
   z.object({
     action: z.literal('element.update'),
     id: z.string(),
@@ -94,7 +100,8 @@ async function deny(connectionId: string) {
 }
 
 /** Client keep-alive (API Gateway's idle timeout is 10 minutes): traffic alone resets it, nothing to do or reply. */
-const isPing = (body: string | undefined) => body !== undefined && body.length < 64 && /^\s*\{\s*"action"\s*:\s*"ping"\s*\}\s*$/.test(body);
+const isPing = (body: string | undefined) =>
+  body !== undefined && body.length < 64 && /^\s*\{\s*"action"\s*:\s*"ping"\s*\}\s*$/.test(body);
 
 export async function handler(event: WsMessageEvent) {
   if (isPing(event.body)) return { statusCode: 200 };
@@ -145,7 +152,15 @@ export async function handler(event: WsMessageEvent) {
       const { rows } = await query(
         `insert into diagram_elements (id, diagram_id, type, geometry, style, z_index, linked_diagram_id)
          values ($1, $2, $3, $4, $5, $6, $7) returning *`,
-        [el.id, conn.resourceId, el.type, JSON.stringify(el.geometry), JSON.stringify(el.style), el.zIndex, el.linkedDiagramId ?? null],
+        [
+          el.id,
+          conn.resourceId,
+          el.type,
+          JSON.stringify(el.geometry),
+          JSON.stringify(el.style),
+          el.zIndex,
+          el.linkedDiagramId ?? null,
+        ],
       );
       await broadcastToRoom(conn.room, { type: 'element.created', element: rows[0] });
       break;

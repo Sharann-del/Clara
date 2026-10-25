@@ -29,11 +29,17 @@ export function SiteHeader() {
           ))}
           <div className="site-nav-mobile-cta show-mobile">
             {idToken ? (
-              <Link to="/app" className="btn btn-primary btn-lg">Open Clara</Link>
+              <Link to="/app" className="btn btn-primary btn-lg">
+                Open Clara
+              </Link>
             ) : (
               <>
-                <Link to="/signin" className="btn btn-lg">Sign in</Link>
-                <Link to="/signup" className="btn btn-primary btn-lg">Start free</Link>
+                <Link to="/signin" className="btn btn-lg">
+                  Sign in
+                </Link>
+                <Link to="/signup" className="btn btn-primary btn-lg">
+                  Start free
+                </Link>
               </>
             )}
           </div>
@@ -45,8 +51,12 @@ export function SiteHeader() {
             </Link>
           ) : (
             <>
-              <Link to="/signin" className="btn btn-ghost hide-mobile">Sign in</Link>
-              <Link to="/signup" className="btn btn-primary hide-mobile">Start free</Link>
+              <Link to="/signin" className="btn btn-ghost hide-mobile">
+                Sign in
+              </Link>
+              <Link to="/signup" className="btn btn-primary hide-mobile">
+                Start free
+              </Link>
             </>
           )}
           <button
@@ -105,7 +115,9 @@ export function SiteFooter() {
 export function SiteLayout({ children, bare }: { children: ReactNode; bare?: boolean }) {
   return (
     <div className="site">
-      <a href="#main" className="skip-link">Skip to content</a>
+      <a href="#main" className="skip-link">
+        Skip to content
+      </a>
       <SiteHeader />
       <main id="main" className="site-main" tabIndex={-1}>
         {children}

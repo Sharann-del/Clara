@@ -1,4 +1,8 @@
-import { ApiGatewayManagementApiClient, GoneException, PostToConnectionCommand } from '@aws-sdk/client-apigatewaymanagementapi';
+import {
+  ApiGatewayManagementApiClient,
+  GoneException,
+  PostToConnectionCommand,
+} from '@aws-sdk/client-apigatewaymanagementapi';
 import { config } from '../config.js';
 import { deleteConnection, listRoomConnections } from './dynamo.js';
 

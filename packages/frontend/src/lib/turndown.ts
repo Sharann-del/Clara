@@ -2,7 +2,12 @@ import TurndownService from 'turndown';
 import { embedBlock } from './markdown';
 
 /** Rich view (HTML) -> markdown, preserving diagram embeds and tables. */
-export const turndown = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced', bulletListMarker: '-', emDelimiter: '*' });
+export const turndown = new TurndownService({
+  headingStyle: 'atx',
+  codeBlockStyle: 'fenced',
+  bulletListMarker: '-',
+  emDelimiter: '*',
+});
 
 turndown.addRule('clara-diagram', {
   filter: (node) => node.nodeName === 'DIV' && (node as HTMLElement).classList.contains('md-embed'),
@@ -14,7 +19,12 @@ turndown.addRule('clara-diagram', {
   },
 });
 
-const cell = (n: Node) => (turndown.turndown((n as HTMLElement).innerHTML || '').replace(/\n+/g, ' ').replace(/\|/g, '\\|').trim() || ' ');
+const cell = (n: Node) =>
+  turndown
+    .turndown((n as HTMLElement).innerHTML || '')
+    .replace(/\n+/g, ' ')
+    .replace(/\|/g, '\\|')
+    .trim() || ' ';
 
 turndown.addRule('table', {
   filter: 'table',

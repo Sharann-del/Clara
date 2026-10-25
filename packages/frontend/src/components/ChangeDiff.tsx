@@ -26,9 +26,10 @@ function TextDiff({ before, after }: { before: string; after: string }) {
         const mark = part.added ? '+ ' : part.removed ? '- ' : '  ';
         const lines = part.value.replace(/\n$/, '').split('\n');
         // Collapse long unchanged runs to keep the review focused on what moved.
-        const shown = !part.added && !part.removed && lines.length > 6
-          ? [...lines.slice(0, 2), `  … ${lines.length - 4} unchanged lines …`, ...lines.slice(-2)]
-          : lines;
+        const shown =
+          !part.added && !part.removed && lines.length > 6
+            ? [...lines.slice(0, 2), `  … ${lines.length - 4} unchanged lines …`, ...lines.slice(-2)]
+            : lines;
         return shown.map((line, j) => (
           <div className={cls} key={`${i}-${j}`}>
             {line.startsWith('  …') ? line : mark + line}
@@ -41,9 +42,11 @@ function TextDiff({ before, after }: { before: string; after: string }) {
 
 function DocumentDiff({ change }: { change: PendingChange }) {
   const proposed = change.diff_payload.proposed as Partial<DocumentFields>;
-  const base = (change.operation === 'update'
-    ? change.current ?? (change.diff_payload.base as DocumentFields | undefined)
-    : undefined) as DocumentFields | undefined;
+  const base = (
+    change.operation === 'update'
+      ? (change.current ?? (change.diff_payload.base as DocumentFields | undefined))
+      : undefined
+  ) as DocumentFields | undefined;
   const created = change.operation === 'create';
 
   const rows: JSX.Element[] = [];
@@ -52,14 +55,19 @@ function DocumentDiff({ change }: { change: PendingChange }) {
   }
   if (proposed.tags !== undefined && !sameList(proposed.tags, base?.tags ?? [])) {
     rows.push(
-      <ScalarRow key="g" label="Tags" before={base ? base.tags.join(', ') : undefined} after={proposed.tags.join(', ')} />,
+      <ScalarRow
+        key="g"
+        label="Tags"
+        before={base ? base.tags.join(', ') : undefined}
+        after={proposed.tags.join(', ')}
+      />,
     );
   }
   const body = proposed.contentMd !== undefined && proposed.contentMd !== base?.contentMd;
   return (
     <>
       {rows}
-      {body && <TextDiff before={created ? '' : base?.contentMd ?? ''} after={proposed.contentMd!} />}
+      {body && <TextDiff before={created ? '' : (base?.contentMd ?? '')} after={proposed.contentMd!} />}
       {rows.length === 0 && !body && <p className="muted">No visible differences.</p>}
     </>
   );
@@ -79,11 +87,14 @@ function Value({ v }: { v: unknown }) {
 
 function DiagramDiff({ change }: { change: PendingChange }) {
   const proposed = change.diff_payload.proposed as {
-    name?: string; tags?: string[]; parentDiagramId?: string | null; elements?: DiagramElement[];
+    name?: string;
+    tags?: string[];
+    parentDiagramId?: string | null;
+    elements?: DiagramElement[];
     source?: { format: string };
   };
   const created = change.operation === 'create';
-  const base = (created ? undefined : change.current ?? change.diff_payload.base) as DiagramFields | undefined;
+  const base = (created ? undefined : (change.current ?? change.diff_payload.base)) as DiagramFields | undefined;
   const d = proposed.elements ? diffElements(base?.elements ?? [], proposed.elements) : undefined;
 
   return (
@@ -100,7 +111,12 @@ function DiagramDiff({ change }: { change: PendingChange }) {
           <ins>{proposed.parentDiagramId ? <code>{proposed.parentDiagramId}</code> : 'top level'}</ins>
         </div>
       )}
-      {proposed.source && <div className="diff-row"><span className="diff-label">Source</span><ins>{proposed.source.format} source replaced</ins></div>}
+      {proposed.source && (
+        <div className="diff-row">
+          <span className="diff-label">Source</span>
+          <ins>{proposed.source.format} source replaced</ins>
+        </div>
+      )}
       {d && (
         <div className="diff-elements">
           <div className="muted" style={{ marginBottom: 4 }}>
@@ -108,7 +124,9 @@ function DiagramDiff({ change }: { change: PendingChange }) {
             {d.unchangedCount > 0 && ` · ${d.unchangedCount} unchanged`}
           </div>
           {d.added.map((e) => (
-            <div key={e.id} className="diff-el"><ElementLine el={e} mark="+" /></div>
+            <div key={e.id} className="diff-el">
+              <ElementLine el={e} mark="+" />
+            </div>
           ))}
           {d.changed.map((c) => (
             <div key={c.id} className="diff-el">
@@ -118,15 +136,31 @@ function DiagramDiff({ change }: { change: PendingChange }) {
                   {f === 'geometry' || f === 'style' ? (
                     // Show only the keys that moved inside geometry/style.
                     Object.keys({ ...c.before[f], ...c.after[f] })
-                      .filter((k) => JSON.stringify((c.before[f] as any)?.[k]) !== JSON.stringify((c.after[f] as any)?.[k]))
+                      .filter(
+                        (k) => JSON.stringify((c.before[f] as any)?.[k]) !== JSON.stringify((c.after[f] as any)?.[k]),
+                      )
                       .map((k) => (
                         <div key={k}>
-                          {f}.{k}: <del><Value v={(c.before[f] as any)?.[k] ?? '—'} /></del> → <ins><Value v={(c.after[f] as any)?.[k] ?? '—'} /></ins>
+                          {f}.{k}:{' '}
+                          <del>
+                            <Value v={(c.before[f] as any)?.[k] ?? '—'} />
+                          </del>{' '}
+                          →{' '}
+                          <ins>
+                            <Value v={(c.after[f] as any)?.[k] ?? '—'} />
+                          </ins>
                         </div>
                       ))
                   ) : (
                     <div>
-                      {f}: <del><Value v={c.before[f] ?? '—'} /></del> → <ins><Value v={c.after[f] ?? '—'} /></ins>
+                      {f}:{' '}
+                      <del>
+                        <Value v={c.before[f] ?? '—'} />
+                      </del>{' '}
+                      →{' '}
+                      <ins>
+                        <Value v={c.after[f] ?? '—'} />
+                      </ins>
                     </div>
                   )}
                 </div>
@@ -134,7 +168,9 @@ function DiagramDiff({ change }: { change: PendingChange }) {
             </div>
           ))}
           {d.removed.map((e) => (
-            <div key={e.id} className="diff-el"><ElementLine el={e} mark="-" /></div>
+            <div key={e.id} className="diff-el">
+              <ElementLine el={e} mark="-" />
+            </div>
           ))}
         </div>
       )}

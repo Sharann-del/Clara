@@ -1,5 +1,6 @@
 /** Single source for keyboard shortcuts: the docs page and the in-app "?" sheet both render this. */
-export const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+export const isMac =
+  typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 export const MOD = isMac ? '⌘' : 'Ctrl';
 
 export interface Shortcut {

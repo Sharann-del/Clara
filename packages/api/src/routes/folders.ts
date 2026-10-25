@@ -4,7 +4,10 @@ import { query } from '../db.js';
 import { assertWorkspaceRole, BadRequestError, NotFoundError } from '../lib/authz.js';
 
 async function loadFolder(id: string) {
-  const { rows } = await query<{ id: string; workspace_id: string; parent_folder_id: string | null }>('select * from folders where id = $1', [id]);
+  const { rows } = await query<{ id: string; workspace_id: string; parent_folder_id: string | null }>(
+    'select * from folders where id = $1',
+    [id],
+  );
   if (!rows[0]) throw new NotFoundError('Folder not found');
   return rows[0];
 }
@@ -13,7 +16,8 @@ async function loadFolder(id: string) {
 async function assertValidParent(workspaceId: string, parentId: string | null | undefined, folderId?: string) {
   if (!parentId) return;
   const parent = await loadFolder(parentId).catch(() => undefined);
-  if (!parent || parent.workspace_id !== workspaceId) throw new BadRequestError('Parent folder not found in this workspace');
+  if (!parent || parent.workspace_id !== workspaceId)
+    throw new BadRequestError('Parent folder not found in this workspace');
   if (!folderId) return;
   const { rows } = await query(
     `with recursive up as (
@@ -37,13 +41,14 @@ export async function folderRoutes(app: FastifyInstance) {
   app.post('/workspaces/:workspaceId/folders', async (req, reply) => {
     const { workspaceId } = req.params as { workspaceId: string };
     await assertWorkspaceRole(req.user!.sub, workspaceId, 'editor');
-    const body = z.object({ name: z.string().trim().min(1).max(200), parentFolderId: z.string().uuid().nullish() }).parse(req.body);
+    const body = z
+      .object({ name: z.string().trim().min(1).max(200), parentFolderId: z.string().uuid().nullish() })
+      .parse(req.body);
     await assertValidParent(workspaceId, body.parentFolderId);
-    const { rows } = await query('insert into folders (workspace_id, parent_folder_id, name) values ($1, $2, $3) returning *', [
-      workspaceId,
-      body.parentFolderId ?? null,
-      body.name,
-    ]);
+    const { rows } = await query(
+      'insert into folders (workspace_id, parent_folder_id, name) values ($1, $2, $3) returning *',
+      [workspaceId, body.parentFolderId ?? null, body.name],
+    );
     reply.code(201).send(rows[0]);
   });
 
@@ -51,7 +56,9 @@ export async function folderRoutes(app: FastifyInstance) {
     const { id } = req.params as { id: string };
     const folder = await loadFolder(id);
     await assertWorkspaceRole(req.user!.sub, folder.workspace_id, 'editor');
-    const body = z.object({ name: z.string().trim().min(1).max(200).optional(), parentFolderId: z.string().uuid().nullish() }).parse(req.body);
+    const body = z
+      .object({ name: z.string().trim().min(1).max(200).optional(), parentFolderId: z.string().uuid().nullish() })
+      .parse(req.body);
     const moving = req.body != null && typeof req.body === 'object' && 'parentFolderId' in req.body;
     if (moving) await assertValidParent(folder.workspace_id, body.parentFolderId, id);
     const { rows } = await query(

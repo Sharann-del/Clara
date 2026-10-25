@@ -15,7 +15,12 @@ async function loadOwner(resourceType: 'document' | 'diagram', id: string): Prom
   return rows[0];
 }
 
-async function checkRole(userId: string, resourceType: 'document' | 'diagram', resource: OwnedResource & { id?: unknown }, min: Role) {
+async function checkRole(
+  userId: string,
+  resourceType: 'document' | 'diagram',
+  resource: OwnedResource & { id?: unknown },
+  min: Role,
+) {
   const role = await effectiveResourceRole(userId, resource.workspace_id, resourceType, String(resource.id));
   return roleAtLeast(role, min);
 }
@@ -78,10 +83,7 @@ export async function versionRoutes(app: FastifyInstance) {
           );
           return rows[0];
         } else {
-          const currentElements = await client.query(
-            'select * from diagram_elements where diagram_id = $1',
-            [id],
-          );
+          const currentElements = await client.query('select * from diagram_elements where diagram_id = $1', [id]);
           await recordVersion(
             'diagram',
             id,

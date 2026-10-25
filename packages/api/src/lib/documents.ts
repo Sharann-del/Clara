@@ -36,7 +36,10 @@ export async function listDocuments(userId: string, workspaceId: string, folderI
 
 /** Loads a document and the caller's effective role on it (workspace role or a direct share). */
 export async function loadDocument(userId: string, id: string, min: Role = 'viewer') {
-  const { rows } = await query<Record<string, any> & { id: string; workspace_id: string }>('select * from documents where id = $1', [id]);
+  const { rows } = await query<Record<string, any> & { id: string; workspace_id: string }>(
+    'select * from documents where id = $1',
+    [id],
+  );
   const doc = rows[0];
   if (!doc) throw new NotFoundError('Not found');
   const role = await assertResourceRole(userId, 'document', doc, min);

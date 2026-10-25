@@ -27,7 +27,9 @@ export function TagEditor({
     if (t && !tags.includes(t)) setTags([...tags, t]);
     setDraft('');
   };
-  const unused = suggestions.filter((s) => !tags.includes(s) && (!draft || s.includes(normalizeTag(draft)))).slice(0, 10);
+  const unused = suggestions
+    .filter((s) => !tags.includes(s) && (!draft || s.includes(normalizeTag(draft))))
+    .slice(0, 10);
 
   return (
     <Dialog
@@ -56,7 +58,12 @@ export function TagEditor({
         {tags.map((t) => (
           <span key={t} className="tag">
             {t}
-            <button type="button" className="tag-x" aria-label={`Remove tag ${t}`} onClick={() => setTags(tags.filter((x) => x !== t))}>
+            <button
+              type="button"
+              className="tag-x"
+              aria-label={`Remove tag ${t}`}
+              onClick={() => setTags(tags.filter((x) => x !== t))}
+            >
               <Icon name="x" size={11} />
             </button>
           </span>

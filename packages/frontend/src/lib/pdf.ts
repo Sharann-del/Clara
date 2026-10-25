@@ -3,7 +3,13 @@
  * no PDF library. The JPEG is embedded as-is (DCTDecode) and scaled to fill the page.
  * Page size is in PDF points (1/72 in).
  */
-export function jpegToPdf(jpeg: Uint8Array, imgWidth: number, imgHeight: number, pageWidth: number, pageHeight: number): Uint8Array {
+export function jpegToPdf(
+  jpeg: Uint8Array,
+  imgWidth: number,
+  imgHeight: number,
+  pageWidth: number,
+  pageHeight: number,
+): Uint8Array {
   const enc = new TextEncoder();
   const chunks: Uint8Array[] = [];
   const offsets: number[] = [];
@@ -26,7 +32,10 @@ export function jpegToPdf(jpeg: Uint8Array, imgWidth: number, imgHeight: number,
   push('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
   obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
   obj(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
-  obj(3, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${w} ${h}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>`);
+  obj(
+    3,
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${w} ${h}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>`,
+  );
   offsets[4] = length;
   push(
     `4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${imgWidth} /Height ${imgHeight} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>\nstream\n`,

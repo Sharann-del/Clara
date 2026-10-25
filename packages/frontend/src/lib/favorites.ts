@@ -48,13 +48,19 @@ export function useFavorites() {
   const [favorites, setFavorites] = useState<Favorite[]>(cache ?? []);
   useEffect(() => {
     listeners.add(setFavorites);
-    if (!cache) load().then(publish).catch(() => publish([]));
+    if (!cache)
+      load()
+        .then(publish)
+        .catch(() => publish([]));
     return () => {
       listeners.delete(setFavorites);
     };
   }, []);
 
-  const isFavorite = useCallback((kind: string, id: string) => favorites.some((f) => f.kind === kind && f.id === id), [favorites]);
+  const isFavorite = useCallback(
+    (kind: string, id: string) => favorites.some((f) => f.kind === kind && f.id === id),
+    [favorites],
+  );
 
   const toggle = useCallback(async (f: Favorite) => {
     const current = cache ?? [];

@@ -19,14 +19,24 @@ export function EmbedPortals({ targets, publicToken }: { targets: HTMLElement[];
       {targets.map((el, i) => {
         const id = el.getAttribute('data-diagram-id');
         const h = Number(el.getAttribute('data-height')) || undefined;
-        return id ? createPortal(<DiagramEmbed id={id} height={h} publicToken={publicToken} />, el, `${id}-${i}`) : null;
+        return id
+          ? createPortal(<DiagramEmbed id={id} height={h} publicToken={publicToken} />, el, `${id}-${i}`)
+          : null;
       })}
     </>
   );
 }
 
 /** Rendered, read-only markdown with live diagram embeds. */
-export function MarkdownView({ markdown, publicToken, className = '' }: { markdown: string; publicToken?: string; className?: string }) {
+export function MarkdownView({
+  markdown,
+  publicToken,
+  className = '',
+}: {
+  markdown: string;
+  publicToken?: string;
+  className?: string;
+}) {
   const html = useMemo(() => renderMarkdown(markdown), [markdown]);
   const ref = useRef<HTMLDivElement>(null);
   const [targets] = useEmbedTargets(ref, [html]);

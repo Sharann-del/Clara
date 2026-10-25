@@ -10,7 +10,9 @@ export function NotFoundPage() {
   return (
     <SiteLayout>
       <div className="notfound wrap">
-        <span className="code404">edge you -&gt; {pathname.length > 40 ? `${pathname.slice(0, 37)}…` : pathname}  # no such node</span>
+        <span className="code404">
+          edge you -&gt; {pathname.length > 40 ? `${pathname.slice(0, 37)}…` : pathname} # no such node
+        </span>
         <h1>This page doesn't exist.</h1>
         <p>The link may be old, or the page may have moved. These are good places to pick up from.</p>
         <div className="cta-row">

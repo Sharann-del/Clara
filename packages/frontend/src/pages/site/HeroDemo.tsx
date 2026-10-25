@@ -69,11 +69,16 @@ export function HeroDemo() {
     if (!showPreview && !flash) return undefined;
     const color = flash ? GREEN : ACCENT;
     const added = new Set(
-      compiled.elements.filter((e) => e.type !== 'connector' && PROPOSAL.addedLabels.has(String(e.geometry.text))).map((e) => e.id!),
+      compiled.elements
+        .filter((e) => e.type !== 'connector' && PROPOSAL.addedLabels.has(String(e.geometry.text)))
+        .map((e) => e.id!),
     );
     const out: Record<string, string> = {};
     for (const el of compiled.elements) {
-      if (added.has(el.id!) || (el.type === 'connector' && (added.has(el.geometry.fromId as string) || added.has(el.geometry.toId as string)))) {
+      if (
+        added.has(el.id!) ||
+        (el.type === 'connector' && (added.has(el.geometry.fromId as string) || added.has(el.geometry.toId as string)))
+      ) {
         out[el.id!] = color;
       }
     }
@@ -98,7 +103,11 @@ export function HeroDemo() {
   }
 
   return (
-    <div className="demo" role="region" aria-label="Interactive demo: edit the diagram code and review an AI-proposed change">
+    <div
+      className="demo"
+      role="region"
+      aria-label="Interactive demo: edit the diagram code and review an AI-proposed change"
+    >
       <div className="demo-bar">
         <Icon name="code" size={14} />
         <span className="demo-file">orders.clara</span>
@@ -154,9 +163,7 @@ function ProposalCard({
         <div className={`proposal-result ${phase === 'accepted' ? 'ok' : ''}`}>
           <Icon name={phase === 'accepted' ? 'check' : 'x'} />
           <span>
-            {phase === 'accepted'
-              ? 'Accepted. The previous version is in history.'
-              : 'Rejected. Nothing changed.'}
+            {phase === 'accepted' ? 'Accepted. The previous version is in history.' : 'Rejected. Nothing changed.'}
           </span>
         </div>
         <button type="button" className="btn btn-sm btn-ghost" onClick={onReset}>

@@ -22,7 +22,8 @@ export function isMissingRoute(err: unknown): boolean {
 
 /** Message suitable for a toast: network failures get a plain-language explanation. */
 export function errorMessage(err: unknown): string {
-  if (err instanceof TypeError && /fetch|network/i.test(err.message)) return 'Can’t reach Clara. Check your connection and try again.';
+  if (err instanceof TypeError && /fetch|network/i.test(err.message))
+    return 'Can’t reach Clara. Check your connection and try again.';
   return (err as Error)?.message || 'Something went wrong';
 }
 
@@ -177,7 +178,10 @@ export interface PublicDiagram {
 }
 
 export type PublicResource =
-  | { kind: 'document'; document: { id: string; title: string; content_md: string; tags: string[]; updated_at: string } }
+  | {
+      kind: 'document';
+      document: { id: string; title: string; content_md: string; tags: string[]; updated_at: string };
+    }
   | { kind: 'diagram'; diagram: PublicDiagram };
 
 export interface SearchResult {
@@ -244,8 +248,10 @@ export interface PendingChange {
 export const api = {
   me: () => request<{ sub: string; email?: string }>('/me'),
   listFavorites: () => request<{ kind: 'document' | 'diagram'; id: string; name: string }[]>('/favorites'),
-  addFavorite: (kind: 'document' | 'diagram', id: string) => request<void>(`/favorites/${kind}/${id}`, { method: 'PUT' }),
-  removeFavorite: (kind: 'document' | 'diagram', id: string) => request<void>(`/favorites/${kind}/${id}`, { method: 'DELETE' }),
+  addFavorite: (kind: 'document' | 'diagram', id: string) =>
+    request<void>(`/favorites/${kind}/${id}`, { method: 'PUT' }),
+  removeFavorite: (kind: 'document' | 'diagram', id: string) =>
+    request<void>(`/favorites/${kind}/${id}`, { method: 'DELETE' }),
   onboard: () => request<OnboardingResult>('/onboarding', { method: 'POST' }),
   search: (q: string, limit = 20) => request<SearchResult[]>(`/search?q=${encodeURIComponent(q)}&limit=${limit}`),
 
@@ -257,7 +263,10 @@ export const api = {
     request<Workspace>(`/workspaces/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
   deleteWorkspace: (id: string) => request<void>(`/workspaces/${id}`, { method: 'DELETE' }),
   setMemberRole: (workspaceId: string, userId: string, role: Role) =>
-    request<Member>(`/workspaces/${workspaceId}/members/${userId}`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+    request<Member>(`/workspaces/${workspaceId}/members/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    }),
   removeMember: (workspaceId: string, userId: string) =>
     request<void>(`/workspaces/${workspaceId}/members/${userId}`, { method: 'DELETE' }),
   listMembers: (workspaceId: string) => request<Member[]>(`/workspaces/${workspaceId}/members`),
@@ -274,32 +283,31 @@ export const api = {
       body: JSON.stringify({ name, parentFolderId }),
     }),
 
-  renameFolder: (id: string, name: string) => request<Folder>(`/folders/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
+  renameFolder: (id: string, name: string) =>
+    request<Folder>(`/folders/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
   moveFolder: (id: string, parentFolderId: string | null) =>
     request<Folder>(`/folders/${id}`, { method: 'PATCH', body: JSON.stringify({ parentFolderId }) }),
   deleteFolder: (id: string) => request<void>(`/folders/${id}`, { method: 'DELETE' }),
 
   listDocuments: (workspaceId: string, folderId?: string) =>
-    request<DocumentSummary[]>(
-      `/workspaces/${workspaceId}/documents${folderId ? `?folderId=${folderId}` : ''}`,
-    ),
+    request<DocumentSummary[]>(`/workspaces/${workspaceId}/documents${folderId ? `?folderId=${folderId}` : ''}`),
   createDocument: (workspaceId: string, title: string, folderId?: string | null) =>
     request<DocumentFull>(`/workspaces/${workspaceId}/documents`, {
       method: 'POST',
       body: JSON.stringify({ title, folderId }),
     }),
   getDocument: (id: string) => request<DocumentFull>(`/documents/${id}`),
-  updateDocument: (id: string, patch: Partial<{ title: string; contentMd: string; tags: string[]; folderId: string | null }>) =>
-    request<DocumentFull>(`/documents/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
+  updateDocument: (
+    id: string,
+    patch: Partial<{ title: string; contentMd: string; tags: string[]; folderId: string | null }>,
+  ) => request<DocumentFull>(`/documents/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
   deleteDocument: (id: string) => request<void>(`/documents/${id}`, { method: 'DELETE' }),
   documentVersions: (id: string) => request<VersionSummary[]>(`/documents/${id}/versions`),
   restoreDocumentVersion: (id: string, versionId: string) =>
     request<DocumentFull>(`/documents/${id}/versions/${versionId}/restore`, { method: 'POST' }),
 
   listDiagrams: (workspaceId: string, folderId?: string) =>
-    request<DiagramSummary[]>(
-      `/workspaces/${workspaceId}/diagrams${folderId ? `?folderId=${folderId}` : ''}`,
-    ),
+    request<DiagramSummary[]>(`/workspaces/${workspaceId}/diagrams${folderId ? `?folderId=${folderId}` : ''}`),
   createDiagram: (workspaceId: string, name: string, folderId?: string | null, parentDiagramId?: string | null) =>
     request<DiagramSummary>(`/workspaces/${workspaceId}/diagrams`, {
       method: 'POST',
@@ -309,8 +317,10 @@ export const api = {
     const d = await request<Omit<DiagramFull, 'elements'> & { elements: Record<string, unknown>[] }>(`/diagrams/${id}`);
     return { ...d, elements: d.elements.map(normalizeElement) };
   },
-  updateDiagram: (id: string, patch: Partial<{ name: string; tags: string[]; folderId: string | null; parentDiagramId: string | null }>) =>
-    request<DiagramSummary>(`/diagrams/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
+  updateDiagram: (
+    id: string,
+    patch: Partial<{ name: string; tags: string[]; folderId: string | null; parentDiagramId: string | null }>,
+  ) => request<DiagramSummary>(`/diagrams/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
   deleteDiagram: (id: string) => request<void>(`/diagrams/${id}`, { method: 'DELETE' }),
   saveDiagramElements: async (id: string, elements: DiagramElement[]): Promise<DiagramFull['elements']> => {
     const saved = await request<Record<string, unknown>[]>(`/diagrams/${id}/elements`, {
@@ -357,7 +367,8 @@ export const api = {
   revokeGrant: (kind: 'document' | 'diagram', id: string, userId: string) =>
     request<void>(`/${kind}s/${id}/permissions/${userId}`, { method: 'DELETE' }),
   listShareLinks: (kind: 'document' | 'diagram', id: string) => request<ShareLink[]>(`/${kind}s/${id}/share-links`),
-  createShareLink: (kind: 'document' | 'diagram', id: string) => request<ShareLink>(`/${kind}s/${id}/share-links`, { method: 'POST' }),
+  createShareLink: (kind: 'document' | 'diagram', id: string) =>
+    request<ShareLink>(`/${kind}s/${id}/share-links`, { method: 'POST' }),
   revokeShareLink: (linkId: string) => request<void>(`/share-links/${linkId}`, { method: 'DELETE' }),
   sharedWithMe: () => request<SharedItem[]>('/shared-with-me'),
   getPublic: (token: string) => request<PublicResource>(`/public/${encodeURIComponent(token)}`, {}, false),

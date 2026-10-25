@@ -17,7 +17,17 @@ interface Props {
 }
 
 /** Tabs for the diagram's named states; "Base" is the underlying diagram (no overrides). */
-export function StatesBar({ readOnly, states, activeStateId, onSelect, onAdd, onRename, onMove, onDelete, onPresent }: Props) {
+export function StatesBar({
+  readOnly,
+  states,
+  activeStateId,
+  onSelect,
+  onAdd,
+  onRename,
+  onMove,
+  onDelete,
+  onPresent,
+}: Props) {
   const { prompt, confirm } = useConfirm();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
@@ -32,7 +42,8 @@ export function StatesBar({ readOnly, states, activeStateId, onSelect, onAdd, on
   async function add() {
     const name = await prompt({
       title: 'New state',
-      message: 'A state is a named version of this diagram, like “Today”, “Migrating” or “Target”. Changes you make in it don’t touch the base diagram.',
+      message:
+        'A state is a named version of this diagram, like “Today”, “Migrating” or “Target”. Changes you make in it don’t touch the base diagram.',
       label: 'State name',
       placeholder: 'e.g. Target',
       confirmLabel: 'Add state',
@@ -51,8 +62,14 @@ export function StatesBar({ readOnly, states, activeStateId, onSelect, onAdd, on
 
   return (
     <div className="states-bar">
-      <span className="muted" style={{ fontSize: 12 }}>States</span>
-      <button className={`state-chip ${activeStateId === null ? 'active' : ''}`} aria-pressed={activeStateId === null} onClick={() => onSelect(null)}>
+      <span className="muted" style={{ fontSize: 12 }}>
+        States
+      </span>
+      <button
+        className={`state-chip ${activeStateId === null ? 'active' : ''}`}
+        aria-pressed={activeStateId === null}
+        onClick={() => onSelect(null)}
+      >
         Base
       </button>
       {states.map((s) =>
@@ -96,7 +113,12 @@ export function StatesBar({ readOnly, states, activeStateId, onSelect, onAdd, on
           <button className="btn" disabled={idx === 0} onClick={() => onMove(active.id, -1)} title="Move left">
             ←
           </button>
-          <button className="btn" disabled={idx === states.length - 1} onClick={() => onMove(active.id, 1)} title="Move right">
+          <button
+            className="btn"
+            disabled={idx === states.length - 1}
+            onClick={() => onMove(active.id, 1)}
+            title="Move right"
+          >
             →
           </button>
           <button
@@ -111,8 +133,12 @@ export function StatesBar({ readOnly, states, activeStateId, onSelect, onAdd, on
           <button
             className="btn btn-danger"
             onClick={async () =>
-              (await confirm({ title: `Delete state “${active.name}”?`, message: 'Shapes drawn only in this state are removed from it. The base diagram is unchanged.', confirmLabel: 'Delete state', danger: true })) &&
-              onDelete(active.id)
+              (await confirm({
+                title: `Delete state “${active.name}”?`,
+                message: 'Shapes drawn only in this state are removed from it. The base diagram is unchanged.',
+                confirmLabel: 'Delete state',
+                danger: true,
+              })) && onDelete(active.id)
             }
           >
             Delete
@@ -125,7 +151,12 @@ export function StatesBar({ readOnly, states, activeStateId, onSelect, onAdd, on
           Editing “{active.name}”: changes apply to this state only
         </span>
       )}
-      <button className="btn btn-primary btn-sm" disabled={states.length === 0} onClick={onPresent} title={states.length === 0 ? 'Add a state to present' : undefined}>
+      <button
+        className="btn btn-primary btn-sm"
+        disabled={states.length === 0}
+        onClick={onPresent}
+        title={states.length === 0 ? 'Add a state to present' : undefined}
+      >
         <Icon name="play" size={12} /> Present
       </button>
     </div>

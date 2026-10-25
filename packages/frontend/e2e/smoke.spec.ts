@@ -1,5 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
-import { AdminConfirmSignUpCommand, AdminDeleteUserCommand, CognitoIdentityProviderClient } from '@aws-sdk/client-cognito-identity-provider';
+import {
+  AdminConfirmSignUpCommand,
+  AdminDeleteUserCommand,
+  CognitoIdentityProviderClient,
+} from '@aws-sdk/client-cognito-identity-provider';
 import { readFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 
@@ -48,7 +52,10 @@ test.describe('playground (no account)', () => {
     await expect(other.getByLabel(/Diagram code/)).toHaveValue('node a "Shared node"');
 
     await page.getByRole('button', { name: /Export/ }).click();
-    const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('menuitem', { name: /PNG/ }).click()]);
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('menuitem', { name: /PNG/ }).click(),
+    ]);
     const file = await download.path();
     expect(readFileSync(file!).subarray(0, 4).toString('latin1')).toBe('\x89PNG');
   });

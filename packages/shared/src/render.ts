@@ -40,13 +40,23 @@ export const isShape = (el: DiagramElement) => el.type === 'rect' || el.type ===
 function textBox(el: DiagramElement): Box {
   const fontSize = num(el.style.fontSize, 14);
   const text = String(el.geometry.text ?? '');
-  return { x: num(el.geometry.x), y: num(el.geometry.y) - fontSize, width: Math.max(8, text.length * fontSize * 0.6), height: fontSize * 1.3 };
+  return {
+    x: num(el.geometry.x),
+    y: num(el.geometry.y) - fontSize,
+    width: Math.max(8, text.length * fontSize * 0.6),
+    height: fontSize * 1.3,
+  };
 }
 
 /** Bounding box of a non-connector element. */
 export function elementBox(el: DiagramElement): Box {
   if (el.type === 'text') return textBox(el);
-  return { x: num(el.geometry.x), y: num(el.geometry.y), width: num(el.geometry.width, 120), height: num(el.geometry.height, 60) };
+  return {
+    x: num(el.geometry.x),
+    y: num(el.geometry.y),
+    width: num(el.geometry.width, 120),
+    height: num(el.geometry.height, 60),
+  };
 }
 
 /** Where the ray from the box centre towards (tx, ty) leaves the shape outline. */
@@ -156,16 +166,14 @@ export function diagramBounds(elements: DiagramElement[]): Box | undefined {
 }
 
 export function escapeXml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 /** Only pass through simple colour values into attributes (no `url(...)`, no quotes). */
 function color(v: unknown, fallback: string): string {
-  return typeof v === 'string' && /^(#[0-9a-f]{3,8}|[a-z]+|rgba?\([\d\s.,%]+\)|none)$/i.test(v.trim()) ? v.trim() : fallback;
+  return typeof v === 'string' && /^(#[0-9a-f]{3,8}|[a-z]+|rgba?\([\d\s.,%]+\)|none)$/i.test(v.trim())
+    ? v.trim()
+    : fallback;
 }
 
 /** Colours a diagram is drawn with. Stored element colours are light-sheet values; the dark palette remaps them. */
@@ -233,7 +241,11 @@ function isLight(hex: string): boolean {
 }
 
 /** Fill, stroke and label colour for a shape under a palette. Unknown custom fills keep their colour and get a readable label. */
-export function shapeColors(fill: unknown, stroke: unknown, palette: DiagramPalette = LIGHT_PALETTE): { fill: string; stroke: string; text: string } {
+export function shapeColors(
+  fill: unknown,
+  stroke: unknown,
+  palette: DiagramPalette = LIGHT_PALETTE,
+): { fill: string; stroke: string; text: string } {
   const f = color(fill, '#ffffff').toLowerCase();
   const s = color(stroke, '#1f2937').toLowerCase();
   if (palette === LIGHT_PALETTE) return { fill: f, stroke: s, text: LIGHT_PALETTE.ink };
@@ -281,7 +293,9 @@ export function renderDiagramSvg(all: RenderableElement[], opts: SvgRenderOption
   const padding = opts.padding ?? 32;
   const pal = opts.palette ?? LIGHT_PALETTE;
   const background = opts.background === undefined ? '#ffffff' : opts.background;
-  const elements = visibleElements(all.map((e) => (e.style?.baseHidden === true && e.hidden === undefined ? { ...e, hidden: true } : e)));
+  const elements = visibleElements(
+    all.map((e) => (e.style?.baseHidden === true && e.hidden === undefined ? { ...e, hidden: true } : e)),
+  );
   const byId = new Map(elements.filter((e) => e.id).map((e) => [e.id as string, e as DiagramElement]));
 
   const bounds = diagramBounds(elements) ?? { x: 0, y: 0, width: 400, height: 240 };
@@ -333,7 +347,9 @@ export function renderDiagramSvg(all: RenderableElement[], opts: SvgRenderOption
         parts.push(
           (() => {
             const wrap = wrapLabel(String(g.text ?? ''), w, h, el.type === 'ellipse');
-            const spans = wrap.lines.map((l, i) => `<tspan x="${x + w / 2}" y="${num(lineY(wrap, y + h / 2, i))}">${escapeXml(l)}</tspan>`).join('');
+            const spans = wrap.lines
+              .map((l, i) => `<tspan x="${x + w / 2}" y="${num(lineY(wrap, y + h / 2, i))}">${escapeXml(l)}</tspan>`)
+              .join('');
             return `<text text-anchor="middle" dominant-baseline="central" font-size="${wrap.fontSize}" fill="${label}">${spans}</text>`;
           })(),
         );
@@ -351,7 +367,10 @@ export function renderDiagramSvg(all: RenderableElement[], opts: SvgRenderOption
     if (el.type !== 'connector') continue;
     const seg = connectorSegment(el, byId);
     if (!seg) continue;
-    const stroke = color(opts.highlights?.[el.id ?? ''] ?? inkColor(el.style.stroke, pal, pal.connector), pal.connector);
+    const stroke = color(
+      opts.highlights?.[el.id ?? ''] ?? inkColor(el.style.stroke, pal, pal.connector),
+      pal.connector,
+    );
     parts.push(
       `<line x1="${seg.x1}" y1="${seg.y1}" x2="${seg.x2}" y2="${seg.y2}" stroke="${stroke}" stroke-width="1.5" marker-end="url(#clara-arrow)" />`,
     );

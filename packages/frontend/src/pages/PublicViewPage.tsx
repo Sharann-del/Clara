@@ -74,7 +74,9 @@ export function PublicViewPage() {
                 </Link>
               }
             >
-              {error.status === 404 ? 'Whoever shared it may have turned the link off. Ask them for a new one.' : error.message}
+              {error.status === 404
+                ? 'Whoever shared it may have turned the link off. Ask them for a new one.'
+                : error.message}
             </EmptyState>
           </div>
         ) : !data ? (
@@ -101,11 +103,22 @@ export function PublicViewPage() {
               <h1>{data.diagram.name}</h1>
               {states.length > 0 && (
                 <div className="public-states" role="group" aria-label="States">
-                  <button type="button" className={`state-chip ${!stateId ? 'active' : ''}`} aria-pressed={!stateId} onClick={() => setStateId(null)}>
+                  <button
+                    type="button"
+                    className={`state-chip ${!stateId ? 'active' : ''}`}
+                    aria-pressed={!stateId}
+                    onClick={() => setStateId(null)}
+                  >
                     Base
                   </button>
                   {states.map((s) => (
-                    <button key={s.id} type="button" className={`state-chip ${stateId === s.id ? 'active' : ''}`} aria-pressed={stateId === s.id} onClick={() => setStateId(s.id)}>
+                    <button
+                      key={s.id}
+                      type="button"
+                      className={`state-chip ${stateId === s.id ? 'active' : ''}`}
+                      aria-pressed={stateId === s.id}
+                      onClick={() => setStateId(s.id)}
+                    >
                       {s.name}
                     </button>
                   ))}
@@ -133,7 +146,14 @@ export function PublicViewPage() {
             <div className="public-stage">
               <DiagramViewer elements={shown} label={`Diagram: ${data.diagram.name}`} />
             </div>
-            {presenting && <PresentMode base={elements} states={states} startIndex={stateId ? states.findIndex((s) => s.id === stateId) + 1 : 0} onClose={() => setPresenting(false)} />}
+            {presenting && (
+              <PresentMode
+                base={elements}
+                states={states}
+                startIndex={stateId ? states.findIndex((s) => s.id === stateId) + 1 : 0}
+                onClose={() => setPresenting(false)}
+              />
+            )}
           </>
         )}
       </main>

@@ -68,8 +68,14 @@ export async function stateRoutes(app: FastifyInstance) {
     return withTransaction(async (client) => {
       const existing = await listStates(id, client);
       const known = new Set(existing.map((s) => s.id));
-      if (stateIds.length !== known.size || !stateIds.every((s) => known.has(s)) || new Set(stateIds).size !== known.size) {
-        throw Object.assign(new Error('stateIds must list every state of this diagram exactly once'), { statusCode: 400 });
+      if (
+        stateIds.length !== known.size ||
+        !stateIds.every((s) => known.has(s)) ||
+        new Set(stateIds).size !== known.size
+      ) {
+        throw Object.assign(new Error('stateIds must list every state of this diagram exactly once'), {
+          statusCode: 400,
+        });
       }
       for (let i = 0; i < stateIds.length; i++) {
         await client.query('update diagram_states set order_index = $1 where id = $2', [i, stateIds[i]]);

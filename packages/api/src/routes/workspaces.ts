@@ -1,7 +1,14 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { query, withTransaction } from '../db.js';
-import { assertWorkspaceRole, BadRequestError, ForbiddenError, NotFoundError, workspaceRole, roleAtLeast } from '../lib/authz.js';
+import {
+  assertWorkspaceRole,
+  BadRequestError,
+  ForbiddenError,
+  NotFoundError,
+  workspaceRole,
+  roleAtLeast,
+} from '../lib/authz.js';
 import { emailForUser, findUserIdByEmail } from '../lib/users.js';
 
 export async function workspaceRoutes(app: FastifyInstance) {
@@ -19,14 +26,12 @@ export async function workspaceRoutes(app: FastifyInstance) {
   app.post('/workspaces', async (req, reply) => {
     const body = z.object({ name: z.string().min(1).max(200) }).parse(req.body);
     const workspace = await withTransaction(async (client) => {
-      const { rows } = await client.query(
-        'insert into workspaces (name) values ($1) returning *',
-        [body.name],
-      );
-      await client.query(
-        'insert into workspace_members (workspace_id, user_id, role) values ($1, $2, $3)',
-        [rows[0].id, req.user!.sub, 'owner'],
-      );
+      const { rows } = await client.query('insert into workspaces (name) values ($1) returning *', [body.name]);
+      await client.query('insert into workspace_members (workspace_id, user_id, role) values ($1, $2, $3)', [
+        rows[0].id,
+        req.user!.sub,
+        'owner',
+      ]);
       return rows[0];
     });
     reply.code(201).send(workspace);
@@ -46,10 +51,7 @@ export async function workspaceRoutes(app: FastifyInstance) {
     const role = await workspaceRole(req.user!.sub, id);
     if (!roleAtLeast(role, 'admin')) return reply.code(403).send({ error: 'Admin role required' });
     const body = z.object({ name: z.string().min(1).max(200) }).parse(req.body);
-    const { rows } = await query('update workspaces set name = $1 where id = $2 returning *', [
-      body.name,
-      id,
-    ]);
+    const { rows } = await query('update workspaces set name = $1 where id = $2 returning *', [body.name, id]);
     return rows[0];
   });
 
@@ -80,9 +82,15 @@ export async function workspaceRoutes(app: FastifyInstance) {
     const sub = await findUserIdByEmail(body.email);
     const existing = await workspaceRole(sub, id);
     if (existing) {
-      return reply.code(409).send({ error: `${body.email} is already ${existing === 'admin' || existing === 'owner' ? 'an' : 'a'} ${existing} here. Change their role in the list instead.` });
+      return reply.code(409).send({
+        error: `${body.email} is already ${existing === 'admin' || existing === 'owner' ? 'an' : 'a'} ${existing} here. Change their role in the list instead.`,
+      });
     }
-    await query('insert into workspace_members (workspace_id, user_id, role) values ($1, $2, $3)', [id, sub, body.role]);
+    await query('insert into workspace_members (workspace_id, user_id, role) values ($1, $2, $3)', [
+      id,
+      sub,
+      body.role,
+    ]);
     reply.code(201).send({ userId: sub, role: body.role, email: body.email.trim().toLowerCase() });
   });
 
@@ -96,7 +104,8 @@ export async function workspaceRoutes(app: FastifyInstance) {
     const { role: next } = z.object({ role: z.enum(['owner', 'admin', 'editor', 'viewer']) }).parse(req.body);
     const current = await workspaceRole(userId, id);
     if (!current) throw new NotFoundError('Not a member of this workspace');
-    if ((current === 'owner' || next === 'owner') && actorRole !== 'owner') throw new ForbiddenError('Only an owner can change owners');
+    if ((current === 'owner' || next === 'owner') && actorRole !== 'owner')
+      throw new ForbiddenError('Only an owner can change owners');
     if (current === 'owner' && next !== 'owner') await assertAnotherOwner(id, userId);
     const { rows } = await query(
       'update workspace_members set role = $1 where workspace_id = $2 and user_id = $3 returning user_id, role, created_at',
@@ -127,6 +136,8 @@ async function assertAnotherOwner(workspaceId: string, exceptUserId: string) {
     [workspaceId, exceptUserId],
   );
   if (Number(rows[0].n) === 0) {
-    throw new BadRequestError('A workspace needs at least one owner. Make someone else an owner first, or delete the workspace.');
+    throw new BadRequestError(
+      'A workspace needs at least one owner. Make someone else an owner first, or delete the workspace.',
+    );
   }
 }

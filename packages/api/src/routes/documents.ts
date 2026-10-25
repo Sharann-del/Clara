@@ -2,13 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { query } from '../db.js';
 import { assertWorkspaceRole } from '../lib/authz.js';
-import {
-  createDocument,
-  getDocument,
-  listDocuments,
-  loadDocument,
-  updateDocument,
-} from '../lib/documents.js';
+import { createDocument, getDocument, listDocuments, loadDocument, updateDocument } from '../lib/documents.js';
 
 export async function documentRoutes(app: FastifyInstance) {
   app.get('/workspaces/:workspaceId/documents', async (req) => {

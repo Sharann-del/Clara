@@ -66,7 +66,8 @@ export function HomePage() {
       ensureOnboarded(mySub ?? 'anon')
         .then(async (r) => {
           const list = await refresh();
-          if (r.created || (force && r.workspaceId && list.length)) navigate(`/workspaces/${r.workspaceId}?tour=1`, { replace: true });
+          if (r.created || (force && r.workspaceId && list.length))
+            navigate(`/workspaces/${r.workspaceId}?tour=1`, { replace: true });
         })
         .catch((e) => setSetupError(errorMessage(e)))
         .finally(() => setSettingUp(false));
@@ -80,12 +81,22 @@ export function HomePage() {
   }, [workspaces, params, runSetup]);
 
   useEffect(() => {
-    loadRecent().then(setRecent).catch(() => setRecent([]));
-    api.sharedWithMe().then(setShared).catch(() => setShared([]));
+    loadRecent()
+      .then(setRecent)
+      .catch(() => setRecent([]));
+    api
+      .sharedWithMe()
+      .then(setShared)
+      .catch(() => setShared([]));
   }, []);
 
   async function newWorkspace() {
-    const name = await prompt({ title: 'New workspace', label: 'Name', placeholder: 'e.g. Platform team', confirmLabel: 'Create workspace' });
+    const name = await prompt({
+      title: 'New workspace',
+      label: 'Name',
+      placeholder: 'e.g. Platform team',
+      confirmLabel: 'Create workspace',
+    });
     if (!name) return;
     try {
       const ws = await api.createWorkspace(name);
@@ -122,14 +133,17 @@ export function HomePage() {
         className={`btn btn-ghost btn-icon btn-sm star ${isFavorite(it.kind, it.id) ? 'on' : ''}`}
         aria-pressed={isFavorite(it.kind, it.id)}
         aria-label={isFavorite(it.kind, it.id) ? `Remove ${it.name} from favorites` : `Add ${it.name} to favorites`}
-        onClick={() => toggleFavorite({ kind: it.kind as 'document' | 'diagram', id: it.id, name: it.name }).catch((e) => toast.error(errorMessage(e)))}
+        onClick={() =>
+          toggleFavorite({ kind: it.kind as 'document' | 'diagram', id: it.id, name: it.name }).catch((e) =>
+            toast.error(errorMessage(e)),
+          )
+        }
       >
         <Icon name="star" />
       </button>
     );
 
   const first = email?.split('@')[0];
-
 
   return (
     <AppShell title={<strong>Home</strong>}>
@@ -155,20 +169,35 @@ export function HomePage() {
           </div>
         )}
         {settingUp && (
-          <div className="panel" role="status" style={{ marginBottom: 16, display: 'flex', gap: 10, alignItems: 'center' }}>
-            <span className="spinner" aria-hidden="true" /> Setting up your workspace with a welcome doc and a sample diagram…
+          <div
+            className="panel"
+            role="status"
+            style={{ marginBottom: 16, display: 'flex', gap: 10, alignItems: 'center' }}
+          >
+            <span className="spinner" aria-hidden="true" /> Setting up your workspace with a welcome doc and a sample
+            diagram…
           </div>
         )}
 
         <div className="quick-actions">
-          <button type="button" className="quick-action" onClick={() => quickCreate('document')} disabled={!workspaces?.length}>
+          <button
+            type="button"
+            className="quick-action"
+            onClick={() => quickCreate('document')}
+            disabled={!workspaces?.length}
+          >
             <Icon name="doc" size={20} />
             <span>
               <strong>New document</strong>
               <span className="muted">Markdown, with diagrams inline</span>
             </span>
           </button>
-          <button type="button" className="quick-action" onClick={() => quickCreate('diagram')} disabled={!workspaces?.length}>
+          <button
+            type="button"
+            className="quick-action"
+            onClick={() => quickCreate('diagram')}
+            disabled={!workspaces?.length}
+          >
             <Icon name="diagram" size={20} />
             <span>
               <strong>New diagram</strong>
@@ -218,7 +247,14 @@ export function HomePage() {
               <h2 id="shared-title">Shared with you</h2>
             </div>
             <ItemList
-              items={shared.map((r) => ({ kind: r.kind, id: r.id, name: r.name, tags: r.tags, updatedAt: r.updated_at, context: `${r.workspace_name} · ${r.role}` }))}
+              items={shared.map((r) => ({
+                kind: r.kind,
+                id: r.id,
+                name: r.name,
+                tags: r.tags,
+                updatedAt: r.updated_at,
+                context: `${r.workspace_name} · ${r.role}`,
+              }))}
               trailing={star}
             />
           </section>

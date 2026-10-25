@@ -35,7 +35,9 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="panel error-panel" role="alert">
           <strong>This part of the page couldn’t be shown.</strong>
-          <p className="muted" style={{ margin: '4px 0 8px' }}>{error.message}</p>
+          <p className="muted" style={{ margin: '4px 0 8px' }}>
+            {error.message}
+          </p>
           <button type="button" className="btn btn-sm" onClick={() => this.setState({ error: null })}>
             Try again
           </button>

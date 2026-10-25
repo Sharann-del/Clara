@@ -11,10 +11,18 @@ export function wrap(e: Edit, before: string, after = before, placeholder = 'tex
   const pre = e.value.slice(0, e.start);
   const post = e.value.slice(e.end);
   if (pre.endsWith(before) && post.startsWith(after) && sel) {
-    return { value: pre.slice(0, -before.length) + sel + post.slice(after.length), start: e.start - before.length, end: e.end - before.length };
+    return {
+      value: pre.slice(0, -before.length) + sel + post.slice(after.length),
+      start: e.start - before.length,
+      end: e.end - before.length,
+    };
   }
   const body = sel || placeholder;
-  return { value: pre + before + body + after + post, start: e.start + before.length, end: e.start + before.length + body.length };
+  return {
+    value: pre + before + body + after + post,
+    start: e.start + before.length,
+    end: e.start + before.length + body.length,
+  };
 }
 
 /** Toggles a prefix (e.g. "## ", "- ", "> ") on every line the selection touches. */
@@ -24,13 +32,20 @@ export function prefixLines(e: Edit, prefix: string | ((i: number) => string)): 
   const lineEnd = nl === -1 ? e.value.length : nl;
   const lines = e.value.slice(lineStart, lineEnd).split('\n');
   const p = (i: number) => (typeof prefix === 'function' ? prefix(i) : prefix);
-  const pattern = typeof prefix === 'function' ? /^\d+\.\s/ : new RegExp(`^${p(0).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`);
+  const pattern =
+    typeof prefix === 'function' ? /^\d+\.\s/ : new RegExp(`^${p(0).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`);
   const all = lines.every((l) => pattern.test(l));
   // Headings replace each other rather than stacking.
   const strip = (l: string) => l.replace(/^#{1,6}\s/, '');
-  const next = lines.map((l, i) => (all ? l.replace(pattern, '') : p(i) + (typeof prefix === 'string' && prefix.startsWith('#') ? strip(l) : l)));
+  const next = lines.map((l, i) =>
+    all ? l.replace(pattern, '') : p(i) + (typeof prefix === 'string' && prefix.startsWith('#') ? strip(l) : l),
+  );
   const text = next.join('\n');
-  return { value: e.value.slice(0, lineStart) + text + e.value.slice(lineEnd), start: lineStart, end: lineStart + text.length };
+  return {
+    value: e.value.slice(0, lineStart) + text + e.value.slice(lineEnd),
+    start: lineStart,
+    end: lineStart + text.length,
+  };
 }
 
 /** Inserts a block on its own lines at the cursor, selecting `select` within it if given. */

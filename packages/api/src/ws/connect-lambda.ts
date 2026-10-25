@@ -53,10 +53,9 @@ export async function handler(event: WsConnectEvent) {
   }
 
   const table = resourceType === 'document' ? 'documents' : 'diagrams';
-  const { rows } = await query<{ workspace_id: string }>(
-    `select workspace_id from ${table} where id = $1`,
-    [resourceId],
-  );
+  const { rows } = await query<{ workspace_id: string }>(`select workspace_id from ${table} where id = $1`, [
+    resourceId,
+  ]);
   const resource = rows[0];
   if (!resource) return { statusCode: 404, body: 'Resource not found' };
 

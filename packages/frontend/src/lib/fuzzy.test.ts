@@ -17,6 +17,9 @@ test('rankMatches matches tags and drops non-matches', () => {
     { name: 'Payments service', tags: [] },
     { name: 'Search', tags: [] },
   ];
-  assert.deepEqual(rankMatches(items, 'pay', (i) => [i.name, ...i.tags]).map((i) => i.name), ['Checkout flow', 'Payments service']);
+  assert.deepEqual(
+    rankMatches(items, 'pay', (i) => [i.name, ...i.tags]).map((i) => i.name),
+    ['Checkout flow', 'Payments service'],
+  );
   assert.equal(rankMatches(items, '', (i) => [i.name]).length, 3);
 });

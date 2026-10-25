@@ -69,7 +69,10 @@ export function DocumentPage() {
       setTitle(d.title);
       setContentMd(d.content_md);
       setTags(d.tags);
-      api.getWorkspace(d.workspace_id).then(setWorkspace).catch(() => setWorkspace(null));
+      api
+        .getWorkspace(d.workspace_id)
+        .then(setWorkspace)
+        .catch(() => setWorkspace(null));
     } catch (e) {
       setLoadError(e instanceof ApiError ? e : new ApiError(0, errorMessage(e)));
     }
@@ -95,7 +98,10 @@ export function DocumentPage() {
       // Put the unsaved fields back so the retry sends them.
       pending.current = { ...patch, ...pending.current };
       setSaveState('error');
-      toast.show(`Couldn’t save: ${errorMessage(e)}`, { tone: 'error', action: { label: 'Retry', onClick: () => flush() } });
+      toast.show(`Couldn’t save: ${errorMessage(e)}`, {
+        tone: 'error',
+        action: { label: 'Retry', onClick: () => flush() },
+      });
     }
   }, [documentId, toast]);
 
@@ -134,7 +140,10 @@ export function DocumentPage() {
             setPresence(msg.users as PresenceUser[]);
             break;
           case 'presence.joined':
-            setPresence((prev) => [...prev.filter((u) => u.userId !== msg.userId), { userId: msg.userId as string, email: msg.email as string | undefined }]);
+            setPresence((prev) => [
+              ...prev.filter((u) => u.userId !== msg.userId),
+              { userId: msg.userId as string, email: msg.email as string | undefined },
+            ]);
             break;
           case 'presence.left':
             setPresence((prev) => prev.filter((u) => u.userId !== msg.userId));
@@ -185,10 +194,19 @@ export function DocumentPage() {
   }
 
   if (loadError) {
-    if (loadError.status === 403 || loadError.status === 404) return <NoAccess what="document" notFound={loadError.status === 404} />;
+    if (loadError.status === 403 || loadError.status === 404)
+      return <NoAccess what="document" notFound={loadError.status === 404} />;
     return (
       <AppShell sidebarMode="drawer" title={<strong>Document</strong>}>
-        <EmptyState icon="alert" title="This document didn’t load" actions={<button className="btn btn-primary" onClick={load}>Try again</button>}>
+        <EmptyState
+          icon="alert"
+          title="This document didn’t load"
+          actions={
+            <button className="btn btn-primary" onClick={load}>
+              Try again
+            </button>
+          }
+        >
           {loadError.message}
         </EmptyState>
       </AppShell>
@@ -198,7 +216,15 @@ export function DocumentPage() {
   const others = presence.filter((u) => u.email !== myEmail);
   const fav = doc ? isFavorite('document', doc.id) : false;
   const statusText =
-    saveState === 'saving' || saveState === 'pending' ? 'Saving…' : saveState === 'saved' ? 'Saved' : saveState === 'error' ? 'Not saved' : doc ? `Edited ${timeAgo(doc.updated_at)}` : '';
+    saveState === 'saving' || saveState === 'pending'
+      ? 'Saving…'
+      : saveState === 'saved'
+        ? 'Saved'
+        : saveState === 'error'
+          ? 'Not saved'
+          : doc
+            ? `Edited ${timeAgo(doc.updated_at)}`
+            : '';
 
   return (
     <AppShell
@@ -207,7 +233,10 @@ export function DocumentPage() {
       title={
         <Crumbs
           items={[
-            { label: workspace?.name ?? (doc ? 'Workspace' : '…'), to: doc ? `/workspaces/${doc.workspace_id}` : undefined },
+            {
+              label: workspace?.name ?? (doc ? 'Workspace' : '…'),
+              to: doc ? `/workspaces/${doc.workspace_id}` : undefined,
+            },
             { label: title || 'Untitled' },
           ]}
         />
@@ -222,7 +251,11 @@ export function DocumentPage() {
               </span>
             ) : null}
             {editing && (
-              <span className={`save-status hide-mobile ${saveState === 'error' ? 'error' : ''}`} role="status" aria-live="polite">
+              <span
+                className={`save-status hide-mobile ${saveState === 'error' ? 'error' : ''}`}
+                role="status"
+                aria-live="polite"
+              >
                 {statusText}
               </span>
             )}
@@ -236,7 +269,11 @@ export function DocumentPage() {
               className={`btn btn-ghost btn-icon star ${fav ? 'on' : ''}`}
               aria-pressed={fav}
               aria-label={fav ? 'Remove from favorites' : 'Add to favorites'}
-              onClick={() => toggleFavorite({ kind: 'document', id: doc.id, name: title || 'Untitled' }).catch((e) => toast.error(errorMessage(e)))}
+              onClick={() =>
+                toggleFavorite({ kind: 'document', id: doc.id, name: title || 'Untitled' }).catch((e) =>
+                  toast.error(errorMessage(e)),
+                )
+              }
             >
               <Icon name="star" />
             </button>
@@ -251,13 +288,28 @@ export function DocumentPage() {
                 { label: 'Share', icon: 'share', onSelect: () => navigate(`${base}/share`) },
                 { label: 'Version history', icon: 'history', onSelect: () => navigate(`${base}/history`) },
                 ...(canEdit ? [{ label: 'Edit tags', icon: 'tag' as const, onSelect: () => setPanel('tags') }] : []),
-                { label: 'Export as markdown', icon: 'download', onSelect: () => downloadAuthed(api.exportUrl('documents', doc.id), `${title || 'Untitled'}.md`).catch((e) => toast.error(errorMessage(e))) },
+                {
+                  label: 'Export as markdown',
+                  icon: 'download',
+                  onSelect: () =>
+                    downloadAuthed(api.exportUrl('documents', doc.id), `${title || 'Untitled'}.md`).catch((e) =>
+                      toast.error(errorMessage(e)),
+                    ),
+                },
                 {
                   label: 'Copy link',
                   icon: 'link',
-                  onSelect: () => navigator.clipboard.writeText(window.location.href).then(() => toast.success('Link copied. People need access to open it.')),
+                  onSelect: () =>
+                    navigator.clipboard
+                      .writeText(window.location.href)
+                      .then(() => toast.success('Link copied. People need access to open it.')),
                 },
-                ...(canDelete ? ['separator' as const, { label: 'Delete document', icon: 'trash' as const, danger: true, onSelect: deleteDoc }] : []),
+                ...(canDelete
+                  ? [
+                      'separator' as const,
+                      { label: 'Delete document', icon: 'trash' as const, danger: true, onSelect: deleteDoc },
+                    ]
+                  : []),
               ]}
             />
           </>
@@ -265,65 +317,65 @@ export function DocumentPage() {
       }
     >
       {!sub && (
-      <div className="doc-wrap">
-        {!doc ? (
-          <>
-            <span className="skeleton" style={{ height: 44, width: '60%', marginBottom: 16 }} />
-            <SkeletonRows rows={6} height={22} />
-          </>
-        ) : (
-          <>
-            {editing ? (
-              <input
-                className="doc-title"
-                aria-label="Document title"
-                value={title}
-                placeholder="Untitled"
-                maxLength={300}
-                onChange={(e) => {
-                  setTitle(e.target.value);
-                  if (e.target.value.trim()) schedule({ title: e.target.value });
-                }}
-              />
-            ) : (
-              <h1 className="doc-title">{title || 'Untitled'}</h1>
-            )}
-            <div className="doc-meta">
-              {!canEdit && <span className="tag tag-neutral">View only</span>}
-              {tags.map((t) => (
-                <span key={t} className="tag">
-                  {t}
-                </span>
-              ))}
-              {canEdit && (
-                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPanel('tags')}>
-                  <Icon name="tag" size={13} /> {tags.length ? 'Edit tags' : 'Add tags'}
-                </button>
+        <div className="doc-wrap">
+          {!doc ? (
+            <>
+              <span className="skeleton" style={{ height: 44, width: '60%', marginBottom: 16 }} />
+              <SkeletonRows rows={6} height={22} />
+            </>
+          ) : (
+            <>
+              {editing ? (
+                <input
+                  className="doc-title"
+                  aria-label="Document title"
+                  value={title}
+                  placeholder="Untitled"
+                  maxLength={300}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    if (e.target.value.trim()) schedule({ title: e.target.value });
+                  }}
+                />
+              ) : (
+                <h1 className="doc-title">{title || 'Untitled'}</h1>
               )}
-              {!editing && <span>· Edited {timeAgo(doc.updated_at)}</span>}
-            </div>
-            {editing ? (
-              <MarkdownEditor
-                value={contentMd}
-                workspaceId={doc.workspace_id}
-                onSaveNow={() => flush().then(() => toast.success('Saved'))}
-                onCreateDiagram={async (name) => (await api.createDiagram(doc.workspace_id, name, doc.folder_id)).id}
-                onChange={(md) => {
-                  setContentMd(md);
-                  schedule({ contentMd: md });
-                  rtRef.current?.send('document.update', { contentMd: md });
-                }}
-              />
-            ) : contentMd.trim() ? (
-              <MarkdownView markdown={contentMd} />
-            ) : (
-              <EmptyState icon="doc" title="This document is empty" compact>
-                {canEdit ? 'Tap Edit to start writing.' : 'Nothing has been written here yet.'}
-              </EmptyState>
-            )}
-          </>
-        )}
-      </div>
+              <div className="doc-meta">
+                {!canEdit && <span className="tag tag-neutral">View only</span>}
+                {tags.map((t) => (
+                  <span key={t} className="tag">
+                    {t}
+                  </span>
+                ))}
+                {canEdit && (
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPanel('tags')}>
+                    <Icon name="tag" size={13} /> {tags.length ? 'Edit tags' : 'Add tags'}
+                  </button>
+                )}
+                {!editing && <span>· Edited {timeAgo(doc.updated_at)}</span>}
+              </div>
+              {editing ? (
+                <MarkdownEditor
+                  value={contentMd}
+                  workspaceId={doc.workspace_id}
+                  onSaveNow={() => flush().then(() => toast.success('Saved'))}
+                  onCreateDiagram={async (name) => (await api.createDiagram(doc.workspace_id, name, doc.folder_id)).id}
+                  onChange={(md) => {
+                    setContentMd(md);
+                    schedule({ contentMd: md });
+                    rtRef.current?.send('document.update', { contentMd: md });
+                  }}
+                />
+              ) : contentMd.trim() ? (
+                <MarkdownView markdown={contentMd} />
+              ) : (
+                <EmptyState icon="doc" title="This document is empty" compact>
+                  {canEdit ? 'Tap Edit to start writing.' : 'Nothing has been written here yet.'}
+                </EmptyState>
+              )}
+            </>
+          )}
+        </div>
       )}
 
       {doc && (

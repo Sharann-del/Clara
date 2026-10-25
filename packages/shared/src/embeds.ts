@@ -21,7 +21,8 @@ export function parseEmbed(body: string): DiagramEmbedRef | null {
   return { id: id.toLowerCase(), height: Number.isFinite(h) && h >= 120 && h <= 1200 ? h : undefined };
 }
 
-export const embedBlock = (ref: DiagramEmbedRef) => `\`\`\`clara-diagram\nid: ${ref.id}${ref.height ? `\nheight: ${ref.height}` : ''}\n\`\`\``;
+export const embedBlock = (ref: DiagramEmbedRef) =>
+  `\`\`\`clara-diagram\nid: ${ref.id}${ref.height ? `\nheight: ${ref.height}` : ''}\n\`\`\``;
 
 /** Every embed in a document, in order (duplicates kept). */
 export function embeddedDiagrams(markdown: string): DiagramEmbedRef[] {

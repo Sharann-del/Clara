@@ -30,7 +30,16 @@ interface Props {
 
 const ICON = { document: 'doc', diagram: 'diagram', folder: 'folder' } as const;
 
-export function ItemList({ items, actions, onOpenFolder, draggable, onDragStartItem, onDropOnFolder, onTagClick, trailing }: Props) {
+export function ItemList({
+  items,
+  actions,
+  onOpenFolder,
+  draggable,
+  onDragStartItem,
+  onDropOnFolder,
+  onTagClick,
+  trailing,
+}: Props) {
   return (
     <ul className={`item-list ${actions ? 'has-actions' : ''}`} role="list">
       {items.some((it) => it.updatedAt) && (
@@ -75,7 +84,13 @@ export function ItemList({ items, actions, onOpenFolder, draggable, onDragStartI
           <span className="item-tags">
             {it.tags?.map((t) =>
               onTagClick ? (
-                <button key={t} type="button" className="tag tag-button" onClick={() => onTagClick(t)} aria-label={`Filter by tag ${t}`}>
+                <button
+                  key={t}
+                  type="button"
+                  className="tag tag-button"
+                  onClick={() => onTagClick(t)}
+                  aria-label={`Filter by tag ${t}`}
+                >
                   {t}
                 </button>
               ) : (

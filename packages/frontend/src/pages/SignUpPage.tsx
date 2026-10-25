@@ -108,7 +108,15 @@ export function SignUpPage() {
       <form onSubmit={onSignUp} style={{ display: 'contents' }}>
         <label className="field">
           Email
-          <input className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
+          <input
+            className="input"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            autoFocus
+          />
         </label>
         <label className="field">
           Password
@@ -153,7 +161,8 @@ export function SignUpPage() {
         Already have an account? <Link to={`/signin${params.toString() ? `?${params}` : ''}`}>Sign in</Link>
       </div>
       <div className="muted" style={{ fontSize: 12 }}>
-        By creating an account you agree to the <Link to="/terms">terms</Link> and <Link to="/privacy">privacy policy</Link>.
+        By creating an account you agree to the <Link to="/terms">terms</Link> and{' '}
+        <Link to="/privacy">privacy policy</Link>.
       </div>
     </AuthLayout>
   );

@@ -100,15 +100,41 @@ async function buildFallbackIndex(): Promise<SearchResult[]> {
     workspaces.map(async (w) => {
       const [docs, diagrams] = await Promise.all([api.listDocuments(w.id), api.listDiagrams(w.id)]);
       return [
-        ...docs.map((d) => ({ kind: 'document' as const, id: d.id, name: d.title, tags: d.tags, workspace_id: w.id, workspace_name: w.name, folder_id: d.folder_id, updated_at: (d as { updated_at?: string }).updated_at ?? '' })),
-        ...diagrams.map((d) => ({ kind: 'diagram' as const, id: d.id, name: d.name, tags: d.tags, workspace_id: w.id, workspace_name: w.name, folder_id: d.folder_id, updated_at: (d as { updated_at?: string }).updated_at ?? '' })),
+        ...docs.map((d) => ({
+          kind: 'document' as const,
+          id: d.id,
+          name: d.title,
+          tags: d.tags,
+          workspace_id: w.id,
+          workspace_name: w.name,
+          folder_id: d.folder_id,
+          updated_at: (d as { updated_at?: string }).updated_at ?? '',
+        })),
+        ...diagrams.map((d) => ({
+          kind: 'diagram' as const,
+          id: d.id,
+          name: d.name,
+          tags: d.tags,
+          workspace_id: w.id,
+          workspace_name: w.name,
+          folder_id: d.folder_id,
+          updated_at: (d as { updated_at?: string }).updated_at ?? '',
+        })),
       ];
     }),
   );
   return per.flat();
 }
 
-function CommandPalette({ workspaceId, onClose, onShortcuts }: { workspaceId: string | null; onClose: () => void; onShortcuts: () => void }) {
+function CommandPalette({
+  workspaceId,
+  onClose,
+  onShortcuts,
+}: {
+  workspaceId: string | null;
+  onClose: () => void;
+  onShortcuts: () => void;
+}) {
   const navigate = useNavigate();
   const toast = useToast();
   const { signOut } = useAuth();
@@ -121,7 +147,10 @@ function CommandPalette({ workspaceId, onClose, onShortcuts }: { workspaceId: st
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    api.listWorkspaces().then(setWorkspaces).catch(() => undefined);
+    api
+      .listWorkspaces()
+      .then(setWorkspaces)
+      .catch(() => undefined);
   }, []);
 
   // Search as you type (debounced). Tag search: "#tag" or just the tag text.
@@ -197,17 +226,43 @@ function CommandPalette({ workspaceId, onClose, onShortcuts }: { workspaceId: st
     const wsItems: Item[] = workspaces
       .filter((w) => !term || w.name.toLowerCase().includes(term))
       .slice(0, 6)
-      .map((w) => ({ id: `ws:${w.id}`, group: 'Workspaces', label: w.name, icon: 'folder', hint: 'Workspace', run: () => go(`/workspaces/${w.id}`) }));
+      .map((w) => ({
+        id: `ws:${w.id}`,
+        group: 'Workspaces',
+        label: w.name,
+        icon: 'folder',
+        hint: 'Workspace',
+        run: () => go(`/workspaces/${w.id}`),
+      }));
     const commands: Item[] = [
       { id: 'new-doc', group: 'Commands', label: 'New document', icon: 'doc', run: () => create('document') },
       { id: 'new-diagram', group: 'Commands', label: 'New diagram', icon: 'diagram', run: () => create('diagram') },
       { id: 'home', group: 'Commands', label: 'Go to home', icon: 'home', run: () => go('/app') },
       { id: 'playground', group: 'Commands', label: 'Open the playground', icon: 'code', run: () => go('/editor') },
       { id: 'settings', group: 'Commands', label: 'Settings', icon: 'settings', run: () => go('/settings') },
-      { id: 'tokens', group: 'Commands', label: 'Access tokens for AI assistants', icon: 'key', run: () => go('/settings/tokens') },
-      { id: 'shortcuts', group: 'Commands', label: 'Keyboard shortcuts', hint: '?', icon: 'keyboard', run: onShortcuts },
+      {
+        id: 'tokens',
+        group: 'Commands',
+        label: 'Access tokens for AI assistants',
+        icon: 'key',
+        run: () => go('/settings/tokens'),
+      },
+      {
+        id: 'shortcuts',
+        group: 'Commands',
+        label: 'Keyboard shortcuts',
+        hint: '?',
+        icon: 'keyboard',
+        run: onShortcuts,
+      },
       { id: 'docs', group: 'Commands', label: 'Documentation', icon: 'book', run: () => go('/docs') },
-      { id: 'signout', group: 'Commands', label: 'Sign out', icon: 'logout', run: () => (onClose(), signOut(), navigate('/')) },
+      {
+        id: 'signout',
+        group: 'Commands',
+        label: 'Sign out',
+        icon: 'logout',
+        run: () => (onClose(), signOut(), navigate('/')),
+      },
     ];
     const cmd = term ? rankMatches(commands, term, (c) => [c.label]) : commands.slice(0, 5);
     return [...found, ...wsItems, ...cmd];
@@ -253,7 +308,9 @@ function CommandPalette({ workspaceId, onClose, onShortcuts }: { workspaceId: st
           {loading && <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} aria-hidden="true" />}
         </div>
         <div className="palette-list" id="palette-list" role="listbox" ref={listRef} aria-label="Results">
-          {items.length === 0 && !loading && <div className="palette-empty">Nothing matches “{q}”. Try another title or tag.</div>}
+          {items.length === 0 && !loading && (
+            <div className="palette-empty">Nothing matches “{q}”. Try another title or tag.</div>
+          )}
           {items.map((it, i) => {
             const header = it.group !== lastGroup ? it.group : null;
             lastGroup = it.group;

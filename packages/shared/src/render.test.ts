@@ -4,10 +4,19 @@ import { parseMermaid, parseClaraDsl, toMermaid, layoutToElements, type DiagramE
 import { connectorSegment, diagramBounds, renderDiagramSvg, visibleElements } from './render.js';
 
 const rect = (id: string, x: number, y: number, text = id, extra: Partial<DiagramElement> = {}): DiagramElement => ({
-  id, type: 'rect', geometry: { x, y, width: 100, height: 50, text }, style: {}, zIndex: 1, ...extra,
+  id,
+  type: 'rect',
+  geometry: { x, y, width: 100, height: 50, text },
+  style: {},
+  zIndex: 1,
+  ...extra,
 });
 const attached = (id: string, fromId: string, toId: string, text = ''): DiagramElement => ({
-  id, type: 'connector', geometry: { fromId, toId, text }, style: {}, zIndex: 0,
+  id,
+  type: 'connector',
+  geometry: { fromId, toId, text },
+  style: {},
+  zIndex: 0,
 });
 
 test('toMermaid: canvas connectors (fromId/toId) become edges', () => {
@@ -17,13 +26,22 @@ test('toMermaid: canvas connectors (fromId/toId) become edges', () => {
 
 test('toMermaid: attached connectors follow the reference, not the nearest shape', () => {
   // Stale coordinates point at b, but the connector is attached to c.
-  const c: DiagramElement = { ...attached('k', 'a', 'c'), geometry: { fromId: 'a', toId: 'c', x1: 50, y1: 25, x2: 50, y2: 225 } };
+  const c: DiagramElement = {
+    ...attached('k', 'a', 'c'),
+    geometry: { fromId: 'a', toId: 'c', x1: 50, y1: 25, x2: 50, y2: 225 },
+  };
   const out = toMermaid([rect('a', 0, 0), rect('b', 0, 200), rect('c', 400, 400), c]);
   assert.match(out, /n0 --> n2$/);
 });
 
 test('toMermaid: the old coordinate format still resolves to the nearest shapes', () => {
-  const free: DiagramElement = { id: 'k', type: 'connector', geometry: { x1: 50, y1: 25, x2: 50, y2: 225, text: '' }, style: {}, zIndex: 0 };
+  const free: DiagramElement = {
+    id: 'k',
+    type: 'connector',
+    geometry: { x1: 50, y1: 25, x2: 50, y2: 225, text: '' },
+    style: {},
+    zIndex: 0,
+  };
   assert.match(toMermaid([rect('a', 0, 0), rect('b', 0, 200), free]), /n0 --> n1$/);
 });
 
@@ -34,15 +52,27 @@ test('toMermaid: connectors to text/groups or to deleted shapes are skipped', ()
 });
 
 test('toMermaid -> parseMermaid round-trips labels (no stray quotes) and ellipses', () => {
-  const ell: DiagramElement = { id: 'e', type: 'ellipse', geometry: { x: 0, y: 200, width: 100, height: 50, text: 'Say "hi"' }, style: {}, zIndex: 1 };
+  const ell: DiagramElement = {
+    id: 'e',
+    type: 'ellipse',
+    geometry: { x: 0, y: 200, width: 100, height: 50, text: 'Say "hi"' },
+    style: {},
+    zIndex: 1,
+  };
   const g = parseMermaid(toMermaid([rect('a', 0, 0, 'Web [edge]'), ell, attached('k', 'a', 'e', 'calls')]));
-  assert.deepEqual(g.nodes.map((n) => n.label), ['Web edge', "Say 'hi'"]);
+  assert.deepEqual(
+    g.nodes.map((n) => n.label),
+    ['Web edge', "Say 'hi'"],
+  );
   assert.deepEqual(g.edges, [{ from: 'n0', to: 'n1', label: 'calls' }]);
 });
 
 test('parseMermaid: strips quotes and stadium wrappers from labels', () => {
   const g = parseMermaid('A["Quoted"] --> B(["Stadium"])');
-  assert.deepEqual(g.nodes.map((n) => n.label), ['Quoted', 'Stadium']);
+  assert.deepEqual(
+    g.nodes.map((n) => n.label),
+    ['Quoted', 'Stadium'],
+  );
 });
 
 test('connectorSegment: attached connectors are clipped to the shape outlines', () => {
@@ -53,18 +83,29 @@ test('connectorSegment: attached connectors are clipped to the shape outlines', 
 
 test('connectorSegment: dangling refs fall back to coordinates, or nothing', () => {
   const byId = new Map<string, DiagramElement>();
-  const withCoords: DiagramElement = { ...attached('k', 'x', 'y'), geometry: { fromId: 'x', toId: 'y', x1: 1, y1: 2, x2: 3, y2: 4 } };
+  const withCoords: DiagramElement = {
+    ...attached('k', 'x', 'y'),
+    geometry: { fromId: 'x', toId: 'y', x1: 1, y1: 2, x2: 3, y2: 4 },
+  };
   assert.deepEqual(connectorSegment(withCoords, byId), { x1: 1, y1: 2, x2: 3, y2: 4 });
   assert.equal(connectorSegment(attached('k', 'x', 'y'), byId), undefined);
 });
 
 test('visibleElements: a hidden endpoint hides its connector', () => {
   const els = [rect('a', 0, 0), { ...rect('b', 0, 200), hidden: true }, attached('k', 'a', 'b')];
-  assert.deepEqual(visibleElements(els).map((e) => e.id), ['a']);
+  assert.deepEqual(
+    visibleElements(els).map((e) => e.id),
+    ['a'],
+  );
 });
 
 test('renderDiagramSvg: draws attached connectors and skips base-hidden elements', () => {
-  const els = [rect('a', 0, 0, 'A&B'), rect('b', 0, 200), rect('s', 300, 0, 'state-only', { style: { baseHidden: true } }), attached('k', 'a', 'b', 'x<y')];
+  const els = [
+    rect('a', 0, 0, 'A&B'),
+    rect('b', 0, 200),
+    rect('s', 300, 0, 'state-only', { style: { baseHidden: true } }),
+    attached('k', 'a', 'b', 'x<y'),
+  ];
   const { svg, width, height } = renderDiagramSvg(els, { padding: 10 });
   assert.match(svg, /<line x1="50" y1="50" x2="50" y2="200"/);
   assert.match(svg, /A&amp;B/);
@@ -89,7 +130,14 @@ test('diagramBounds covers importer output', () => {
 
 test('parseMermaid: standalone node declarations keep their labels and isolated nodes', () => {
   const g = parseMermaid('flowchart TD\n  n0["Web"]\n  n1["Lonely"]\n  n2 --> n0');
-  assert.deepEqual(g.nodes.map((n) => [n.id, n.label]), [['n0', 'Web'], ['n1', 'Lonely'], ['n2', 'n2']]);
+  assert.deepEqual(
+    g.nodes.map((n) => [n.id, n.label]),
+    [
+      ['n0', 'Web'],
+      ['n1', 'Lonely'],
+      ['n2', 'n2'],
+    ],
+  );
   assert.equal(g.edges.length, 1);
 });
 
@@ -126,12 +174,18 @@ test('layoutToElements attaches connectors to their shapes (and keeps coordinate
 test('parser diagnostics report skipped lines and unknown edge endpoints', () => {
   const issues: { line: number; message: string }[] = [];
   parseClaraDsl('node a\nnodee b\nedge a -> zz', issues);
-  assert.deepEqual(issues.map((i) => i.line), [2, 3]);
+  assert.deepEqual(
+    issues.map((i) => i.line),
+    [2, 3],
+  );
   assert.match(issues[1].message, /"zz"/);
 
   const mi: { line: number; message: string }[] = [];
   parseMermaid('flowchart TD\n  A --> B\n  subgraph X\n  A === B', mi);
-  assert.deepEqual(mi.map((i) => i.line), [3, 4]);
+  assert.deepEqual(
+    mi.map((i) => i.line),
+    [3, 4],
+  );
   assert.match(mi[0].message, /not supported/);
 });
 

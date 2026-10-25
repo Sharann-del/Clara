@@ -25,7 +25,10 @@ export function friendlyAuthError(err: unknown): string {
       return 'That code has expired. Send a new one.';
     case 'UserLambdaValidationException':
       // The pre-sign-up trigger's own message, e.g. "That invite code isn't valid."
-      return (e.message ?? '').replace(/^PreSignUp failed with error\s*/, '') || 'Sign-ups are restricted on this deployment.';
+      return (
+        (e.message ?? '').replace(/^PreSignUp failed with error\s*/, '') ||
+        'Sign-ups are restricted on this deployment.'
+      );
     case 'LimitExceededException':
     case 'TooManyRequestsException':
       return 'Too many attempts. Wait a minute, then try again.';
@@ -64,11 +67,23 @@ export function SignInPage() {
   return (
     <AuthLayout>
       <h1>Sign in to Clara</h1>
-      {reason === 'save' && <p className="muted" style={{ margin: 0 }}>Sign in to save your playground diagram to a workspace.</p>}
+      {reason === 'save' && (
+        <p className="muted" style={{ margin: 0 }}>
+          Sign in to save your playground diagram to a workspace.
+        </p>
+      )}
       <form onSubmit={onSubmit} style={{ display: 'contents' }} noValidate={false}>
         <label className="field">
           Email
-          <input className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
+          <input
+            className="input"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            autoFocus
+          />
         </label>
         <label className="field">
           Password

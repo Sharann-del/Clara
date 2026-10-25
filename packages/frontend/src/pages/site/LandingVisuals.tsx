@@ -19,7 +19,10 @@ const compile = (code: string) => compileDiagram(code, 'clara').elements;
 
 /** Markdown with a live diagram embedded in it. */
 export function DocsVisual() {
-  const els = useMemo(() => compile('direction LR\nnode c "Client"\nnode g "Gateway"\nnode s "Search"\nedge c -> g\nedge g -> s "query"'), []);
+  const els = useMemo(
+    () => compile('direction LR\nnode c "Client"\nnode g "Gateway"\nnode s "Search"\nedge c -> g\nedge g -> s "query"'),
+    [],
+  );
   return (
     <div className="feature-visual">
       <div className="visual-bar">
@@ -31,10 +34,16 @@ export function DocsVisual() {
           Queries enter through the gateway, which applies rate limits before fanning out to the search tier.
         </p>
         <div className="embed">
-          <DiagramViewer elements={els} controls={false} className="viewer-inline" maxFitScale={0.9} label="Embedded diagram: Client to Gateway to Search" />
+          <DiagramViewer
+            elements={els}
+            controls={false}
+            className="viewer-inline"
+            maxFitScale={0.9}
+            label="Embedded diagram: Client to Gateway to Search"
+          />
         </div>
         <p style={{ margin: 0, color: 'var(--muted)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
-          ```clara-diagram  ·  renders the live diagram
+          ```clara-diagram · renders the live diagram
         </p>
       </div>
     </div>
@@ -130,7 +139,12 @@ export function C4Visual() {
         />
         {path.length < 3 && <span className="visual-hint">Click the blue box to go a level deeper</span>}
         {path.length === 3 && (
-          <button type="button" className="btn btn-sm visual-hint" style={{ pointerEvents: 'auto' }} onClick={() => setPath(['context'])}>
+          <button
+            type="button"
+            className="btn btn-sm visual-hint"
+            style={{ pointerEvents: 'auto' }}
+            onClick={() => setPath(['context'])}
+          >
             Back to the top
           </button>
         )}
@@ -156,7 +170,11 @@ edge billing -> bdb "SQL (own)"`;
 
 const STATES: { name: string; nodes: string[]; edges: string[] }[] = [
   { name: 'Today', nodes: ['Users', 'Monolith', 'Shared DB'], edges: ['requests', 'SQL'] },
-  { name: 'Migrating', nodes: ['Users', 'Monolith', 'Shared DB', 'Billing service'], edges: ['requests', 'SQL', 'calls', 'SQL (shared)'] },
+  {
+    name: 'Migrating',
+    nodes: ['Users', 'Monolith', 'Shared DB', 'Billing service'],
+    edges: ['requests', 'SQL', 'calls', 'SQL (shared)'],
+  },
   {
     name: 'Target',
     nodes: ['Users', 'Monolith', 'Shared DB', 'Billing service', 'Event bus', 'Billing DB'],
@@ -182,13 +200,21 @@ export function StatesVisual() {
     () =>
       base.map((e) => ({
         ...e,
-        hidden: e.type === 'connector' ? !state.edges.includes(String(e.geometry.text)) : !state.nodes.includes(String(e.geometry.text)),
+        hidden:
+          e.type === 'connector'
+            ? !state.edges.includes(String(e.geometry.text))
+            : !state.nodes.includes(String(e.geometry.text)),
       })),
     [base, state],
   );
 
   return (
-    <div className="feature-visual" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocus={() => setPaused(true)}>
+    <div
+      className="feature-visual"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocus={() => setPaused(true)}
+    >
       <div className="visual-bar" role="group" aria-label="Diagram states">
         <Icon name="play" size={12} />
         {STATES.map((s, i) => (
@@ -207,7 +233,14 @@ export function StatesVisual() {
         ))}
       </div>
       <div className="visual-body">
-        <DiagramViewer elements={els} controls={false} className="viewer-inline" maxFitScale={0.95} autoFit={false} label={`Migration diagram, state: ${state.name}`} />
+        <DiagramViewer
+          elements={els}
+          controls={false}
+          className="viewer-inline"
+          maxFitScale={0.95}
+          autoFit={false}
+          label={`Migration diagram, state: ${state.name}`}
+        />
       </div>
     </div>
   );
@@ -215,15 +248,27 @@ export function StatesVisual() {
 
 /** Live cursors and presence over a shared diagram. */
 export function CollabVisual() {
-  const els = useMemo(() => compile('direction LR\nnode a "Ingest"\nnode b "Stream processor"\nnode c "Warehouse"\nedge a -> b\nedge b -> c "hourly"'), []);
+  const els = useMemo(
+    () =>
+      compile(
+        'direction LR\nnode a "Ingest"\nnode b "Stream processor"\nnode c "Warehouse"\nedge a -> b\nedge b -> c "hourly"',
+      ),
+    [],
+  );
   return (
     <div className="feature-visual">
       <div className="visual-bar">
         <Icon name="diagram" size={14} /> pipeline
         <span className="presence-row" aria-label="3 people viewing">
-          <span className="avatar" style={{ background: '#db2777' }}>DK</span>
-          <span className="avatar" style={{ background: '#0f7a56' }}>SM</span>
-          <span className="avatar" style={{ background: '#2b50e8' }}>You</span>
+          <span className="avatar" style={{ background: '#db2777' }}>
+            DK
+          </span>
+          <span className="avatar" style={{ background: '#0f7a56' }}>
+            SM
+          </span>
+          <span className="avatar" style={{ background: '#2b50e8' }}>
+            You
+          </span>
         </span>
       </div>
       <div className="visual-body" aria-hidden="true">
@@ -244,7 +289,13 @@ export function CollabVisual() {
 function CursorArrow({ color }: { color: string }) {
   return (
     <svg width="16" height="18" viewBox="0 0 16 18" aria-hidden="true">
-      <path d="M1 1l13 6.5-5.5 1.6L6 15z" fill={color} stroke="var(--canvas)" strokeWidth="1.2" strokeLinejoin="round" />
+      <path
+        d="M1 1l13 6.5-5.5 1.6L6 15z"
+        fill={color}
+        stroke="var(--canvas)"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
