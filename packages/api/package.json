@@ -1,6 +1,6 @@
 {
   "name": "@clara/api",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Clara REST API (Fastify) — talks to RDS Postgres, verifies Cognito JWTs",
   "keywords": [
