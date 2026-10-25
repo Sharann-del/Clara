@@ -1,110 +1,166 @@
 # Clara
 
-System design documentation that stays in step with the system: markdown documents and
-architecture diagrams in one place, diagrams you can write as code (Clara DSL or Mermaid), C4-style
-drill-down with no depth limit, named states for walking people through change, real-time
-collaboration, and an MCP server so AI assistants can propose edits that a person reviews before
-they land.
+[![CI](https://github.com/Sharann-del/Clara/actions/workflows/ci.yml/badge.svg)](https://github.com/Sharann-del/Clara/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-- Product requirements: [`docs/clara-prd-aws.md`](docs/clara-prd-aws.md)
-- AWS architecture, costs and limits: [`docs/aws-report.md`](docs/aws-report.md)
-- Every page and API route: [`docs/routes.md`](docs/routes.md)
-- User-facing docs ship inside the app at `/docs`
+System design documentation that stays in step with the system. Clara keeps markdown documents
+and architecture diagrams in one place. You can write diagrams as code (Clara DSL or Mermaid),
+drill down C4-style with no depth limit, step through named states to show how a system changes,
+and edit together in real time. An MCP server lets AI assistants propose edits, and a person
+reviews each one before it lands.
 
-## Repository layout
+Clara runs entirely on AWS (CloudFront, API Gateway, Lambda, RDS PostgreSQL, Cognito, DynamoDB),
+defined in one CDK stack. A native SwiftUI iOS app uses the same backend.
 
-| Package | What it is |
-| --- | --- |
-| `packages/frontend` | React + Vite SPA: the public site (landing, playground, docs, pricing, legal) and the signed-in app |
-| `packages/api` | Fastify REST API (runs as a Lambda), WebSocket Lambdas, SQL migrations |
-| `packages/mcp-server` | MCP server (Lambda on `/mcp`) — reads go through the API's services, writes become pending changes |
-| `packages/shared` | Framework-free code used by all three: DSL/Mermaid parsing + Dagre layout, the SVG renderer, diagram diffing, markdown embed parsing, onboarding content |
-| `packages/infra` | AWS CDK stack (`ClaraStack`) — see its [README](packages/infra/README.md) |
+## Features
 
-## The site
+- **Documents and diagrams together.** Markdown documents with a rich-text mode. Diagrams embed
+  inline and render live.
+- **Diagrams as code.** Write the Clara DSL or paste Mermaid and get an auto-laid-out diagram (Dagre).
+  Any diagram exports back to Mermaid.
+- **A freeform canvas.** Shapes, connectors that follow their shapes, text and groups. Drag,
+  resize, pan, zoom and multi-select, with an inspector for colours and links.
+- **Unlimited C4 drill-down.** Any shape can open a child diagram, at any depth.
+- **Named states and present mode.** Store per-element overrides (visibility, style, position) for
+  states such as *current*, *interim* and *future*, then step through them or auto-play them full screen.
+- **Real-time collaboration.** Presence, live cursors, live typing and live canvas edits over a
+  WebSocket, with per-element last-write-wins conflict resolution.
+- **AI edits with human review.** An MCP server (streamable HTTP) lets Claude and other MCP clients read
+  everything you can read. Every write is staged as a pending change that a person accepts or
+  rejects from a diff.
+- **Sharing.** Workspace roles (viewer, editor, admin, owner), per-item grants and revocable public
+  read-only links.
+- **History and export.** Full version history with preview, diff and restore. Diagrams export to
+  SVG, PNG, PDF and Mermaid; documents export to markdown.
+- **A public playground.** `/editor` renders the DSL or Mermaid in the browser without an account.
+  Its state lives in the URL, so a link is the share.
 
-Public (no account): `/` landing page with a live editor, `/editor` playground, `/docs/*`,
-`/pricing`, `/about`, `/privacy`, `/terms`, and `/s/:token` public share links. Signed in:
-`/app` home, `/workspaces/:id`, `/documents/:id`, `/diagrams/:id`, `/settings`, `/settings/tokens`.
-Details, including the ⌘K palette and keyboard shortcuts, are in [`docs/routes.md`](docs/routes.md).
+## Architecture
 
-Design notes worth knowing before changing the UI:
+```mermaid
+flowchart LR
+  Browser[Browser - React SPA] --> CloudFront[CloudFront]
+  CloudFront -->|OAC| S3[S3 site bucket]
+  Browser -->|sign in| Cognito[Cognito User Pool]
+  Browser -->|REST + ID token| HttpApi[API Gateway HTTP API]
+  Browser -->|WSS + ID token| WsApi[API Gateway WebSocket API]
+  Claude[Claude / MCP client] -->|POST /mcp + PAT| HttpApi
+  HttpApi -->|default route| ApiFn[Lambda - REST API]
+  HttpApi -->|ANY /mcp| McpFn[Lambda - MCP server]
+  WsApi -->|connect / disconnect / default| WsFn[Lambda x3 - realtime]
+  Deploy[cdk deploy] -->|Trigger| MigrateFn[Lambda - migrations]
+  ApiFn -->|5432| RDS[RDS PostgreSQL 16 db.t4g.micro]
+  McpFn -->|5432| RDS
+  WsFn -->|5432| RDS
+  MigrateFn -->|5432| RDS
+  WsFn -->|gateway endpoint| DynamoDB[DynamoDB Connections table]
+  WsFn -->|postToConnection| WsApi
+  ApiFn -->|egress| NAT[NAT instance t4g.nano]
+  McpFn -->|egress| NAT
+  WsFn -->|egress| NAT
+  MigrateFn -->|egress| NAT
+  NAT -->|GetSecretValue| Secrets[Secrets Manager - DB credentials]
+  NAT -->|JWKS / ListUsers| CognitoAPI[Cognito IdP API]
+```
 
-- Colours are tokens in `packages/frontend/src/styles.css` with light and dark sets. **Amber means
-  exactly one thing: a change proposed by an AI that is waiting for a human.** Don't use it for
-  anything else.
-- The diagram canvas stays a light sheet in both themes, so what you see is what exports.
-- Diagrams render through one function, `renderDiagramSvg` in `@clara/shared/render`, used by the
-  server's SVG export, client SVG/PNG/PDF export, the playground, embeds and share links.
-- Markdown is rendered by `src/lib/markdown.ts`, which escapes raw HTML and filters link/image URLs.
-  Documents can be public, so keep it that way.
+The same diagram is in [`docs/aws-architecture.mmd`](docs/aws-architecture.mmd), ready to import
+into Clara itself. See [docs/architecture.md](docs/architecture.md) for how the pieces fit together
+and [docs/aws-report.md](docs/aws-report.md) for the design trade-offs, security review, costs and
+scaling limits.
 
-## Running it locally
+## Quick start
 
-Prerequisites: Node 20+, PostgreSQL 16, AWS credentials for the Cognito user pool (the API verifies
-real Cognito tokens and looks people up by email).
+You need Node.js 22, npm 10 and PostgreSQL 16. Sign-in uses a real Cognito user pool, so deploy the
+stack once first ([self-hosting on AWS](docs/self-hosting-aws.md)) or point at an existing pool.
 
 ```bash
+git clone https://github.com/Sharann-del/Clara.git
+cd Clara
 npm install
 
-# 1. A local database
+# Try the public site and playground. No backend is needed for /, /editor or /docs.
+cp packages/frontend/.env.example packages/frontend/.env
+npm run frontend:dev            # http://localhost:5173
+```
+
+To run the full app locally against your own user pool:
+
+```bash
 createdb clara
 export DATABASE_URL=postgres://localhost/clara
 npm run api:migrate
 
-# 2. The API (copy packages/api/.env.example for the variable list)
-USER_POOL_ID=… USER_POOL_CLIENT_ID=… AWS_REGION=eu-north-1 \
-CORS_ORIGINS=http://localhost:5173 DATABASE_URL=$DATABASE_URL npm run api:dev
+cp packages/api/.env.example packages/api/.env   # fill in USER_POOL_ID / USER_POOL_CLIENT_ID
+set -a; . packages/api/.env; set +a
+npm run api:dev                 # http://localhost:3001
 
-# 3. The frontend (copy packages/frontend/.env.example to .env first)
-VITE_API_URL=http://localhost:3001 npm run frontend:dev
+# In packages/frontend/.env set VITE_API_URL=http://localhost:3001 plus the same pool IDs
+npm run frontend:dev
 ```
 
-The WebSocket handlers only run on AWS and check access against the deployed database, so a
-local API has no real-time channel: the app shows "Reconnecting…" and retries with backoff.
-Shape edits on the canvas are saved through that channel, so test drawing against the deployed
-stack. Documents, code-to-diagram, sharing and everything else save over REST and work locally.
+[docs/getting-started.md](docs/getting-started.md) walks through this step by step, including
+what does and doesn't work without the deployed WebSocket API.
 
-## Tests
+## Tech stack
 
-| Command | What it covers |
+| Layer | Technology |
 | --- | --- |
-| `npm test -w @clara/shared` | DSL/Mermaid parsing, layout, Mermaid export, SVG rendering, connectors, embeds, diffing |
-| `npm test -w @clara/frontend` | Share-link encoding, markdown safety, editor operations, PDF writer, backoff, fuzzy search, examples |
-| `npm test -w @clara/api` | Server SVG export, public-link embed scoping |
-| `npm test -w @clara/mcp-server` | Element and text edit operations |
-| `npx tsx packages/mcp-server/scripts/local.ts` | MCP propose → review → accept/reject scenario against a scratch Postgres (`DATABASE_URL`) |
-| `npx tsx packages/mcp-server/scripts/sharing-e2e.ts` | Per-item sharing in REST and MCP, public links, members, folders, versions — 58 checks against a running API with two real Cognito users (see the file header) |
-| `npm run e2e -w @clara/mcp-server` | MCP against the deployed stack |
-| `npm run e2e -w @clara/frontend` | Playwright smoke test (below) |
+| Frontend | React 18, React Router 6, Vite 6, TypeScript, `amazon-cognito-identity-js`, `marked`, `turndown` |
+| Diagram engine | `@clara/shared`: DSL and Mermaid parsers, Dagre layout, one SVG renderer for every view and export |
+| API | Fastify 5 on AWS Lambda (`@fastify/aws-lambda`), `pg`, Zod, `aws-jwt-verify` |
+| Realtime | API Gateway WebSocket API, three Lambdas, DynamoDB connections table |
+| MCP | `@modelcontextprotocol/sdk`, stateless streamable HTTP on Lambda, personal access tokens |
+| Data | Amazon RDS for PostgreSQL 16, SQL migrations applied by a CDK Trigger on every deploy |
+| Auth | Amazon Cognito user pool (email and password) |
+| Infrastructure | AWS CDK v2 (TypeScript), one stack: `ClaraStack` |
+| iOS | SwiftUI (iOS 18+), JavaScriptCore running a bundle of `@clara/shared` |
+| Tests | Node's test runner via `tsx`, Jest (CDK assertions), Playwright |
 
-### End-to-end smoke test
+## Repository structure
 
-`packages/frontend/e2e/smoke.spec.ts` runs the playground (no account), then signs up a
-throwaway user through the real form, checks first-run setup, creates a document and a diagram,
-shares the document with a public link, opens it signed out and revokes it. The emailed
-verification code is replaced by an `AdminConfirmSignUp` call, and the user is deleted afterwards.
-
-```bash
-# frontend running (npm run frontend:dev, or a deployed URL)
-E2E_BASE_URL=http://localhost:5173 \
-E2E_USER_POOL_ID=eu-north-1_xxxxxxxx AWS_PROFILE=<profile allowed to admin-confirm/delete users> \
-npm run e2e -w @clara/frontend
+```
+.
+├── docs/                      Project documentation (start at docs/getting-started.md)
+├── ios/                       Native SwiftUI app (see ios/README.md)
+├── packages/
+│   ├── shared/                Framework-free diagram code shared by every package
+│   ├── api/                   Fastify REST API, WebSocket Lambdas, SQL migrations
+│   ├── mcp-server/            MCP server Lambda and its integration scripts
+│   ├── frontend/              React SPA: public site, playground and the signed-in app
+│   └── infra/                 AWS CDK stack
+└── .github/                   CI, release workflow, issue and PR templates
 ```
 
-Without `E2E_USER_POOL_ID` only the playground test runs. Playwright's Chromium must be
-installed (`npx playwright install chromium`).
+| Package | What it is |
+| --- | --- |
+| [`packages/frontend`](packages/frontend) | The public site (landing page, playground, docs, pricing, legal) and the signed-in app |
+| [`packages/api`](packages/api) | REST API (runs as a Lambda), WebSocket Lambdas, SQL migrations |
+| [`packages/mcp-server`](packages/mcp-server) | MCP server on `/mcp`. Reads go through the API's services; writes become pending changes |
+| [`packages/shared`](packages/shared) | DSL/Mermaid parsing and layout, the SVG renderer, diagram diffing, embed parsing, onboarding content |
+| [`packages/infra`](packages/infra) | The CDK stack (see its [README](packages/infra/README.md)) |
 
-## Deploying
+## Documentation
 
-The backend (API, WebSocket and MCP Lambdas, migrations) deploys with CDK from `packages/infra`;
-migrations run automatically on each deploy. The frontend is a static build synced to S3:
+| Guide | |
+| --- | --- |
+| [Getting started](docs/getting-started.md) | Run Clara locally |
+| [Self-hosting on AWS](docs/self-hosting-aws.md) | Deploy to a fresh account, upload the frontend, keep the bill down |
+| [Configuration](docs/configuration.md) | Every environment variable and CDK context flag |
+| [Architecture](docs/architecture.md) | Packages, request flows and data model |
+| [API](docs/api.md) and [routes](docs/routes.md) | REST, WebSocket and public endpoints |
+| [MCP setup](docs/mcp-setup.md) | Connect Claude Code or another MCP client |
+| [Realtime](docs/realtime.md) | The WebSocket protocol and conflict resolution |
+| [Sharing and permissions](docs/sharing-and-permissions.md) | Roles, grants and public links |
+| [Testing](docs/testing.md) | Unit, infrastructure, integration and end-to-end tests |
+| [Troubleshooting](docs/troubleshooting.md) | Common problems and fixes |
+| [Roadmap](docs/roadmap.md) | What's planned next |
 
-```bash
-npm run frontend:build      # needs VITE_* vars incl. VITE_SITE_URL (used for sitemap/Open Graph)
-aws s3 sync packages/frontend/dist/ s3://<FrontendBucketName>/ --delete
-aws cloudfront create-invalidation --distribution-id <FrontendDistributionId> --paths "/*"
-```
+## Contributing
 
-The frontend tolerates an older backend: onboarding, search and favorites fall back to existing
-endpoints, and sharing says it needs the newer API.
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) to get set up and
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before taking part. To report a vulnerability, follow
+[SECURITY.md](SECURITY.md) and don't open a public issue.
+
+## License
+
+[MIT](LICENSE) © 2026 Sharann M and Dhriti

@@ -1,6 +1,8 @@
 # Clara — AWS Cloud Architecture Report
 
-**Course project write-up · Stack `ClaraStack` · region `eu-north-1` (Stockholm) · account verified via `aws sts` / CloudFormation, 2026-10-02**
+**Course project write-up · Stack `ClaraStack` · region `eu-north-1` (Stockholm) · account verified via `aws sts` / CloudFormation, 2026-10-02 · updated for v0.1.0, 2026-10-25**
+
+> **Changes in v0.1.0.** Since the original write-up the stack has gained: a `t4g.nano` NAT instance in place of the NAT gateway (fixed cost ≈ $52 → ≈ $22/month, §2.2 and §4), stage throttling on the HTTP and WebSocket APIs, per-user and per-item WebSocket connection limits, and an optional sign-up allowlist or invite-code trigger (§3.4). All of these are CDK context settings ([configuration.md](configuration.md)). Per-item sharing is enforced in REST, MCP and the WebSocket. Sections below describe the v0.1.0 code; figures from the original live queries are kept and marked as such.
 
 This report describes what is actually deployed, derived from the CDK code in `packages/infra`, the application code in `packages/api` and `packages/mcp-server`, and read-only AWS calls against the live stack (`cloudformation list-stack-resources`, `lambda list-functions`, `rds describe-db-instances`, `ec2 describe-nat-gateways`, `lambda get-account-settings`, and the AWS Pricing API). Where a number or claim comes from general AWS knowledge instead of the code or a live query, it is marked **(unverified)**.
 
@@ -15,7 +17,7 @@ Clara is a system-design documentation tool: markdown documents, a freeform diag
 | Service | Resources (live) | What it does in Clara |
 |---|---|---|
 | **VPC** | `10.0.0.0/16`, 2 AZs, 2 public + 2 private `/24` subnets, internet gateway, 2 security groups | Network boundary. Lambdas and RDS live in the private subnets. |
-| **NAT gateway** | 1 NAT + 1 Elastic IP (single AZ) | Outbound-only internet for the private Lambdas: Secrets Manager, Cognito (JWKS download, `ListUsers`), and the API Gateway WebSocket management API. |
+| **NAT instance** | 1 `t4g.nano` (Amazon Linux 2023, IMDSv2, no SSH key) with a public IPv4 address, single AZ. `natMode=gateway` switches to a managed NAT gateway | Outbound-only internet for the private Lambdas: Secrets Manager, Cognito (JWKS download, `ListUsers`), and the API Gateway WebSocket management API. |
 | **VPC gateway endpoint** | 1 (DynamoDB) | Keeps DynamoDB traffic off the NAT. Free. |
 | **S3** | 1 private bucket (SSE-S3, block-public-access, TLS-only) | Holds the built React bundle. Not reachable except through CloudFront (Origin Access Control). |
 | **CloudFront** | 1 distribution, `PriceClass_100`, HTTPS redirect, 403/404 → `/index.html` | Serves the SPA. The error rewrite makes client-side routes work on refresh. |
@@ -64,7 +66,7 @@ flowchart LR
   MigrateFn -->|5432| RDS
   WsFn -->|gateway endpoint| DynamoDB[DynamoDB Connections table]
   WsFn -->|postToConnection| WsApi
-  ApiFn -->|egress| NAT[NAT gateway]
+  ApiFn -->|egress| NAT[NAT instance t4g.nano]
   McpFn -->|egress| NAT
   WsFn -->|egress| NAT
   MigrateFn -->|egress| NAT
@@ -79,7 +81,7 @@ flowchart LR
 **B. Signing in.** The SPA uses `amazon-cognito-identity-js` against Cognito directly (the client allows SRP and plain-password flows; no secret, so it is a public client). Cognito returns an ID token (1 h), an access token (1 h) and a refresh token (30 days).
 
 **C. A REST call** (e.g. `PATCH /documents/:id`):
-1. Browser → `https://<api-id>.execute-api.eu-north-1.amazonaws.com/…` with `Authorization: Bearer <ID token>`.
+1. Browser → the HTTP API's `execute-api.eu-north-1.amazonaws.com` URL with the Cognito ID token in an `Authorization: Bearer` header.
 2. HTTP API invokes the REST Lambda. **There is no API Gateway authorizer**; authentication is a Fastify `preHandler` (`api/src/auth.ts`).
 3. `aws-jwt-verify` checks the token's signature (keys fetched once from Cognito's JWKS and cached per container), issuer, expiry, `token_use = id` and `aud` = the app client.
 4. The service layer (`lib/documents.ts`) looks up the caller's role in `workspace_members` and enforces viewer / editor / admin / owner.
@@ -89,7 +91,7 @@ flowchart LR
 On a **cold start** the Lambda first calls Secrets Manager (via the NAT) for DB credentials, then opens its pool. The pool is process-wide, so warm invocations skip this.
 
 **D. Real-time editing.** The page opens one WebSocket per open document/diagram: `wss://…/prod?token=<ID token>&resourceType=…&resourceId=…` (browsers cannot set headers on a WebSocket handshake, hence the query string).
-- `$connect` verifies the JWT, checks the user's role on that resource, writes a row to DynamoDB (`room = "<type>#<id>"`, TTL 4 h) and broadcasts presence.
+- `$connect` verifies the JWT, checks the user's role on that resource, checks the per-user and per-item connection limits, writes a row to DynamoDB (`room` such as `diagram#4f6c…`, TTL 2 h 15 min) and broadcasts presence.
 - `$default` handles `cursor`, `element.create/update/delete`, `state.override`, `presence.sync`. Element mutations are single-row SQL statements on RDS, then `broadcastToRoom` queries the `RoomIndex` GSI and calls `postToConnection` for every other connection (through the NAT to the management API).
 - `$disconnect` deletes the row and announces `presence.left`.
 
@@ -116,18 +118,20 @@ The PRD named ECS Fargate behind an ALB for both the API and the MCP server, and
 
 **What Fargate would give:** a single warm process with a persistent pool, in-process WebSocket fan-out, no per-account concurrency limit, easier live debugging for a demo. The price is the fixed monthly cost and operating a container pipeline.
 
-### 2.2 Single NAT gateway vs VPC endpoints
+### 2.2 NAT gateway, NAT instance or VPC endpoints
 
 The private Lambdas need outbound access to three AWS services that are not on a free gateway endpoint: **Secrets Manager** (DB credentials), **Cognito** (JWKS download for JWT verification; `ListUsers` for member invites) and the **API Gateway management API** (`postToConnection`). Only DynamoDB has a (free) gateway endpoint in the stack.
 
+Prices from the AWS Pricing API for `eu-north-1`, 2026-10-25.
+
 | Option | Fixed monthly cost | Notes |
 |---|---|---|
-| **1 NAT gateway (current)** | $33.58 + $3.65 public IPv4 ≈ **$37.2** | Simple. One AZ: if that AZ fails, private egress fails everywhere. |
-| 2 NAT gateways (one per AZ) | ≈ $74 | Removes the egress SPOF. Not worth it for a course project. |
-| Interface endpoints for the 3 services | ≈ 3 × $0.01/h × 730 h ≈ $22 per AZ, ≈ $44 for 2 AZs **(unverified; endpoint price not retrieved, availability of a Cognito IdP endpoint in this region not checked)** | Cheaper only at 1 AZ, and it removes the internet path entirely, a security plus. |
-| NAT instance (`t4g.nano`) | ≈ $3–5 **(unverified)** | Cheapest, but self-managed and a single point of failure. |
+| **1 NAT instance, `t4g.nano` (v0.1.0 default)** | $3.14 instance + $0.67 for 8 GB gp3 + $3.65 public IPv4 ≈ **$7.5** | No per-GB processing fee. Single AZ and self-managed: CDK's `NatProvider.instanceV2` configures it, a redeploy replaces it, standard CPU credits cap its cost. |
+| 1 NAT gateway (original deployment, `natMode=gateway`) | $33.58 + $3.65 public IPv4 ≈ $37.2 | Managed and simple, plus $0.046/GB processed. Same single-AZ exposure. |
+| 2 NAT gateways (one per AZ) | ≈ $74 | Removes the egress single point of failure. Not worth it at this scale. |
+| Interface endpoints for the 3 services | $0.0105/h each: ≈ $23 in one AZ, ≈ $46 across two | More than a NAT instance. A private-DNS `execute-api` endpoint would also make the VPC resolve every API Gateway hostname privately, breaking `postToConnection` calls to the public WebSocket API. |
 
-At current scale one managed NAT is the simplest option and the endpoints are not clearly cheaper; the NAT is nevertheless the single largest line item (§4). The DynamoDB gateway endpoint is the one place an endpoint is a pure win (free, and it keeps the busiest realtime path off the NAT).
+**Decision (v0.1.0):** the NAT instance. It cuts the fixed bill by about $30/month, about 58%. Its security group admits traffic only from the VPC's CIDR, it requires IMDSv2 and has no SSH key. The trade-off is a single self-managed instance. If it fails, private egress (and so cold starts and realtime fan-out) stops until it's replaced, which `cdk deploy` does. Deployments that care more about availability than cost can set `natMode=gateway`. The DynamoDB gateway endpoint stays: it's free and keeps the busiest realtime path off the NAT.
 
 ### 2.3 RDS `db.t4g.micro` vs Aurora Serverless v2
 
@@ -188,7 +192,7 @@ Each Lambda has its own execution role (9 roles in the live stack). Grants are m
 - **JWT verification:** `aws-jwt-verify` against this user pool and client; `token_use = id`. Verified in the Lambda on every REST request and on WebSocket `$connect`. (There is no gateway-level authorizer, so unauthenticated requests still invoke a Lambda and are rejected inside it; `/health` is intentionally open.)
 - **Cognito settings:** self sign-up, email auto-verify, password minimum 10 characters with lower/upper/digit (symbols not required), email-only recovery, ID/access tokens 1 h, refresh 30 days, `USER_PASSWORD_AUTH` and SRP both enabled.
 - **Workspace roles:** `viewer < editor < admin < owner`, looked up in `workspace_members` **on every request** by the shared service layer, so REST, WebSocket and MCP use one rule set. Writes need editor or higher; member management needs admin; workspace deletion needs owner.
-- **Per-resource permissions:** the `permissions` table holds direct per-item grants. *Update 2026-10-24 (in code, pending deploy):* every document/diagram load now goes through `assertResourceRole` (effective role = higher of workspace role and direct grant), so sharing is enforced in REST, MCP and the WebSocket alike, covered by `mcp-server/scripts/sharing-e2e.ts`. Deleting an item or moving it between folders still needs a workspace role. Public read-only links (`share_links`, 192-bit tokens, revocable) are served by unauthenticated `GET /public/:token` routes; a document link exposes only the diagrams that document embeds.
+- **Per-resource permissions:** the `permissions` table holds direct per-item grants. Every document/diagram load now goes through `assertResourceRole` (effective role = higher of workspace role and direct grant), so sharing is enforced in REST, MCP and the WebSocket alike, covered by `mcp-server/scripts/sharing-e2e.ts`. Deleting an item or moving it between folders still needs a workspace role. Public read-only links (`share_links`, 192-bit tokens, revocable) are served by unauthenticated `GET /public/:token` routes; a document link exposes only the diagrams that document embeds.
 - **Token hashing:** PATs are 256-bit random values, stored as a SHA-256 hash with a short display prefix; lookup is by hash; the plaintext is returned once at creation. Hashing without a salt or work factor is appropriate here because the secret is high-entropy, not a human password.
 - **Reviewer, not proposer, is the actor** on accept, so an AI cannot grant itself more than the human reviewing it has.
 
@@ -198,7 +202,7 @@ Each Lambda has its own execution role (9 roles in the live stack). Grants are m
 - **Shared master DB user.** Recommended: create separate Postgres roles. For the MCP Lambda, `SELECT` on content tables plus `INSERT`/`SELECT` on `pending_mcp_changes` and `personal_access_tokens` lookups only. That would turn the "AI cannot write directly" rule from a code convention into a database guarantee.
 - **WebSocket token in the URL.** It is necessary because of the browser handshake limitation. API Gateway access logging is not enabled, so tokens are not logged today; enabling it would log them.
 - **`retainData: false`.** RDS has `deletionProtection: false`, a `DESTROY` removal policy and 1-day backups. That is right for iterating, wrong for real data; flip it before storing anything you care about.
-- **No WAF, no throttling configuration beyond API Gateway defaults.** A leaked PAT or ID token could drive load; this is bounded mainly by the Lambda concurrency limit (§5).
+- **Throttling and abuse controls (v0.1.0).** The HTTP API's `$default` stage is throttled (50 requests/s steady, 100 burst by default) and so is the WebSocket stage (100 messages/s, 200 burst). `$connect` caps open connections at 10 per user and 25 per item. A Cognito pre-sign-up trigger can restrict sign-up to an allowlist or invite codes (off by default). There is still **no WAF and no per-token rate limit**, so a leaked PAT or ID token can use the whole stage budget.
 - **CloudWatch log groups never expire.**
 
 ---
@@ -211,23 +215,26 @@ Each Lambda has its own execution role (9 roles in the live stack). Grants are m
 
 | Service | Basis | $/month |
 |---|---|---|
-| NAT gateway | $0.046/h | **33.58** |
-| Public IPv4 for the NAT Elastic IP | $0.005/h **(unverified)** | 3.65 |
+| NAT instance `t4g.nano` (v0.1.0) | $0.0043/h | 3.14 |
+| NAT instance root volume, 8 GB gp3 | $0.0836/GB-month | 0.67 |
+| Public IPv4 on the NAT instance | $0.005/h **(published rate)** | 3.65 |
 | RDS `db.t4g.micro` Single-AZ PostgreSQL | $0.016/h | **11.68** |
 | RDS storage, 20 GB gp3 | $0.12/GB-month | 2.40 |
 | Secrets Manager, 1 secret | $0.40/secret | 0.40 |
 | Everything else (ECS cluster, VPC, subnets, IGW, gateway endpoint, IAM, security groups) | no charge | 0.00 |
-| **Fixed total** | | **≈ 51.7** |
+| **Fixed total** | | **≈ 21.9** |
+
+With `natMode=gateway` (the original deployment) the first two lines are replaced by a NAT gateway at $0.046/h ($33.58), for a fixed total of **≈ 51.7**.
 
 If the AWS account is eligible for RDS free tier, the two RDS lines go to ~$0 for the free period (**unverified**; eligibility depends on account age and plan). RDS burstable instances also default to "unlimited" credits (**unverified**), which can add a small per-vCPU-hour surcharge under sustained load.
 
-> This is higher than the figure in `packages/infra/README.md` ("~$15–47"). That table assumed `us-east-1` and a free-tier RDS; the stack is in Stockholm and the NAT price is $0.046/h there.
+> The original infra README quoted "~$15–47", assuming `us-east-1` and a free-tier RDS. With the NAT gateway in Stockholm the real figure was ≈ $52; v0.1.0's NAT instance brings it to ≈ $22.
 
 ### 4.2 Usage-based costs
 
 | Service | Unit price | Notes |
 |---|---|---|
-| NAT data processing | $0.046 per GB | Secrets, JWKS, `postToConnection` calls. Small. |
+| NAT data processing | none with the NAT instance ($0.046 per GB with a NAT gateway) | Secrets, JWKS, `postToConnection` calls. Small. |
 | HTTP API Gateway | $1.06 per million requests | REST + MCP. |
 | Lambda requests | $0.20 per million | Free tier 1M requests/month **(unverified)**. |
 | Lambda compute | $0.0000166667 per GB-second (x86) | Free tier 400k GB-s/month **(unverified)**. |
@@ -241,24 +248,24 @@ If the AWS account is eligible for RDS free tier, the two RDS lines go to ~$0 fo
 
 | Scenario | Assumptions | Variable $ | **Total $/month** |
 |---|---|---|---|
-| **Idle / demo** | a few requests a day | ≈ 0–1 | **≈ 52** |
-| **Small team** | ~3M REST+MCP requests, ~2M WebSocket messages, 20 GB NAT data | ≈ 8 (API GW 3.2, WebSocket ≈ 2, Lambda ≈ 0.5, NAT data 0.9, misc) | **≈ 60** |
+| **Idle / demo** | a few requests a day | ≈ 0–1 | **≈ 22** (≈ 52 with a NAT gateway) |
+| **Small team** | ~3M REST+MCP requests, ~2M WebSocket messages, 20 GB through the NAT | ≈ 7 (API GW 3.2, WebSocket ≈ 2, Lambda ≈ 0.5, misc; no NAT data fee) | **≈ 29** (≈ 60 with a NAT gateway) |
 | **Busy collaboration** | heavy live-cursor use (see §5, concurrency becomes the issue before cost does) | tens of dollars | the cap is concurrency, not the bill |
 
 ### 4.4 How to reduce it
 
 | Change | Saves (≈) | Trade-off |
 |---|---|---|
-| **`cdk destroy` between demos** (`retainData: false` makes this clean) | ~$52/mo while off | Data is lost. Take a snapshot first, or set `retainData: true` and accept the RDS cost. |
-| Replace the NAT gateway with a `t4g.nano` NAT instance | ≈ $30–33 **(unverified)** | Self-managed, single point of failure. |
-| Replace NAT with interface endpoints (Secrets Manager, Cognito IdP, execute-api) in **one AZ** | ≈ $15 **(unverified)** | Needs those endpoints available; more resources to manage; stronger isolation. |
+| **`cdk destroy` between demos** (`retainData: false` makes this clean) | ~$22/mo while off | Data is lost. Take a snapshot first, or set `retainData: true` and accept the RDS cost. |
+| **Done in v0.1.0:** NAT gateway → `t4g.nano` NAT instance | ≈ $30 | Self-managed, single point of failure (§2.2). |
+| Replace the NAT with interface endpoints | costs more (≈ $23–46) | Not a saving at this scale, and breaks `postToConnection` with private DNS (§2.2). |
 | Free-tier RDS (if eligible) | up to $14 | Time-limited. |
 | Stop the RDS instance when idle | ≈ $11.68 | NAT keeps billing; AWS restarts a stopped instance after 7 days. |
 | Switch Lambdas to `ARM_64` (Graviton) | ~20% of Lambda compute **(unverified)** | Negligible while inside the free tier. |
 | Set 7-day log retention | pennies | None. |
 | Delete the empty ECS cluster | $0 | Cosmetic. |
 
-The NAT gateway is **65% of the fixed bill** and the one lever worth pulling. Everything else is already near the floor for managed services.
+With the NAT gateway gone, RDS (instance and storage, ≈ $14) is about two thirds of the fixed bill. Everything else is already near the floor for managed services.
 
 ---
 
@@ -266,15 +273,15 @@ The NAT gateway is **65% of the fixed bill** and the one lever worth pulling. Ev
 
 Ordered roughly by what I expect to fail first. Items marked *(measured)* come from live queries; the rest are code reading and arithmetic, with assumptions stated.
 
-1. **Lambda account concurrency is 10** *(measured: `lambda get-account-settings` returns 10 total / 10 unreserved).* Every function in the stack shares this pool: REST, MCP, three realtime handlers, migrations. Live cursors send up to ~16 messages/s per mouse-moving user (client throttle is 60 ms), and each message is one Lambda invocation that does a DynamoDB read, a GSI query and N `postToConnection` calls. If an invocation takes ~50 ms (**assumption, not measured**), 10 concurrent executions top out near 200 messages/s, i.e. roughly a dozen people moving their mice at once, with REST calls competing for the same slots. When it saturates, WebSocket and HTTP calls fail with throttling errors. **Fix:** request a Service Quotas increase (new accounts commonly start low), then reduce load: send cursors at 100–200 ms, batch them, or stop persisting a consistent read per cursor event. Reserve concurrency for REST so cursors cannot starve it.
+1. **Lambda account concurrency is 10** *(measured: `lambda get-account-settings` returns 10 total / 10 unreserved).* Every function in the stack shares this pool: REST, MCP, three realtime handlers, migrations. Live cursors send up to ~12 messages/s per mouse-moving user (client throttle is 80 ms), and each message is one Lambda invocation that does a DynamoDB read, a GSI query and N `postToConnection` calls. If an invocation takes ~50 ms (**assumption, not measured**), 10 concurrent executions top out near 200 messages/s, i.e. roughly a dozen people moving their mice at once, with REST calls competing for the same slots. When it saturates, WebSocket and HTTP calls fail with throttling errors. **Fix:** request a Service Quotas increase (new accounts commonly start low), then reduce load: send cursors at 100–200 ms, batch them, or stop persisting a consistent read per cursor event. Reserve concurrency for REST so cursors cannot starve it.
 2. **Database connections.** `db.ts` creates a pool of up to 5 connections per Lambda container, but a container serves one request at a time, so most of that is wasted. With concurrency 10 the worst case is 50 connections. RDS sets `max_connections` from instance memory (formula `DBInstanceClassMemory/9531392`, so on the order of 100 on a 1 GiB instance, **unverified; check `SHOW max_connections`**). If the concurrency quota is raised, connections run out quickly. **Fix:** `max: 1–2` per container now; RDS Proxy (adds a monthly cost, not priced here) or a larger instance later.
 3. **Burstable database.** `t4g.micro` has 2 vCPU and 1 GiB RAM and earns CPU credits at a low baseline. Sustained heavy use (large diagram saves, many realtime element writes) will throttle or, in unlimited mode, surcharge. **Fix:** move to `t4g.small`/`medium` or a non-burstable class; add read replicas only if reads dominate.
 4. **Storage cannot grow.** `maxAllocatedStorage` equals `allocatedStorage` (20 GB), so storage autoscaling is off. The `versions` table stores a **full snapshot per save with no pruning**, and the document editor autosaves 600 ms after typing stops, so it is the fastest-growing table. **Fix:** raise `maxAllocatedStorage`, cap or thin old versions (keep every Nth / last N days), store diffs.
 5. **Realtime fan-out is O(N) per message per Lambda** and therefore O(N²) per room for cursor traffic: each cursor event queries the GSI and then posts to every other connection from one function, through the NAT. Fine for 2–5 editors, poor for dozens. **Fix:** throttle/batch cursors, don't broadcast cursors to rooms above a threshold, or move fan-out to a purpose-built service (e.g. a Fargate WebSocket server or an AppSync/IoT-style pub/sub).
-6. **WebSocket lifetime limits.** API Gateway enforces a maximum connection duration (documented as 2 hours) and an idle timeout (documented as 10 minutes) **(unverified against current quotas)**. *Update 2026-10-24 (in code, pending deploy):* the client now pings every 4 minutes (the `$default` Lambda returns for a ping before any DynamoDB read), reconnects with jittered exponential backoff (1–30 s) and refetches after reconnecting; the connection row's TTL is 2 h 15 min. Each ping is still one Lambda invocation per open tab every 4 minutes, which counts against the concurrency limit in item 1.
+6. **WebSocket lifetime limits.** API Gateway enforces a maximum connection duration (documented as 2 hours) and an idle timeout (documented as 10 minutes) **(unverified against current quotas)**. The client pings every 4 minutes (the `$default` Lambda returns for a ping before any DynamoDB read), reconnects with jittered exponential backoff (1–30 s) and refetches after reconnecting; the connection row's TTL is 2 h 15 min. Each ping is still one Lambda invocation per open tab every 4 minutes, which counts against the concurrency limit in item 1.
 7. **Big diagrams.** `PUT /diagrams/:id/elements` deletes and re-inserts every element one `INSERT` at a time inside one transaction, with no element cap on the REST path (MCP caps at 1000). `GET /diagrams/:id` returns every element in one response, bounded by Lambda's ~6 MB synchronous response limit **(unverified)**. **Fix:** multi-row inserts, an element cap, pagination or viewport queries.
-8. **Single points of failure.** One NAT (one AZ) and single-AZ RDS (Multi-AZ roughly doubles the instance cost). An AZ outage takes the app down. **Fix:** one NAT per AZ and `multiAz: true`, when availability matters more than the bill.
-9. **No rate limiting.** There is no per-user or per-token throttle and no WAF. The existing protections are the Lambda concurrency limit and the 50-pending-change cap per user per workspace. **Fix:** HTTP API stage throttling, a WAF rate rule, per-token rate limits.
+8. **Single points of failure.** One NAT instance (one AZ, self-managed) and single-AZ RDS (Multi-AZ roughly doubles the instance cost). An AZ outage or a failed NAT instance takes the app down. **Fix:** `natMode=gateway` (managed), or one NAT per AZ, and `dbMultiAz: true`, when availability matters more than the bill.
+9. **Rate limiting is stage-wide only.** v0.1.0 throttles both API stages and caps WebSocket connections per user and per item, on top of the Lambda concurrency limit and the 50-pending-change cap. There is no per-user or per-token request throttle and no WAF. **Fix:** a WAF rate rule, per-token rate limits.
 10. **Cold starts.** VPC Lambdas plus a Secrets Manager call add latency to the first request after idle. **Fix:** provisioned concurrency on the REST function (costs money) or keep-warm pings.
 11. **Last-write-wins.** Fine for 2–3 collaborators; if concurrent edits of the *same* shape become common, move that state to a CRDT (§2.4).
 
@@ -286,7 +293,7 @@ Ordered roughly by what I expect to fail first. Items marked *(measured)* come f
 |---|---|
 | API and MCP on ECS Fargate behind an ALB | Both on Lambda; no ALB; an empty ECS cluster remains |
 | Google OAuth via Cognito | Email/password only; no Cognito domain, no Google IdP |
-| Per-document sharing (owner/editor/viewer) | Enforced in REST, MCP and WebSocket as of 2026-10-24 (pending deploy); grants are viewer/editor per item, plus public read-only links |
+| Per-document sharing (owner/editor/viewer) | Enforced in REST, MCP and WebSocket; grants are viewer/editor per item, plus public read-only links |
 | Terraform or CDK | CDK (TypeScript) |
 | Secrets Manager for DB credentials | Yes, but one master secret shared by all functions, no rotation |
 | `pending_mcp_changes(id, resource_id, diff_payload, status)` | Implemented with extra columns (resource type, operation, proposer, token, summary, reviewer, timestamps) |

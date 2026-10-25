@@ -23,18 +23,28 @@ AI pending-change review, access tokens, and live collaboration (presence, live 
 ios/scripts/configure.sh        # Clara/Resources/ClaraConfig.json from packages/frontend/.env
 ios/scripts/build-shared-js.sh  # after changing packages/shared
 ios/scripts/fetch-fonts.sh      # OFL fonts into Clara/Fonts (falls back to SF without them)
+cp ios/Config/Local.example.xcconfig ios/Config/Local.xcconfig   # then set your team and bundle ID
 open ios/Clara.xcodeproj
 ```
 
-Signing uses team `A1B2C3D4E5` and bundle id `com.sharannm.clara`; change both in the target's
-Signing settings for another account. Free developer accounts can install at most 3 apps per device,
-and the first launch needs Settings → General → VPN & Device Management → trust the developer.
+**Endpoints.** `Clara/Resources/ClaraConfig.json` is generated and gitignored, so the app always
+talks to the same stack as your web build. `Config/ClaraConfig.example.json` shows the format. The
+app stops at launch with a message pointing at `configure.sh` if the file is missing.
+
+**Signing.** `Config/Signing.xcconfig` (committed) sets neutral defaults (no team, bundle ID
+`dev.clara.ios`) so the project builds anywhere, and includes `Config/Local.xcconfig` (gitignored)
+when it exists. Put your Apple team ID and a bundle ID you own there. The keychain service name is
+derived from the bundle ID. Free developer accounts can install at most 3 apps per device, and the
+first launch needs Settings → General → VPN & Device Management → trust the developer.
 
 Command-line build and install on a connected device:
 
 ```sh
-xcodebuild -project ios/Clara.xcodeproj -scheme Clara -destination 'id=<UDID>' -allowProvisioningUpdates build
-xcrun devicectl device install app --device <UDID> <DerivedData>/Build/Products/Debug-iphoneos/Clara.app
+xcrun devicectl list devices            # find your device's identifier
+UDID=00008030-001A2B3C4D5E802E          # example; use the identifier from the list
+xcodebuild -project ios/Clara.xcodeproj -scheme Clara -destination "id=$UDID" \
+  -derivedDataPath build/ios -allowProvisioningUpdates build
+xcrun devicectl device install app --device "$UDID" build/ios/Build/Products/Debug-iphoneos/Clara.app
 ```
 
 ## Site content
