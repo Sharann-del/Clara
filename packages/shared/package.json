@@ -1,6 +1,6 @@
 {
   "name": "@clara/shared",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Framework-free code shared by the frontend, API and MCP server (DSL / Mermaid parsing + layout, diagram diffing, SVG rendering)",
   "keywords": [

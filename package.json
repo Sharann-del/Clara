@@ -1,6 +1,6 @@
 {
   "name": "clara",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Clara: system design documentation with diagrams as code, C4 drill-down, real-time collaboration and human-reviewed AI edits over MCP (monorepo)",
   "keywords": [
