@@ -5,6 +5,16 @@ All notable changes to Clara are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- The NAT instance now forwards traffic. CDK's default setup script found the outbound interface
+  with `route`, which Amazon Linux 2023 doesn't include, and the private routes switched to the
+  instance before it had finished booting, so deploys with the default `natMode=instance` failed
+  with Lambda timeouts. Clara now configures the instance with its own script that verifies NAT
+  works, and CloudFormation waits for the instance to signal success before switching the routes.
+
 ## [0.1.0] - 2026-10-25
 
 The first public release: the web app, MCP server, AWS infrastructure and the native iOS app.
@@ -83,4 +93,5 @@ The first public release: the web app, MCP server, AWS infrastructure and the na
 - Example configuration files and the Git history no longer contain real AWS account, Cognito, API
   Gateway or CloudFront identifiers, or an Apple team ID.
 
+[Unreleased]: https://github.com/Sharann-del/Clara/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/Sharann-del/Clara/releases/tag/v0.1.0

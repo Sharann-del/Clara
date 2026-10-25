@@ -30,6 +30,37 @@ describe('ClaraStack with default settings', () => {
     });
   });
 
+  it('configures NAT without net-tools and verifies it before reporting success', () => {
+    const instance = Object.values(template.findResources('AWS::EC2::Instance'))[0] as {
+      Properties: { UserData: unknown };
+    };
+    const userData = JSON.stringify(instance.Properties.UserData);
+    // `route` (net-tools) isn't installed on Amazon Linux 2023; the interface comes from iproute.
+    expect(userData).not.toContain('route | awk');
+    expect(userData).toContain('ip -4 route show default');
+    expect(userData).toContain('set -euxo pipefail');
+    expect(userData).toContain('net.ipv4.ip_forward = 1');
+    expect(userData).toContain('-j MASQUERADE');
+    expect(userData).toContain('iptables -F FORWARD');
+    // The exit trap reports the script's result to CloudFormation.
+    expect(userData).toContain('/opt/aws/bin/cfn-signal');
+    expect(userData).toContain('-e $exitCode');
+  });
+
+  it('switches the private routes only after the NAT instance signals that NAT works', () => {
+    const instances = template.findResources('AWS::EC2::Instance', {
+      CreationPolicy: { ResourceSignal: { Count: 1, Timeout: 'PT10M' } },
+    });
+    const [instanceId] = Object.keys(instances);
+    expect(instanceId).toBeDefined();
+    // Each private default route references the instance, so CloudFormation can't
+    // update it until the instance resource (and so its signal) has completed.
+    const routes = template.findResources('AWS::EC2::Route', {
+      Properties: { DestinationCidrBlock: '0.0.0.0/0', InstanceId: { Ref: instanceId } },
+    });
+    expect(Object.keys(routes)).toHaveLength(2);
+  });
+
   it('only lets traffic from inside the VPC into the NAT instance, and requires IMDSv2', () => {
     const groups = template.findResources('AWS::EC2::SecurityGroup', {
       Properties: { GroupDescription: 'Security Group for NAT instances' },
@@ -130,6 +161,10 @@ describe('ClaraStack context flags', () => {
     const template = synth({ natMode: 'gateway' });
     template.resourceCountIs('AWS::EC2::NatGateway', 1);
     template.resourceCountIs('AWS::EC2::Instance', 0);
+    template.hasResourceProperties('AWS::EC2::Route', {
+      DestinationCidrBlock: '0.0.0.0/0',
+      NatGatewayId: Match.anyValue(),
+    });
   });
 
   it('signupMode=invite attaches a pre-sign-up trigger outside the VPC with the codes', () => {

@@ -94,6 +94,24 @@ The `MigrateFn` Lambda's CloudWatch log group has the SQL error. Fix the migrati
 tripped over, and deploy again; the trigger runs on every deploy and skips migrations already in
 `schema_migrations`. Never edit a migration that has already run on a deployment; add a new one.
 
+### Deploy fails on the NAT instance: "Failed to receive 1 resource signal(s)" or a FAILURE signal
+
+The NAT instance reports to CloudFormation when its setup script finishes. A FAILURE signal means a
+step failed (package install, IP forwarding, the MASQUERADE rule or the egress check); no signal
+within 10 minutes usually means the instance couldn't reach the internet to install packages or
+send the signal. Either way the private routes were never switched, so the app keeps its previous
+egress. To see which step failed, read the instance's console output before the rollback deletes
+it:
+
+```bash
+ID=$(aws ec2 describe-instances --filters Name=tag:Name,Values='ClaraStack/Network/Vpc/publicSubnet1/NatInstance' \
+  --query 'Reservations[].Instances[].InstanceId' --output text)
+aws ec2 get-console-output --instance-id "$ID" --latest --output text | grep -A3 -E '^\+|error|fail'
+```
+
+The script runs with `set -x`, so each command is echoed with a leading `+`. To deploy anyway with
+the managed option, use `-c natMode=gateway`.
+
 ### Lambdas time out on cold start after changing the NAT
 
 The private Lambdas reach Secrets Manager and Cognito through the NAT. If they time out:
