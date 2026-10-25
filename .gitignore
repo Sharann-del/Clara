@@ -72,3 +72,6 @@ playwright-report/
 
 # CI synth output with optional features on
 cdk.out.flags/
+
+# Course submission bundle
+course-submission/
