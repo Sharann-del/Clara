@@ -43,7 +43,7 @@ flowchart LR
   MigrateFn -->|5432| RDS
   WsFn -->|gateway endpoint| DynamoDB[DynamoDB Connections table]
   WsFn -->|postToConnection| WsApi
-  ApiFn -->|egress| NAT[NAT instance t4g.nano]
+  ApiFn -->|egress| NAT[NAT instance t4g.micro]
   McpFn -->|egress| NAT
   WsFn -->|egress| NAT
   MigrateFn -->|egress| NAT
@@ -60,7 +60,7 @@ flowchart LR
 | Realtime | WebSocket API (`prod` stage, throttled) → connect, disconnect and default Lambdas | Connections live in DynamoDB with `RoomIndex` and `UserIndex` GSIs |
 | Database | RDS PostgreSQL 16, `db.t4g.micro`, private subnets, encrypted | Credentials generated into Secrets Manager |
 | Migrations | `MigrateFn`, run by a CDK Trigger on every deploy | The API Lambdas depend on it, so new code never meets an old schema |
-| Egress | One `t4g.nano` NAT instance (or a NAT gateway with `natMode=gateway`) | For Secrets Manager, Cognito and the WebSocket management API. DynamoDB traffic uses a free gateway endpoint |
+| Egress | One `t4g.micro` NAT instance (or a NAT gateway with `natMode=gateway`) | For Secrets Manager, Cognito and the WebSocket management API. DynamoDB traffic uses a free gateway endpoint |
 
 Every application Lambda runs Node.js 22 in the private subnets on one shared security group. RDS
 accepts connections on 5432 from that security group only.

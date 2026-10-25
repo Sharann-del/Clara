@@ -31,8 +31,8 @@ them at synth time, so a bad value fails before anything is deployed.
 
 | Key | Default | Description |
 | --- | --- | --- |
-| `natMode` | `instance` | How Lambdas in the private subnets reach AWS APIs. `instance`: one NAT instance (about $7.50/month with its IPv4 address). `gateway`: one managed NAT gateway (about $37/month). See [self-hosting-aws.md](self-hosting-aws.md#costs). |
-| `natInstanceType` | `t4g.nano` | EC2 instance type for the NAT instance. The Amazon Linux 2023 image is picked to match its architecture (arm64 for Graviton types, x86_64 otherwise). |
+| `natMode` | `instance` | How Lambdas in the private subnets reach AWS APIs. `instance`: one NAT instance (about $10.60/month with its disk and IPv4 address). `gateway`: one managed NAT gateway (about $37/month). See [self-hosting-aws.md](self-hosting-aws.md#costs). |
+| `natInstanceType` | `t4g.micro` | EC2 instance type for the NAT instance. The Amazon Linux 2023 image is picked to match its architecture (arm64 for Graviton types, x86_64 otherwise). The default is the smallest Graviton type that accounts on the AWS Free plan are allowed to launch. On an account without that restriction, `t4g.nano` saves about $3/month. |
 | `dbInstanceType` | `t4g.micro` | RDS instance type, without the `db.` prefix. |
 | `dbAllocatedStorageGb` | `20` | RDS storage in GB. Storage autoscaling is off, so this is also the ceiling. |
 | `dbMultiAz` | `false` | Run RDS Multi-AZ. Roughly doubles the database cost. |

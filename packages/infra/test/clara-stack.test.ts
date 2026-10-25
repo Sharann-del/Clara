@@ -20,7 +20,7 @@ describe('ClaraStack with default settings', () => {
     template.resourceCountIs('AWS::EC2::NatGateway', 0);
     template.resourceCountIs('AWS::EC2::Instance', 1);
     template.hasResourceProperties('AWS::EC2::Instance', {
-      InstanceType: 't4g.nano',
+      InstanceType: 't4g.micro',
       SourceDestCheck: false,
       CreditSpecification: { CPUCredits: 'standard' },
     });
@@ -121,6 +121,11 @@ describe('ClaraStack with default settings', () => {
 });
 
 describe('ClaraStack context flags', () => {
+  it('natInstanceType overrides the NAT instance type', () => {
+    const template = synth({ natInstanceType: 't4g.small' });
+    template.hasResourceProperties('AWS::EC2::Instance', { InstanceType: 't4g.small' });
+  });
+
   it('natMode=gateway uses one managed NAT gateway and no instance', () => {
     const template = synth({ natMode: 'gateway' });
     template.resourceCountIs('AWS::EC2::NatGateway', 1);

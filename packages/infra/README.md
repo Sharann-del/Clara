@@ -11,7 +11,7 @@ design trade-offs, security review, costs and scaling limits are in the
 
 | Construct | Resources |
 | --- | --- |
-| `Network` (`lib/network.ts`) | One VPC (`10.0.0.0/16`), 2 AZs, public and private subnets, and **one `t4g.nano` NAT instance** (IMDSv2, no SSH key, VPC-only ingress, standard CPU credits). `natMode=gateway` uses a managed NAT gateway instead |
+| `Network` (`lib/network.ts`) | One VPC (`10.0.0.0/16`), 2 AZs, public and private subnets, and **one `t4g.micro` NAT instance** (IMDSv2, no SSH key, VPC-only ingress, standard CPU credits). `natMode=gateway` uses a managed NAT gateway instead |
 | `Frontend` (`lib/frontend.ts`) | Private S3 bucket and a CloudFront distribution (Origin Access Control, HTTPS redirect, SPA error routing, `PriceClass_100`) |
 | `Compute` (`lib/compute.ts`) | An empty ECS cluster left from the original Fargate plan. No services, no cost |
 | `Database` (`lib/database.ts`) | RDS PostgreSQL 16, single-AZ `db.t4g.micro`, 20 GB gp3, private, encrypted, credentials generated into Secrets Manager |
@@ -31,7 +31,7 @@ deployment cheap and open. Put overrides in `cdk.context.json` (gitignored) or p
 | Key | Default | |
 | --- | --- | --- |
 | `natMode` | `instance` | `instance` or `gateway` |
-| `natInstanceType` | `t4g.nano` | |
+| `natInstanceType` | `t4g.micro` | The smallest Graviton type AWS Free plan accounts can launch |
 | `dbInstanceType`, `dbAllocatedStorageGb`, `dbMultiAz` | `t4g.micro`, `20`, `false` | |
 | `retainData` | `false` | Keep stateful resources on destroy; RDS deletion protection and 7-day backups |
 | `signupMode`, `signupAllowlist`, `signupInviteCodes` | `open` | Sign-up restrictions |
@@ -59,7 +59,7 @@ npm run destroy -w @clara/infra
 
 ## Cost
 
-The fixed cost in `eu-north-1` is about **$22/month** with the default NAT instance (about $52
+The fixed cost in `eu-north-1` is about **$25/month** with the default NAT instance (about $52
 with `natMode=gateway`), most of it the database. The line-by-line breakdown and ways to cut it
 are in [docs/self-hosting-aws.md](../../docs/self-hosting-aws.md#costs).
 

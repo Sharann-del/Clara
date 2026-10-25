@@ -55,7 +55,7 @@ flowchart LR
   MigrateFn -->|5432| RDS
   WsFn -->|gateway endpoint| DynamoDB[DynamoDB Connections table]
   WsFn -->|postToConnection| WsApi
-  ApiFn -->|egress| NAT[NAT instance t4g.nano]
+  ApiFn -->|egress| NAT[NAT instance t4g.micro]
   McpFn -->|egress| NAT
   WsFn -->|egress| NAT
   MigrateFn -->|egress| NAT

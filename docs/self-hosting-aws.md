@@ -154,14 +154,14 @@ before tax, free tier or credits. Other regions differ by a few percent.
 
 | Item | Price | ≈ USD / month |
 | --- | --- | --- |
-| NAT instance, `t4g.nano`, standard CPU credits | $0.0043/h | 3.14 |
+| NAT instance, `t4g.micro`, standard CPU credits | $0.0086/h | 6.28 |
 | NAT instance root volume, 8 GB gp3 | $0.0836/GB-month | 0.67 |
 | Public IPv4 address on the NAT instance | $0.005/h | 3.65 |
 | RDS `db.t4g.micro`, single-AZ PostgreSQL | $0.016/h | 11.68 |
 | RDS storage, 20 GB gp3 | $0.12/GB-month | 2.40 |
 | Secrets Manager, 1 secret | $0.40/secret | 0.40 |
 | VPC, subnets, internet gateway, DynamoDB gateway endpoint, IAM, empty ECS cluster | free | 0.00 |
-| **Total** | | **≈ 22** |
+| **Total** | | **≈ 25** |
 
 With `natMode=gateway` the first three lines become a managed NAT gateway ($0.046/h, $33.58) plus
 its Elastic IP ($3.65), for a total of about **$52**.
@@ -184,10 +184,11 @@ A small team (a few million requests and messages a month) adds roughly $5–10 
 
 | Change | Saves ≈ / month | Trade-off |
 | --- | --- | --- |
-| Keep the default `natMode=instance` | $30 against a NAT gateway | The instance is a single point of failure you patch by replacing it (redeploy) |
+| Keep the default `natMode=instance` | $27 against a NAT gateway | The instance is a single point of failure you patch by replacing it (redeploy) |
 | `cdk destroy` when not in use (with `retainData: false`) | All of it | Data is deleted; snapshot RDS first if you need it |
 | Stop the RDS instance when idle (`aws rds stop-db-instance`) | $11.68 while stopped | AWS restarts it automatically after 7 days |
 | RDS free tier, if your account qualifies | up to $14 for 12 months | Time-limited |
+| `natInstanceType=t4g.nano`, if your account isn't on the AWS Free plan | $3.14 | Free-plan accounts can only launch Free Tier eligible types, so the deploy fails there |
 | Lower `apiThrottleRate` / `wsThrottleRate` | Caps the worst case | Heavy legitimate use gets 429s |
 | Set a budget alert | Nothing, but you hear early | See below |
 

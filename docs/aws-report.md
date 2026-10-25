@@ -2,7 +2,7 @@
 
 **Course project write-up · Stack `ClaraStack` · region `eu-north-1` (Stockholm) · account verified via `aws sts` / CloudFormation, 2026-10-02 · updated for v0.1.0, 2026-10-25**
 
-> **Changes in v0.1.0.** Since the original write-up the stack has gained: a `t4g.nano` NAT instance in place of the NAT gateway (fixed cost ≈ $52 → ≈ $22/month, §2.2 and §4), stage throttling on the HTTP and WebSocket APIs, per-user and per-item WebSocket connection limits, and an optional sign-up allowlist or invite-code trigger (§3.4). All of these are CDK context settings ([configuration.md](configuration.md)). Per-item sharing is enforced in REST, MCP and the WebSocket. Sections below describe the v0.1.0 code; figures from the original live queries are kept and marked as such.
+> **Changes in v0.1.0.** Since the original write-up the stack has gained: a `t4g.micro` NAT instance in place of the NAT gateway (fixed cost ≈ $52 → ≈ $25/month, §2.2 and §4), stage throttling on the HTTP and WebSocket APIs, per-user and per-item WebSocket connection limits, and an optional sign-up allowlist or invite-code trigger (§3.4). All of these are CDK context settings ([configuration.md](configuration.md)). Per-item sharing is enforced in REST, MCP and the WebSocket. Sections below describe the v0.1.0 code; figures from the original live queries are kept and marked as such.
 
 This report describes what is actually deployed, derived from the CDK code in `packages/infra`, the application code in `packages/api` and `packages/mcp-server`, and read-only AWS calls against the live stack (`cloudformation list-stack-resources`, `lambda list-functions`, `rds describe-db-instances`, `ec2 describe-nat-gateways`, `lambda get-account-settings`, and the AWS Pricing API). Where a number or claim comes from general AWS knowledge instead of the code or a live query, it is marked **(unverified)**.
 
@@ -17,7 +17,7 @@ Clara is a system-design documentation tool: markdown documents, a freeform diag
 | Service | Resources (live) | What it does in Clara |
 |---|---|---|
 | **VPC** | `10.0.0.0/16`, 2 AZs, 2 public + 2 private `/24` subnets, internet gateway, 2 security groups | Network boundary. Lambdas and RDS live in the private subnets. |
-| **NAT instance** | 1 `t4g.nano` (Amazon Linux 2023, IMDSv2, no SSH key) with a public IPv4 address, single AZ. `natMode=gateway` switches to a managed NAT gateway | Outbound-only internet for the private Lambdas: Secrets Manager, Cognito (JWKS download, `ListUsers`), and the API Gateway WebSocket management API. |
+| **NAT instance** | 1 `t4g.micro` (Amazon Linux 2023, IMDSv2, no SSH key) with a public IPv4 address, single AZ. `natMode=gateway` switches to a managed NAT gateway | Outbound-only internet for the private Lambdas: Secrets Manager, Cognito (JWKS download, `ListUsers`), and the API Gateway WebSocket management API. |
 | **VPC gateway endpoint** | 1 (DynamoDB) | Keeps DynamoDB traffic off the NAT. Free. |
 | **S3** | 1 private bucket (SSE-S3, block-public-access, TLS-only) | Holds the built React bundle. Not reachable except through CloudFront (Origin Access Control). |
 | **CloudFront** | 1 distribution, `PriceClass_100`, HTTPS redirect, 403/404 → `/index.html` | Serves the SPA. The error rewrite makes client-side routes work on refresh. |
@@ -66,7 +66,7 @@ flowchart LR
   MigrateFn -->|5432| RDS
   WsFn -->|gateway endpoint| DynamoDB[DynamoDB Connections table]
   WsFn -->|postToConnection| WsApi
-  ApiFn -->|egress| NAT[NAT instance t4g.nano]
+  ApiFn -->|egress| NAT[NAT instance t4g.micro]
   McpFn -->|egress| NAT
   WsFn -->|egress| NAT
   MigrateFn -->|egress| NAT
@@ -126,12 +126,13 @@ Prices from the AWS Pricing API for `eu-north-1`, 2026-10-25.
 
 | Option | Fixed monthly cost | Notes |
 |---|---|---|
-| **1 NAT instance, `t4g.nano` (v0.1.0 default)** | $3.14 instance + $0.67 for 8 GB gp3 + $3.65 public IPv4 ≈ **$7.5** | No per-GB processing fee. Single AZ and self-managed: CDK's `NatProvider.instanceV2` configures it, a redeploy replaces it, standard CPU credits cap its cost. |
+| **1 NAT instance, `t4g.micro` (v0.1.0 default)** | $6.28 instance + $0.67 for 8 GB gp3 + $3.65 public IPv4 ≈ **$10.6** | No per-GB processing fee. Single AZ and self-managed: CDK's `NatProvider.instanceV2` configures it, a redeploy replaces it, standard CPU credits cap its cost. |
+| 1 NAT instance, `t4g.nano` (`natInstanceType=t4g.nano`) | $3.14 + $0.67 + $3.65 ≈ $7.5 | Cheapest, but accounts on the AWS Free plan can only launch Free Tier eligible types, and `t4g.nano` isn't one: the first v0.1.0 deploy failed on it. |
 | 1 NAT gateway (original deployment, `natMode=gateway`) | $33.58 + $3.65 public IPv4 ≈ $37.2 | Managed and simple, plus $0.046/GB processed. Same single-AZ exposure. |
 | 2 NAT gateways (one per AZ) | ≈ $74 | Removes the egress single point of failure. Not worth it at this scale. |
 | Interface endpoints for the 3 services | $0.0105/h each: ≈ $23 in one AZ, ≈ $46 across two | More than a NAT instance. A private-DNS `execute-api` endpoint would also make the VPC resolve every API Gateway hostname privately, breaking `postToConnection` calls to the public WebSocket API. |
 
-**Decision (v0.1.0):** the NAT instance. It cuts the fixed bill by about $30/month, about 58%. Its security group admits traffic only from the VPC's CIDR, it requires IMDSv2 and has no SSH key. The trade-off is a single self-managed instance. If it fails, private egress (and so cold starts and realtime fan-out) stops until it's replaced, which `cdk deploy` does. Deployments that care more about availability than cost can set `natMode=gateway`. The DynamoDB gateway endpoint stays: it's free and keeps the busiest realtime path off the NAT.
+**Decision (v0.1.0):** the NAT instance. It cuts the fixed bill by about $27/month, about 51%. It's a `t4g.micro` because that's the smallest Graviton type a Free plan account may launch. Its security group admits traffic only from the VPC's CIDR, it requires IMDSv2 and has no SSH key. The trade-off is a single self-managed instance. If it fails, private egress (and so cold starts and realtime fan-out) stops until it's replaced, which `cdk deploy` does. Deployments that care more about availability than cost can set `natMode=gateway`. The DynamoDB gateway endpoint stays: it's free and keeps the busiest realtime path off the NAT.
 
 ### 2.3 RDS `db.t4g.micro` vs Aurora Serverless v2
 
@@ -215,20 +216,20 @@ Each Lambda has its own execution role (9 roles in the live stack). Grants are m
 
 | Service | Basis | $/month |
 |---|---|---|
-| NAT instance `t4g.nano` (v0.1.0) | $0.0043/h | 3.14 |
+| NAT instance `t4g.micro` (v0.1.0) | $0.0086/h | 6.28 |
 | NAT instance root volume, 8 GB gp3 | $0.0836/GB-month | 0.67 |
 | Public IPv4 on the NAT instance | $0.005/h **(published rate)** | 3.65 |
 | RDS `db.t4g.micro` Single-AZ PostgreSQL | $0.016/h | **11.68** |
 | RDS storage, 20 GB gp3 | $0.12/GB-month | 2.40 |
 | Secrets Manager, 1 secret | $0.40/secret | 0.40 |
 | Everything else (ECS cluster, VPC, subnets, IGW, gateway endpoint, IAM, security groups) | no charge | 0.00 |
-| **Fixed total** | | **≈ 21.9** |
+| **Fixed total** | | **≈ 25.1** |
 
 With `natMode=gateway` (the original deployment) the first two lines are replaced by a NAT gateway at $0.046/h ($33.58), for a fixed total of **≈ 51.7**.
 
 If the AWS account is eligible for RDS free tier, the two RDS lines go to ~$0 for the free period (**unverified**; eligibility depends on account age and plan). RDS burstable instances also default to "unlimited" credits (**unverified**), which can add a small per-vCPU-hour surcharge under sustained load.
 
-> The original infra README quoted "~$15–47", assuming `us-east-1` and a free-tier RDS. With the NAT gateway in Stockholm the real figure was ≈ $52; v0.1.0's NAT instance brings it to ≈ $22.
+> The original infra README quoted "~$15–47", assuming `us-east-1` and a free-tier RDS. With the NAT gateway in Stockholm the real figure was ≈ $52; v0.1.0's NAT instance brings it to ≈ $25.
 
 ### 4.2 Usage-based costs
 
@@ -248,16 +249,16 @@ If the AWS account is eligible for RDS free tier, the two RDS lines go to ~$0 fo
 
 | Scenario | Assumptions | Variable $ | **Total $/month** |
 |---|---|---|---|
-| **Idle / demo** | a few requests a day | ≈ 0–1 | **≈ 22** (≈ 52 with a NAT gateway) |
-| **Small team** | ~3M REST+MCP requests, ~2M WebSocket messages, 20 GB through the NAT | ≈ 7 (API GW 3.2, WebSocket ≈ 2, Lambda ≈ 0.5, misc; no NAT data fee) | **≈ 29** (≈ 60 with a NAT gateway) |
+| **Idle / demo** | a few requests a day | ≈ 0–1 | **≈ 25** (≈ 52 with a NAT gateway) |
+| **Small team** | ~3M REST+MCP requests, ~2M WebSocket messages, 20 GB through the NAT | ≈ 7 (API GW 3.2, WebSocket ≈ 2, Lambda ≈ 0.5, misc; no NAT data fee) | **≈ 32** (≈ 60 with a NAT gateway) |
 | **Busy collaboration** | heavy live-cursor use (see §5, concurrency becomes the issue before cost does) | tens of dollars | the cap is concurrency, not the bill |
 
 ### 4.4 How to reduce it
 
 | Change | Saves (≈) | Trade-off |
 |---|---|---|
-| **`cdk destroy` between demos** (`retainData: false` makes this clean) | ~$22/mo while off | Data is lost. Take a snapshot first, or set `retainData: true` and accept the RDS cost. |
-| **Done in v0.1.0:** NAT gateway → `t4g.nano` NAT instance | ≈ $30 | Self-managed, single point of failure (§2.2). |
+| **`cdk destroy` between demos** (`retainData: false` makes this clean) | ~$25/mo while off | Data is lost. Take a snapshot first, or set `retainData: true` and accept the RDS cost. |
+| **Done in v0.1.0:** NAT gateway → `t4g.micro` NAT instance | ≈ $27 | Self-managed, single point of failure (§2.2). |
 | Replace the NAT with interface endpoints | costs more (≈ $23–46) | Not a saving at this scale, and breaks `postToConnection` with private DNS (§2.2). |
 | Free-tier RDS (if eligible) | up to $14 | Time-limited. |
 | Stop the RDS instance when idle | ≈ $11.68 | NAT keeps billing; AWS restarts a stopped instance after 7 days. |

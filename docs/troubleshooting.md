@@ -75,6 +75,19 @@ A restricted sign-up mode needs something to check against. Set `signupInviteCod
 or `signupAllowlist` (for `allowlist`) in `packages/infra/cdk.context.json` or with `-c`. See
 [configuration.md](configuration.md#sign-up-restrictions).
 
+### Deploy fails on the NAT instance: "The specified instance type is not eligible for Free Tier"
+
+Accounts on the AWS Free plan can only launch Free Tier eligible instance types. The default
+`natInstanceType` is `t4g.micro`, which is eligible. If you set another type, list the allowed ones
+and pick an ARM (`arm64`) one:
+
+```bash
+aws ec2 describe-instance-types --filters Name=free-tier-eligible,Values=true \
+  --query 'InstanceTypes[].[InstanceType,ProcessorInfo.SupportedArchitectures[0]]' --output table
+```
+
+CloudFormation rolls the stack back, so deploy again after changing the setting.
+
 ### The migration trigger fails during deploy
 
 The `MigrateFn` Lambda's CloudWatch log group has the SQL error. Fix the migration, or the data it

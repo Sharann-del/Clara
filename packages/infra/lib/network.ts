@@ -26,9 +26,11 @@ export interface NetworkProps {
  *
  * The private Lambdas need outbound access to Secrets Manager, Cognito (JWKS,
  * ListUsers) and the WebSocket management API. By default that goes through a
- * single t4g.nano NAT instance (Amazon Linux 2023, configured by CDK's
- * NatProvider.instanceV2) instead of a managed NAT gateway: about $3/month of
- * compute against about $34. The instance has no SSH key, requires IMDSv2,
+ * single t4g.micro NAT instance (Amazon Linux 2023, configured by CDK's
+ * NatProvider.instanceV2) instead of a managed NAT gateway: about $6/month of
+ * compute against about $34. t4g.micro rather than t4g.nano because accounts
+ * on the AWS Free plan may only launch Free Tier eligible types; override it
+ * with the `natInstanceType` context value. The instance has no SSH key, requires IMDSv2,
  * runs on standard (capped) CPU credits, and only accepts traffic from inside
  * the VPC. Set the `natMode` context value to `gateway` for the managed
  * option. Interface endpoints were rejected: three services across two AZs

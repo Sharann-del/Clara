@@ -22,12 +22,16 @@ export interface ClaraInfraConfig {
   /**
    * How the private subnets reach AWS APIs on the internet (Secrets Manager,
    * Cognito, the WebSocket management API).
-   *   - `instance` (default): one t4g.nano NAT instance, about $3/month plus its public IPv4.
+   *   - `instance` (default): one t4g.micro NAT instance, about $6/month plus its public IPv4.
    *   - `gateway`: one managed NAT gateway, about $34/month plus its public IPv4.
    */
   readonly natMode: NatMode;
 
-  /** Instance type for the NAT instance when natMode is `instance`. */
+  /**
+   * Instance type for the NAT instance when natMode is `instance`. Defaults to
+   * t4g.micro: the smallest Graviton type that accounts on the AWS Free plan
+   * may launch (t4g.nano is refused there with "not eligible for Free Tier").
+   */
   readonly natInstanceType: InstanceType;
 
   /** RDS instance type. t4g.micro: 2 vCPU burstable / 1 GB RAM. */
@@ -142,7 +146,7 @@ export function resolveConfig(node: Node): ClaraInfraConfig {
     natInstanceType: instanceType(
       node,
       'natInstanceType',
-      InstanceType.of(InstanceClass.BURSTABLE4_GRAVITON, InstanceSize.NANO),
+      InstanceType.of(InstanceClass.BURSTABLE4_GRAVITON, InstanceSize.MICRO),
     ),
     dbInstanceType: instanceType(
       node,
