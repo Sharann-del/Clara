@@ -11,7 +11,11 @@ import {
   Bucket,
   BucketEncryption,
 } from 'aws-cdk-lib/aws-s3';
-import { config } from './config';
+import type { ClaraInfraConfig } from './config';
+
+export interface FrontendProps {
+  readonly config: ClaraInfraConfig;
+}
 
 /**
  * Static frontend hosting (PRD section 6, "Frontend").
@@ -27,8 +31,9 @@ export class Frontend extends Construct {
   readonly bucket: Bucket;
   readonly distribution: Distribution;
 
-  constructor(scope: Construct, id: string) {
+  constructor(scope: Construct, id: string, props: FrontendProps) {
     super(scope, id);
+    const { config } = props;
 
     this.bucket = new Bucket(this, 'SiteBucket', {
       encryption: BucketEncryption.S3_MANAGED,

@@ -14,9 +14,10 @@ import {
   PostgresEngineVersion,
   StorageType,
 } from 'aws-cdk-lib/aws-rds';
-import { config } from './config';
+import type { ClaraInfraConfig } from './config';
 
 export interface DatabaseProps {
+  readonly config: ClaraInfraConfig;
   readonly vpc: IVpc;
   /** Compute that should be allowed to connect to Postgres on 5432. */
   readonly clientSecurityGroup: ISecurityGroup;
@@ -29,13 +30,14 @@ export interface DatabaseProps {
  * subnets. Master credentials are generated into a Secrets Manager secret
  * (PRD: "AWS Secrets Manager for DB creds").
  *
- * No schema / migrations here — that lands with the API package.
+ * The schema is applied by the migration Trigger in the Api construct.
  */
 export class Database extends Construct {
   readonly instance: DatabaseInstance;
 
   constructor(scope: Construct, id: string, props: DatabaseProps) {
     super(scope, id);
+    const { config } = props;
 
     const securityGroup = new SecurityGroup(this, 'SecurityGroup', {
       vpc: props.vpc,

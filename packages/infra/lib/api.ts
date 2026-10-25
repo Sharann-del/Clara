@@ -4,7 +4,7 @@ import { Duration } from 'aws-cdk-lib';
 import { ISecurityGroup, IVpc, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
-import { CorsHttpMethod, HttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
+import { CfnStage, CorsHttpMethod, HttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
 import { DatabaseInstance } from 'aws-cdk-lib/aws-rds';
@@ -21,6 +21,10 @@ export interface ApiProps {
   readonly userPool: IUserPool;
   readonly userPoolClientId: string;
   readonly corsOrigins: string[];
+  /** Steady-state requests per second for the whole HTTP API. */
+  readonly throttleRate: number;
+  /** Burst capacity for the whole HTTP API. */
+  readonly throttleBurst: number;
 }
 
 /**
@@ -115,5 +119,16 @@ export class Api extends Construct {
       },
       defaultIntegration: new HttpLambdaIntegration('DefaultIntegration', this.fn),
     });
+
+    // Abuse control: stage-wide throttling, so a leaked token or a script
+    // can't run up the Lambda bill or starve other users. Requests over the
+    // limit get 429 from API Gateway without invoking a Lambda. Set on the
+    // auto-created $default stage in place, so existing deployments keep
+    // their stage and URL.
+    const defaultStage = this.httpApi.defaultStage!.node.defaultChild as CfnStage;
+    defaultStage.defaultRouteSettings = {
+      throttlingRateLimit: props.throttleRate,
+      throttlingBurstLimit: props.throttleBurst,
+    };
   }
 }

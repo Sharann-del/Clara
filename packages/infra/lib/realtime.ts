@@ -8,9 +8,10 @@ import { WebSocketApi, WebSocketStage } from 'aws-cdk-lib/aws-apigatewayv2';
 import { WebSocketLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { AttributeType, BillingMode, ProjectionType, Table } from 'aws-cdk-lib/aws-dynamodb';
 import { ISecret } from 'aws-cdk-lib/aws-secretsmanager';
-import { config } from './config';
+import type { ClaraInfraConfig } from './config';
 
 export interface RealtimeProps {
+  readonly config: ClaraInfraConfig;
   readonly vpc: IVpc;
   readonly securityGroup: ISecurityGroup;
   readonly dbSecret: ISecret;
@@ -39,6 +40,7 @@ export class Realtime extends Construct {
 
   constructor(scope: Construct, id: string, props: RealtimeProps) {
     super(scope, id);
+    const { config } = props;
 
     this.connectionsTable = new Table(this, 'Connections', {
       partitionKey: { name: 'connectionId', type: AttributeType.STRING },
@@ -51,6 +53,14 @@ export class Realtime extends Construct {
       partitionKey: { name: 'room', type: AttributeType.STRING },
       sortKey: { name: 'connectionId', type: AttributeType.STRING },
       projectionType: ProjectionType.ALL,
+    });
+    // Counts one user's open connections for wsMaxConnectionsPerUser.
+    this.connectionsTable.addGlobalSecondaryIndex({
+      indexName: 'UserIndex',
+      partitionKey: { name: 'userId', type: AttributeType.STRING },
+      sortKey: { name: 'connectionId', type: AttributeType.STRING },
+      projectionType: ProjectionType.INCLUDE,
+      nonKeyAttributes: ['expiresAt'],
     });
 
     // Gateway endpoint: keeps DynamoDB traffic from these VPC Lambdas off the
@@ -68,6 +78,8 @@ export class Realtime extends Construct {
       USER_POOL_ID: props.userPoolId,
       USER_POOL_CLIENT_ID: props.userPoolClientId,
       CONNECTIONS_TABLE: this.connectionsTable.tableName,
+      WS_MAX_CONNECTIONS_PER_USER: String(config.wsMaxConnectionsPerUser),
+      WS_MAX_CONNECTIONS_PER_ROOM: String(config.wsMaxConnectionsPerRoom),
     };
 
     const makeFn = (name: string, entry: string, timeoutSeconds = 15) => {
@@ -105,6 +117,8 @@ export class Realtime extends Construct {
       webSocketApi: this.webSocketApi,
       stageName: 'prod',
       autoDeploy: true,
+      // Abuse control: caps message throughput across the whole API.
+      throttle: { rateLimit: config.wsThrottleRate, burstLimit: config.wsThrottleBurst },
     });
 
     // The $connect/$default Lambdas post messages back out over the same
