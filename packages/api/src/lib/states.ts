@@ -9,8 +9,8 @@ import { query } from '../db.js';
  */
 export const elementOverrideSchema = z.object({
   hidden: z.boolean().optional(),
-  geometry: z.record(z.unknown()).optional(),
-  style: z.record(z.unknown()).optional(),
+  geometry: z.record(z.string(), z.unknown()).optional(),
+  style: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type ElementOverrides = Record<string, z.infer<typeof elementOverrideSchema>>;

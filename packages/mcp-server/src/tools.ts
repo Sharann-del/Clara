@@ -30,11 +30,11 @@ const elementInput = z.object({
   id: uuid.optional().describe('Omit for new elements; one is assigned.'),
   type: z.enum(['rect', 'ellipse', 'text', 'connector', 'group']),
   geometry: z
-    .record(z.unknown())
+    .record(z.string(), z.unknown())
     .describe(
       'Shapes (rect/ellipse/group/text): {x, y, width, height, text}. Connectors: preferably {fromId, toId, text} referencing two shape ids (the arrow follows the shapes and exports to Mermaid exactly), or free {x1, y1, x2, y2, text} in absolute canvas coordinates.',
     ),
-  style: z.record(z.unknown()).default({}).describe('e.g. {fill: "#eff6ff", stroke: "#2563eb"}'),
+  style: z.record(z.string(), z.unknown()).default({}).describe('e.g. {fill: "#eff6ff", stroke: "#2563eb"}'),
   zIndex: z.number().int().default(0),
   linkedDiagramId: uuid.nullish().describe('C4 drill-down: the child diagram this shape opens.'),
   parentGroupId: uuid.nullish(),
@@ -43,8 +43,11 @@ const elementInput = z.object({
 const elementPatch = z.object({
   id: uuid,
   type: z.enum(['rect', 'ellipse', 'text', 'connector', 'group']).optional(),
-  geometry: z.record(z.unknown()).optional().describe('Merged into existing geometry; send only the keys that change.'),
-  style: z.record(z.unknown()).optional().describe('Merged into existing style.'),
+  geometry: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe('Merged into existing geometry; send only the keys that change.'),
+  style: z.record(z.string(), z.unknown()).optional().describe('Merged into existing style.'),
   zIndex: z.number().int().optional(),
   linkedDiagramId: uuid.nullable().optional().describe('Set to link a child diagram; null to unlink.'),
   parentGroupId: uuid.nullable().optional(),

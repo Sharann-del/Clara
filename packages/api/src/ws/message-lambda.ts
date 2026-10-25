@@ -49,8 +49,8 @@ const messageSchema = z.discriminatedUnion('action', [
     element: z.object({
       id: z.string().uuid(),
       type: z.enum(['rect', 'ellipse', 'text', 'connector', 'group']),
-      geometry: z.record(z.unknown()).default({}),
-      style: z.record(z.unknown()).default({}),
+      geometry: z.record(z.string(), z.unknown()).default({}),
+      style: z.record(z.string(), z.unknown()).default({}),
       zIndex: z.number().default(0),
       linkedDiagramId: z.string().uuid().nullish(),
     }),
@@ -66,8 +66,8 @@ const messageSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('element.update'),
     id: z.string(),
-    geometry: z.record(z.unknown()).optional(),
-    style: z.record(z.unknown()).optional(),
+    geometry: z.record(z.string(), z.unknown()).optional(),
+    style: z.record(z.string(), z.unknown()).optional(),
     zIndex: z.number().optional(),
     linkedDiagramId: z.string().uuid().nullish().optional(),
   }),

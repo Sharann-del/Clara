@@ -18,8 +18,8 @@ import { normalizeElement } from '@clara/shared/elements';
 export const elementSchema = z.object({
   id: z.string().uuid().optional(),
   type: z.enum(['rect', 'ellipse', 'text', 'connector', 'group']),
-  geometry: z.record(z.unknown()).default({}),
-  style: z.record(z.unknown()).default({}),
+  geometry: z.record(z.string(), z.unknown()).default({}),
+  style: z.record(z.string(), z.unknown()).default({}),
   zIndex: z.number().int().default(0),
   linkedDiagramId: z.string().uuid().nullish(),
   parentGroupId: z.string().uuid().nullish(),
