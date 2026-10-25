@@ -27,13 +27,19 @@ function wrapAt(text: string, maxChars: number): string[] {
     for (let word of paragraph.split(/\s+/).filter(Boolean)) {
       // A single word wider than the box is hard-broken.
       while (word.length > maxChars) {
-        if (line) (lines.push(line), (line = ''));
+        if (line) {
+          lines.push(line);
+          line = '';
+        }
         lines.push(word.slice(0, maxChars));
         word = word.slice(maxChars);
       }
       if (!line) line = word;
       else if (line.length + 1 + word.length <= maxChars) line += ` ${word}`;
-      else (lines.push(line), (line = word));
+      else {
+        lines.push(line);
+        line = word;
+      }
     }
     lines.push(line);
   }

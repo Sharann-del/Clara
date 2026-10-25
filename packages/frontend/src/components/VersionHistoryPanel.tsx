@@ -100,7 +100,10 @@ export function VersionHistoryPanel({ open, onClose, resourceKind, resourceId, c
                 className={selected === v.id ? 'active' : ''}
                 onClick={() => setSelected(v.id)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') (e.preventDefault(), setSelected(v.id));
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setSelected(v.id);
+                  }
                   if (e.key === 'ArrowDown') (e.currentTarget.nextElementSibling as HTMLElement | null)?.focus();
                   if (e.key === 'ArrowUp') (e.currentTarget.previousElementSibling as HTMLElement | null)?.focus();
                 }}

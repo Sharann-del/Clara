@@ -81,12 +81,22 @@ export function Menu({ trigger, label, items, align = 'right', className = 'btn'
           role="menu"
           className={`menu-popover menu-${align}`}
           onKeyDown={(e) => {
-            if (e.key === 'ArrowDown') (e.preventDefault(), focusItem(1));
-            else if (e.key === 'ArrowUp') (e.preventDefault(), focusItem(-1));
-            else if (e.key === 'Home') (e.preventDefault(), focusItem('first'));
-            else if (e.key === 'End') (e.preventDefault(), focusItem('last'));
-            else if (e.key === 'Escape') (e.preventDefault(), close());
-            else if (e.key === 'Tab') close(false);
+            if (e.key === 'ArrowDown') {
+              e.preventDefault();
+              focusItem(1);
+            } else if (e.key === 'ArrowUp') {
+              e.preventDefault();
+              focusItem(-1);
+            } else if (e.key === 'Home') {
+              e.preventDefault();
+              focusItem('first');
+            } else if (e.key === 'End') {
+              e.preventDefault();
+              focusItem('last');
+            } else if (e.key === 'Escape') {
+              e.preventDefault();
+              close();
+            } else if (e.key === 'Tab') close(false);
           }}
         >
           {items.map((item, i) => {

@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react';
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Route, Routes, useLocation } from 'react-router-dom';
 import { ProtectedRoute } from './components/ProtectedRoute';
-import { useAuth } from './context/AuthContext';
 import { LandingPage } from './pages/site/LandingPage';
 import { PageLoading } from './components/PageLoading';
 import { ErrorBoundary } from './components/ErrorBoundary';

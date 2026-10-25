@@ -94,7 +94,10 @@ export function DiagramPicker({
               onDoubleClick={() => onPick(d)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') onPick(d);
-                if (e.key === ' ') (e.preventDefault(), setSelected(d.id));
+                if (e.key === ' ') {
+                  e.preventDefault();
+                  setSelected(d.id);
+                }
               }}
             >
               <Icon name="diagram" /> {d.name}
