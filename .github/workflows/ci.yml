@@ -71,7 +71,7 @@ jobs:
       - name: Use the example environment
         run: cp packages/frontend/.env.example packages/frontend/.env
       - run: npm run build
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: frontend-dist
           path: packages/frontend/dist
@@ -118,7 +118,7 @@ jobs:
         run: npm run e2e -w @clara/frontend
         env:
           CI: true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-traces
