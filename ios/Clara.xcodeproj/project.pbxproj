@@ -8,6 +8,7 @@
 
 /* Begin PBXFileReference section */
 		C1A000000000000000000001 /* Clara.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Clara.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C1A000000000000000000020 /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Signing.xcconfig; path = Config/Signing.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -29,6 +30,7 @@
 			isa = PBXGroup;
 			children = (
 				C1A000000000000000000002 /* Clara */,
+				C1A000000000000000000020 /* Signing.xcconfig */,
 				C1A000000000000000000005 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -170,12 +172,12 @@
 		};
 		C1A00000000000000000000E /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C1A000000000000000000020 /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = A1B2C3D4E5;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Clara;
@@ -191,7 +193,6 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sharannm.clara;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -206,12 +207,12 @@
 		};
 		C1A00000000000000000000F /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C1A000000000000000000020 /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = A1B2C3D4E5;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Clara;
@@ -227,7 +228,6 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sharannm.clara;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;

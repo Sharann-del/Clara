@@ -4,5 +4,6 @@
   "userPoolId": "eu-north-1_ExamplePool",
   "userPoolClientId": "1example23clientid456abcde",
   "region": "eu-north-1",
-  "siteUrl": "https://d1example2cdn3.cloudfront.net"
+  "siteUrl": "https://d1example2cdn3.cloudfront.net",
+  "signupInviteRequired": false
 }

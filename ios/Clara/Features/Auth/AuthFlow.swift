@@ -125,20 +125,25 @@ private struct SignUpCard: View {
     @Binding var step: AuthFlow.Step
     @State private var email = ""
     @State private var password = ""
+    @State private var inviteCode = ""
     @State private var busy = false
     @State private var error: String?
+    private let inviteRequired = ClaraConfig.shared.signupInviteRequired == true
 
     var body: some View {
         AuthCard(title: "Create your account", subtitle: "Docs and diagrams as code, with AI edits you approve.") {
             ClaraTextField(label: "Email", placeholder: "you@company.com", text: $email, keyboard: .emailAddress, contentType: .username, submitLabel: .next)
-            ClaraTextField(label: "Password", placeholder: "At least 8 characters", text: $password, secure: true, contentType: .newPassword, submitLabel: .go, onSubmit: submit)
+            ClaraTextField(label: "Password", placeholder: "At least 10 characters", text: $password, secure: true, contentType: .newPassword, submitLabel: .go, onSubmit: submit)
             Text("Use upper and lower case letters and a number.").font(ClaraFont.body(13)).foregroundStyle(Theme.muted)
+            if inviteRequired {
+                ClaraTextField(label: "Invite code", placeholder: "From whoever runs this Clara", text: $inviteCode, submitLabel: .go, onSubmit: submit)
+            }
             ErrorText(text: error)
             Button(action: submit) {
                 HStack { if busy { Spinner(size: 16) }; Text(busy ? "Creating…" : "Create account") }.frame(maxWidth: .infinity)
             }
             .buttonStyle(.claraPrimary)
-            .disabled(busy || email.isEmpty || password.count < 8)
+            .disabled(busy || email.isEmpty || password.count < 10 || (inviteRequired && inviteCode.isEmpty))
             HStack(spacing: 4) {
                 Text("Have an account?").foregroundStyle(Theme.muted)
                 Button("Sign in") { step = .signIn }.foregroundStyle(Theme.cobalt)
@@ -155,7 +160,11 @@ private struct SignUpCard: View {
         error = nil
         Task {
             do {
-                try await Cognito.signUp(email: email.trimmingCharacters(in: .whitespaces), password: password)
+                try await Cognito.signUp(
+                    email: email.trimmingCharacters(in: .whitespaces),
+                    password: password,
+                    inviteCode: inviteRequired ? inviteCode.trimmingCharacters(in: .whitespaces) : nil
+                )
                 PendingSignUp.password = password
                 step = .confirm(email.trimmingCharacters(in: .whitespaces))
             } catch { self.error = errorMessage(error) }

@@ -2,3 +2,7 @@ xcuserdata/
 *.xcuserstate
 DerivedData/
 build/
+
+# Account-specific values (see Config/*.example.*)
+Clara/Resources/ClaraConfig.json
+Config/Local.xcconfig

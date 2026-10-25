@@ -84,6 +84,12 @@ const pricing = {
 };
 await browser.close();
 
+// The docs show the deployment's own MCP endpoint. Store a token instead, so no deployment's URL is
+// committed; the app fills in its configured endpoint (ClaraConfig.mcpUrl) when it loads the file.
+const json = JSON.stringify({ docs, about, privacy, terms, pricing, examples }, null, 1).replace(
+  /https?:\/\/[^\s"'`\\)]+\/mcp\b/g,
+  '{{MCP_URL}}',
+);
 const out = join(root, 'ios/Clara/Resources/site-content.json');
-writeFileSync(out, JSON.stringify({ docs, about, privacy, terms, pricing, examples }, null, 1));
+writeFileSync(out, json);
 console.log(`wrote ${out}: ${docs.length} docs sections, ${examples.length} examples`);

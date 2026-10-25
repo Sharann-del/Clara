@@ -1,0 +1,6 @@
+// Copy to Local.xcconfig (gitignored) and fill in your own values.
+// Find your team ID at https://developer.apple.com/account under Membership details,
+// or in Xcode → Settings → Accounts.
+
+DEVELOPMENT_TEAM = A1B2C3D4E5
+PRODUCT_BUNDLE_IDENTIFIER = com.example.clara

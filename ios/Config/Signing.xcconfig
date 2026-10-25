@@ -1,0 +1,10 @@
+// Code signing for the Clara target.
+//
+// These defaults let anyone open and build the project. To install on a device,
+// copy Local.example.xcconfig to Local.xcconfig (gitignored) and set your own
+// Apple team ID and a bundle identifier you own. Values there override these.
+
+DEVELOPMENT_TEAM =
+PRODUCT_BUNDLE_IDENTIFIER = dev.clara.ios
+
+#include? "Local.xcconfig"

@@ -23,7 +23,10 @@ struct SiteContent: Decodable {
 
     static let shared: SiteContent = {
         let url = Bundle.main.url(forResource: "site-content", withExtension: "json")!
-        return try! JSONDecoder().decode(SiteContent.self, from: Data(contentsOf: url))
+        // export-site-content.mjs stores {{MCP_URL}} in place of a deployment's endpoint.
+        let raw = try! String(contentsOf: url, encoding: .utf8)
+            .replacingOccurrences(of: "{{MCP_URL}}", with: ClaraConfig.shared.mcpUrl)
+        return try! JSONDecoder().decode(SiteContent.self, from: Data(raw.utf8))
     }()
 }
 
