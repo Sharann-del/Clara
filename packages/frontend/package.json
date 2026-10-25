@@ -2,6 +2,30 @@
   "name": "@clara/frontend",
   "version": "0.1.0",
   "private": true,
+  "description": "Clara web app: public site, playground and the signed-in React app",
+  "keywords": [
+    "react",
+    "vite",
+    "diagrams",
+    "markdown"
+  ],
+  "homepage": "https://github.com/Sharann-del/Clara#readme",
+  "bugs": {
+    "url": "https://github.com/Sharann-del/Clara/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sharann-del/Clara.git",
+    "directory": "packages/frontend"
+  },
+  "license": "MIT",
+  "author": "Sharann M",
+  "contributors": [
+    "Dhriti"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -3,6 +3,28 @@
   "version": "0.1.0",
   "private": true,
   "description": "Clara MCP server (streamable HTTP) — Claude reads documents/diagrams; every write is staged for human review",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "aws-lambda"
+  ],
+  "homepage": "https://github.com/Sharann-del/Clara#readme",
+  "bugs": {
+    "url": "https://github.com/Sharann-del/Clara/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sharann-del/Clara.git",
+    "directory": "packages/mcp-server"
+  },
+  "license": "MIT",
+  "author": "Sharann M",
+  "contributors": [
+    "Dhriti"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",

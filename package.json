@@ -2,7 +2,35 @@
   "name": "clara",
   "version": "0.1.0",
   "private": true,
-  "description": "Clara \u2014 system design documentation tool (monorepo)",
+  "description": "Clara: system design documentation with diagrams as code, C4 drill-down, real-time collaboration and human-reviewed AI edits over MCP (monorepo)",
+  "keywords": [
+    "system-design",
+    "documentation",
+    "diagrams",
+    "diagrams-as-code",
+    "mermaid",
+    "c4-model",
+    "mcp",
+    "aws",
+    "cdk",
+    "collaboration"
+  ],
+  "homepage": "https://github.com/Sharann-del/Clara#readme",
+  "bugs": {
+    "url": "https://github.com/Sharann-del/Clara/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sharann-del/Clara.git"
+  },
+  "license": "MIT",
+  "author": "Sharann M",
+  "contributors": [
+    "Dhriti"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "workspaces": [
     "packages/shared",
     "packages/infra",
@@ -11,6 +39,13 @@
     "packages/mcp-server"
   ],
   "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm test --workspaces --if-present",
+    "build": "npm run build -w @clara/frontend",
     "infra:synth": "npm run synth -w @clara/infra",
     "infra:deploy": "npm run deploy -w @clara/infra",
     "infra:test": "npm test -w @clara/infra",
@@ -19,5 +54,15 @@
     "frontend:dev": "npm run dev -w @clara/frontend",
     "frontend:build": "npm run build -w @clara/frontend",
     "mcp:typecheck": "npm run typecheck -w @clara/mcp-server"
-  }
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^15.15.0",
+    "prettier": "^3.9.10",
+    "typescript-eslint": "^8.72.0"
+  },
+  "type": "module"
 }

@@ -2,7 +2,31 @@
   "name": "@clara/api",
   "version": "0.1.0",
   "private": true,
-  "description": "Clara REST API (Fastify) \u2014 talks to RDS Postgres, verifies Cognito JWTs",
+  "description": "Clara REST API (Fastify) — talks to RDS Postgres, verifies Cognito JWTs",
+  "keywords": [
+    "fastify",
+    "aws-lambda",
+    "postgresql",
+    "cognito",
+    "websocket"
+  ],
+  "homepage": "https://github.com/Sharann-del/Clara#readme",
+  "bugs": {
+    "url": "https://github.com/Sharann-del/Clara/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sharann-del/Clara.git",
+    "directory": "packages/api"
+  },
+  "license": "MIT",
+  "author": "Sharann M",
+  "contributors": [
+    "Dhriti"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "type": "module",
   "main": "dist/server.js",
   "scripts": {

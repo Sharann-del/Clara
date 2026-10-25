@@ -2,7 +2,29 @@
   "name": "@clara/infra",
   "version": "0.1.0",
   "private": true,
-  "description": "AWS CDK infrastructure for Clara (VPC, S3+CloudFront, ECS Fargate, RDS Postgres, Cognito)",
+  "description": "AWS CDK stack for Clara: VPC, S3 + CloudFront, RDS PostgreSQL, Cognito, HTTP and WebSocket APIs, Lambda",
+  "keywords": [
+    "aws-cdk",
+    "aws",
+    "infrastructure-as-code"
+  ],
+  "homepage": "https://github.com/Sharann-del/Clara#readme",
+  "bugs": {
+    "url": "https://github.com/Sharann-del/Clara/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sharann-del/Clara.git",
+    "directory": "packages/infra"
+  },
+  "license": "MIT",
+  "author": "Sharann M",
+  "contributors": [
+    "Dhriti"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "bin": {
     "clara-infra": "bin/clara.js"
   },
@@ -14,7 +36,8 @@
     "deploy": "cdk deploy",
     "destroy": "cdk destroy",
     "bootstrap": "cdk bootstrap",
-    "test": "jest"
+    "test": "jest",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",

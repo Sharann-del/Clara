@@ -1,0 +1,11 @@
+node_modules/
+dist/
+build/
+coverage/
+cdk.out/
+package-lock.json
+packages/frontend/test-results/
+packages/frontend/playwright-report/
+ios/
+docs/aws-architecture.mmd
+*.md
