@@ -46,7 +46,7 @@
     "@fastify/aws-lambda": "^6.4.2",
     "@fastify/cors": "^11.3.1",
     "aws-jwt-verify": "^4.0.1",
-    "fastify": "^5.1.0",
+    "fastify": "^5.12.6",
     "pg": "^8.13.1",
     "zod": "^3.23.8",
     "@clara/shared": "*"
