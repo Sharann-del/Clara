@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toMermaid } from '@clara/shared/dsl';
+import { DARK_PALETTE, shapeColors } from '@clara/shared/render';
 import { AppShell, Crumbs } from '../components/AppShell';
 import { NoAccess } from '../components/NoAccess';
 import { DiagramCanvas, type RemoteCursor } from '../components/DiagramCanvas';
@@ -47,7 +48,7 @@ const SWATCHES: { fill: string; stroke: string; name: string }[] = [
 ];
 
 export function DiagramPage() {
-  const { diagramId } = useParams<{ diagramId: string }>();
+  const { diagramId, '*': sub } = useParams<{ diagramId: string; '*': string }>();
   const navigate = useNavigate();
   const toast = useToast();
   const { confirm, prompt } = useConfirm();
@@ -69,7 +70,8 @@ export function DiagramPage() {
   const [states, setStates] = useState<DiagramState[]>([]);
   const [activeStateId, setActiveStateId] = useState<string | null>(null);
   const [presenting, setPresenting] = useState(false);
-  const [panel, setPanel] = useState<'history' | 'share' | 'tags' | 'link' | null>(null);
+  const [panel, setPanel] = useState<'tags' | 'link' | null>(null);
+  const base = `/diagrams/${diagramId}`;
   const [diagramNames, setDiagramNames] = useState<Record<string, string>>({});
   const [loadError, setLoadError] = useState<ApiError | null>(null);
   const [rtStatus, setRtStatus] = useState<RealtimeStatus>('connecting');
@@ -427,7 +429,7 @@ export function DiagramPage() {
     <AppShell
       sidebarMode="drawer"
       workspace={workspace}
-      bleed
+      bleed={!sub}
       title={
         <Crumbs
           items={[
@@ -455,7 +457,7 @@ export function DiagramPage() {
             >
               <Icon name="star" />
             </button>
-            <button type="button" className="btn hide-mobile" onClick={() => setPanel('share')}>
+            <button type="button" className="btn hide-mobile" onClick={() => navigate(`${base}/share`)}>
               <Icon name="share" /> Share
             </button>
             <Menu
@@ -478,9 +480,9 @@ export function DiagramPage() {
               label="Diagram actions"
               trigger={<Icon name="more" />}
               items={[
-                { label: 'Share…', icon: 'share', onSelect: () => setPanel('share') },
+                { label: 'Share', icon: 'share', onSelect: () => navigate(`${base}/share`) },
                 { label: 'Present', icon: 'play', disabled: states.length === 0, onSelect: () => setPresenting(true) },
-                { label: 'Version history', icon: 'history', onSelect: () => setPanel('history') },
+                { label: 'Version history', icon: 'history', onSelect: () => navigate(`${base}/history`) },
                 ...(canEdit
                   ? [
                       { label: 'Rename', icon: 'edit' as const, onSelect: renameDiagram },
@@ -500,6 +502,8 @@ export function DiagramPage() {
         </div>
       ) : (
         <>
+          {!sub && (
+          <>
           <div className="diagram-subbar">
             <div className="tabs" role="tablist" aria-label="View">
               <button role="tab" aria-selected={tab === 'canvas'} className={`tab-btn ${tab === 'canvas' ? 'active' : ''}`} onClick={() => setTab('canvas')}>
@@ -629,10 +633,13 @@ export function DiagramPage() {
               </div>
             </div>
           )}
+          </>
+          )}
 
           <VersionHistoryPanel
-            open={panel === 'history'}
-            onClose={() => setPanel(null)}
+            open={sub === 'history'}
+            onClose={() => navigate(base, { replace: true })}
+            backTo={base}
             resourceKind="diagram"
             resourceId={diagram.id}
             current={{ elements }}
@@ -642,7 +649,7 @@ export function DiagramPage() {
               rtRef.current?.send('diagram.refresh');
             }}
           />
-          <ShareDialog open={panel === 'share'} onClose={() => setPanel(null)} kind="diagram" id={diagram.id} name={diagram.name} workspaceName={workspace?.name} canManage={canEdit} />
+          <ShareDialog open={sub === 'share'} backTo={base} kind="diagram" id={diagram.id} name={diagram.name} workspaceName={workspace?.name} canManage={canEdit} />
           {panel === 'tags' && (
             <TagEditor
               open
@@ -757,7 +764,7 @@ function Inspector({
                 key={s.name}
                 type="button"
                 className={`swatch ${selected.style.stroke === s.stroke ? 'on' : ''}`}
-                style={{ background: s.fill, borderColor: s.stroke }}
+                style={{ background: shapeColors(s.fill, s.stroke, DARK_PALETTE).stroke }}
                 aria-label={s.name}
                 aria-pressed={selected.style.stroke === s.stroke}
                 onClick={() => onUpdate(selected.id!, { style: { ...selected.style, fill: s.fill, stroke: s.stroke } })}

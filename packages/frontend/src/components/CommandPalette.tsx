@@ -2,9 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useNavigate } from 'react-router-dom';
 import { Dialog } from './ui/Dialog';
 import { Icon, type IconName } from './ui/Icon';
-import { ShortcutList } from './ShortcutList';
 import { useToast } from './ui/Toast';
-import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { api, errorMessage, isMissingRoute, type SearchResult, type Workspace } from '../lib/api';
 import { MOD } from '../lib/shortcuts';
@@ -12,7 +10,6 @@ import { rankMatches } from '../lib/fuzzy';
 
 interface AppCommands {
   openPalette: () => void;
-  openShortcuts: () => void;
   /** Pages call this so "New document" etc. know which workspace you're in. */
   setCurrentWorkspace: (id: string | null) => void;
   currentWorkspaceId: string | null;
@@ -51,30 +48,28 @@ interface Item {
 
 export function CommandPaletteProvider({ children }: { children: ReactNode }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [currentWorkspaceId, setCurrentWorkspaceId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'k') {
         // Inside the markdown editor ⌘K stays the palette too; links have their own button.
         e.preventDefault();
-        setShortcutsOpen(false);
         setPaletteOpen((o) => !o);
       } else if (e.key === '?' && !isTyping(e.target) && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         setPaletteOpen(false);
-        setShortcutsOpen(true);
+        navigate('/shortcuts');
       }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [navigate]);
 
   const value = useMemo<AppCommands>(
     () => ({
       openPalette: () => setPaletteOpen(true),
-      openShortcuts: () => setShortcutsOpen(true),
       setCurrentWorkspace: setCurrentWorkspaceId,
       currentWorkspaceId,
     }),
@@ -90,13 +85,10 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
           onClose={() => setPaletteOpen(false)}
           onShortcuts={() => {
             setPaletteOpen(false);
-            setShortcutsOpen(true);
+            navigate('/shortcuts');
           }}
         />
       )}
-      <Dialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} title="Keyboard shortcuts" size="lg">
-        <ShortcutList headingLevel={3} />
-      </Dialog>
     </Ctx.Provider>
   );
 }
@@ -119,7 +111,6 @@ async function buildFallbackIndex(): Promise<SearchResult[]> {
 function CommandPalette({ workspaceId, onClose, onShortcuts }: { workspaceId: string | null; onClose: () => void; onShortcuts: () => void }) {
   const navigate = useNavigate();
   const toast = useToast();
-  const { setPreference } = useTheme();
   const { signOut } = useAuth();
   const [q, setQ] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -214,16 +205,13 @@ function CommandPalette({ workspaceId, onClose, onShortcuts }: { workspaceId: st
       { id: 'playground', group: 'Commands', label: 'Open the playground', icon: 'code', run: () => go('/editor') },
       { id: 'settings', group: 'Commands', label: 'Settings', icon: 'settings', run: () => go('/settings') },
       { id: 'tokens', group: 'Commands', label: 'Access tokens for AI assistants', icon: 'key', run: () => go('/settings/tokens') },
-      { id: 'theme-light', group: 'Commands', label: 'Theme: light', icon: 'sun', run: () => (setPreference('light'), onClose()) },
-      { id: 'theme-dark', group: 'Commands', label: 'Theme: dark', icon: 'moon', run: () => (setPreference('dark'), onClose()) },
-      { id: 'theme-system', group: 'Commands', label: 'Theme: match system', icon: 'monitor', run: () => (setPreference('system'), onClose()) },
       { id: 'shortcuts', group: 'Commands', label: 'Keyboard shortcuts', hint: '?', icon: 'keyboard', run: onShortcuts },
       { id: 'docs', group: 'Commands', label: 'Documentation', icon: 'book', run: () => go('/docs') },
       { id: 'signout', group: 'Commands', label: 'Sign out', icon: 'logout', run: () => (onClose(), signOut(), navigate('/')) },
     ];
     const cmd = term ? rankMatches(commands, term, (c) => [c.label]) : commands.slice(0, 5);
     return [...found, ...wsItems, ...cmd];
-  }, [results, workspaces, q, go, create, setPreference, onClose, onShortcuts, signOut, navigate]);
+  }, [results, workspaces, q, go, create, onClose, onShortcuts, signOut, navigate]);
 
   useEffect(() => setActive(0), [q]);
   useEffect(() => {

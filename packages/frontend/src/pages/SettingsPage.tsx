@@ -4,7 +4,6 @@ import { AppShell } from '../components/AppShell';
 import { Icon } from '../components/ui/Icon';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../context/AuthContext';
-import { useTheme, type ThemePreference } from '../context/ThemeContext';
 import { changePassword } from '../lib/cognito';
 import { usePageMeta } from '../lib/seo';
 import { friendlyAuthError } from './SignInPage';
@@ -13,7 +12,7 @@ export function SettingsNav({ current }: { current: 'profile' | 'tokens' }) {
   return (
     <nav className="settings-nav" aria-label="Settings">
       <Link to="/settings" aria-current={current === 'profile' ? 'page' : undefined} className={current === 'profile' ? 'active' : ''}>
-        <Icon name="settings" /> Profile and appearance
+        <Icon name="settings" /> Profile
       </Link>
       <Link to="/settings/tokens" aria-current={current === 'tokens' ? 'page' : undefined} className={current === 'tokens' ? 'active' : ''}>
         <Icon name="key" /> Access tokens
@@ -25,7 +24,6 @@ export function SettingsNav({ current }: { current: 'profile' | 'tokens' }) {
 export function SettingsPage() {
   usePageMeta('Settings', { noindex: true });
   const { email, signOut } = useAuth();
-  const { preference, setPreference } = useTheme();
   const toast = useToast();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
@@ -65,30 +63,6 @@ export function SettingsPage() {
                 <div style={{ fontWeight: 600 }}>{email}</div>
                 <div className="muted">This is how teammates see you and find you when they share.</div>
               </div>
-            </div>
-          </section>
-
-          <section className="panel settings-card" aria-labelledby="theme-h">
-            <h2 id="theme-h" className="panel-title">
-              Appearance
-            </h2>
-            <div className="theme-options" role="radiogroup" aria-label="Theme">
-              {(
-                [
-                  ['system', 'monitor', 'Match system', 'Follows your device’s light or dark setting'],
-                  ['light', 'sun', 'Light', 'Always light'],
-                  ['dark', 'moon', 'Dark', 'Always dark; diagrams stay on a light sheet'],
-                ] as [ThemePreference, 'monitor' | 'sun' | 'moon', string, string][]
-              ).map(([value, icon, label, help]) => (
-                <label key={value} className={`theme-option ${preference === value ? 'on' : ''}`}>
-                  <input type="radio" name="theme" className="sr-only" checked={preference === value} onChange={() => setPreference(value)} />
-                  <Icon name={icon} size={18} />
-                  <span>
-                    <strong>{label}</strong>
-                    <span className="muted">{help}</span>
-                  </span>
-                </label>
-              ))}
             </div>
           </section>
 

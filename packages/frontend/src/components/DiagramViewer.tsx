@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { renderDiagramSvg, type RenderableElement } from '@clara/shared/render';
+import { DARK_PALETTE, renderDiagramSvg, type RenderableElement } from '@clara/shared/render';
 import { Icon } from './ui/Icon';
 
 interface Props {
@@ -47,7 +47,7 @@ export function DiagramViewer({
   const gesture = useRef<{ x: number; y: number; dist?: number; view: typeof view; moved: boolean } | null>(null);
 
   const rendered = useMemo(
-    () => renderDiagramSvg(elements, { background: null, padding: 24, dataAttributes: true, highlights }),
+    () => renderDiagramSvg(elements, { background: null, padding: 24, dataAttributes: true, highlights, palette: DARK_PALETTE }),
     [elements, highlights],
   );
   const empty = elements.filter((e) => !e.hidden).length === 0;

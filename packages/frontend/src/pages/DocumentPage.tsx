@@ -28,7 +28,7 @@ type Patch = Partial<{ title: string; contentMd: string; tags: string[] }>;
 const RANK: Role[] = ['viewer', 'editor', 'admin', 'owner'];
 
 export function DocumentPage() {
-  const { documentId } = useParams<{ documentId: string }>();
+  const { documentId, '*': sub } = useParams<{ documentId: string; '*': string }>();
   const navigate = useNavigate();
   const toast = useToast();
   const { confirm } = useConfirm();
@@ -45,7 +45,8 @@ export function DocumentPage() {
   const [presence, setPresence] = useState<PresenceUser[]>([]);
   const [rtStatus, setRtStatus] = useState<RealtimeStatus>('connecting');
   const [loadError, setLoadError] = useState<ApiError | null>(null);
-  const [panel, setPanel] = useState<'history' | 'share' | 'tags' | null>(null);
+  const [panel, setPanel] = useState<'tags' | null>(null);
+  const base = `/documents/${documentId}`;
   const [editingOnMobile, setEditingOnMobile] = useState(false);
   const pending = useRef<Patch>({});
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -239,7 +240,7 @@ export function DocumentPage() {
             >
               <Icon name="star" />
             </button>
-            <button type="button" className="btn hide-mobile" onClick={() => setPanel('share')}>
+            <button type="button" className="btn hide-mobile" onClick={() => navigate(`${base}/share`)}>
               <Icon name="share" /> Share
             </button>
             <Menu
@@ -247,8 +248,8 @@ export function DocumentPage() {
               label="Document actions"
               trigger={<Icon name="more" />}
               items={[
-                { label: 'Share…', icon: 'share', onSelect: () => setPanel('share') },
-                { label: 'Version history', icon: 'history', onSelect: () => setPanel('history') },
+                { label: 'Share', icon: 'share', onSelect: () => navigate(`${base}/share`) },
+                { label: 'Version history', icon: 'history', onSelect: () => navigate(`${base}/history`) },
                 ...(canEdit ? [{ label: 'Edit tags', icon: 'tag' as const, onSelect: () => setPanel('tags') }] : []),
                 { label: 'Export as markdown', icon: 'download', onSelect: () => downloadAuthed(api.exportUrl('documents', doc.id), `${title || 'Untitled'}.md`).catch((e) => toast.error(errorMessage(e))) },
                 {
@@ -263,6 +264,7 @@ export function DocumentPage() {
         )
       }
     >
+      {!sub && (
       <div className="doc-wrap">
         {!doc ? (
           <>
@@ -322,12 +324,14 @@ export function DocumentPage() {
           </>
         )}
       </div>
+      )}
 
       {doc && (
         <>
           <VersionHistoryPanel
-            open={panel === 'history'}
-            onClose={() => setPanel(null)}
+            open={sub === 'history'}
+            onClose={() => navigate(base, { replace: true })}
+            backTo={base}
             resourceKind="document"
             resourceId={doc.id}
             current={{ contentMd, title }}
@@ -338,8 +342,8 @@ export function DocumentPage() {
             }}
           />
           <ShareDialog
-            open={panel === 'share'}
-            onClose={() => setPanel(null)}
+            open={sub === 'share'}
+            backTo={base}
             kind="document"
             id={doc.id}
             name={title || 'Untitled'}

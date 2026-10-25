@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DiagramElement, DiagramState } from '../lib/api';
 import { buildSteps, easeInOut, interpolate, resolveElements, stepBy, toRender, type RenderEl } from '../lib/states';
-import { connectorSegment, elementBox, type Box } from '@clara/shared/render';
+import { ShapeLabel } from './DiagramCanvas';
+import { DARK_PALETTE, connectorSegment, elementBox, inkColor, shapeColors, type Box } from '@clara/shared/render';
+
+const P = DARK_PALETTE;
 
 interface Props {
   base: DiagramElement[];
@@ -113,7 +116,7 @@ export function PresentMode({ base, states, startIndex, onClose }: Props) {
       <svg className="present-svg" viewBox={viewBox} preserveAspectRatio="xMidYMid meet">
         <defs>
           <marker id="present-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 z" fill="#475569" />
+            <path d="M0,0 L10,5 L0,10 z" fill={P.connector} />
           </marker>
         </defs>
         {frame
@@ -124,27 +127,26 @@ export function PresentMode({ base, states, startIndex, onClose }: Props) {
             const text = String(el.geometry.text ?? '');
             if (el.type === 'text')
               return (
-                <text key={el.id} x={x} y={y} opacity={opacity} fontSize={num(el.style.fontSize, 14)} fill={String(el.style.color ?? '#0f172a')}>
+                <text key={el.id} x={x} y={y} opacity={opacity} fontSize={num(el.style.fontSize, 14)} fill={inkColor(el.style.color, P)}>
                   {text}
                 </text>
               );
             if (el.type === 'group')
               return (
                 <g key={el.id} opacity={opacity}>
-                  <rect x={x} y={y} width={w} height={h} fill="none" stroke="#94a3b8" strokeDasharray="6 4" rx={8} />
-                  <text x={x + 8} y={y + 16} fontSize={12} fill="#64748b">{text}</text>
+                  <rect x={x} y={y} width={w} height={h} fill="none" stroke={P.group} strokeDasharray="6 4" rx={8} />
+                  <text x={x + 8} y={y + 16} fontSize={12} fill={P.muted}>{text}</text>
                 </g>
               );
+            const c = shapeColors(r.fill, r.stroke, P);
             return (
               <g key={el.id} opacity={opacity}>
                 {el.type === 'ellipse' ? (
-                  <ellipse cx={x + w / 2} cy={y + h / 2} rx={w / 2} ry={h / 2} fill={r.fill ?? '#fff'} stroke={r.stroke ?? '#1f2937'} strokeWidth={1.5} />
+                  <ellipse cx={x + w / 2} cy={y + h / 2} rx={w / 2} ry={h / 2} fill={c.fill} stroke={c.stroke} strokeWidth={1.5} />
                 ) : (
-                  <rect x={x} y={y} width={w} height={h} rx={6} fill={r.fill ?? '#fff'} stroke={r.stroke ?? '#1f2937'} strokeWidth={1.5} />
+                  <rect x={x} y={y} width={w} height={h} rx={6} fill={c.fill} stroke={c.stroke} strokeWidth={1.5} />
                 )}
-                <text x={x + w / 2} y={y + h / 2} textAnchor="middle" dominantBaseline="middle" fontSize={13} fill="#0f172a">
-                  {text}
-                </text>
+                <ShapeLabel text={text} x={x} y={y} w={w} h={h} ellipse={el.type === 'ellipse'} fill={c.text} />
               </g>
             );
           })}
@@ -155,9 +157,9 @@ export function PresentMode({ base, states, startIndex, onClose }: Props) {
             if (!p) return null;
             return (
               <g key={r.el.id} opacity={r.opacity}>
-                <line {...p} stroke="#475569" strokeWidth={1.5} markerEnd="url(#present-arrow)" />
+                <line {...p} stroke={P.connector} strokeWidth={1.5} markerEnd="url(#present-arrow)" />
                 {Boolean(r.el.geometry.text) && (
-                  <text x={(p.x1 + p.x2) / 2} y={(p.y1 + p.y2) / 2 - 4} fontSize={11} fill="#475569" textAnchor="middle">
+                  <text x={(p.x1 + p.x2) / 2} y={(p.y1 + p.y2) / 2 - 4} fontSize={11} fill={P.connector} textAnchor="middle">
                     {String(r.el.geometry.text)}
                   </text>
                 )}

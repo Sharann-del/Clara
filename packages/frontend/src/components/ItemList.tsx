@@ -32,7 +32,13 @@ const ICON = { document: 'doc', diagram: 'diagram', folder: 'folder' } as const;
 
 export function ItemList({ items, actions, onOpenFolder, draggable, onDragStartItem, onDropOnFolder, onTagClick, trailing }: Props) {
   return (
-    <ul className="item-list" role="list">
+    <ul className={`item-list ${actions ? 'has-actions' : ''}`} role="list">
+      {items.some((it) => it.updatedAt) && (
+        <li className="item-list-head hide-mobile" aria-hidden="true">
+          <span className="col-name">Name</span>
+          <span className="col-time">Updated</span>
+        </li>
+      )}
       {items.map((it, index) => (
         <li
           key={`${it.kind}:${it.id}`}

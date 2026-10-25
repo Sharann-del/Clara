@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { DiagramElement } from '../lib/api';
 import type { ResolvedElement } from '../lib/states';
-import { connectorSegment, diagramBounds, elementBox, type Box } from '@clara/shared/render';
+import { DARK_PALETTE, connectorSegment, diagramBounds, elementBox, inkColor, lineY, shapeColors, wrapLabel, type Box } from '@clara/shared/render';
 import { Icon, type IconName } from './ui/Icon';
 import { colorFor } from './Presence';
 import { MOD } from '../lib/shortcuts';
@@ -42,6 +42,7 @@ interface Editing {
   kind: DiagramElement['type'];
 }
 
+const P = DARK_PALETTE;
 const ghost = (el: ResolvedElement) => (el.hidden ? 0.25 : 1);
 const num = (v: unknown, fallback = 0) => (typeof v === 'number' ? v : fallback);
 const isTyping = (t: EventTarget | null) => {
@@ -482,7 +483,7 @@ export function DiagramCanvas({
         >
           <defs>
             <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-              <path d="M0,0 L10,5 L0,10 z" fill="#475569" />
+              <path d="M0,0 L10,5 L0,10 z" fill={P.connector} />
             </marker>
           </defs>
           <g transform={`translate(${pan.x},${pan.y}) scale(${zoom})`}>
@@ -505,7 +506,7 @@ export function DiagramCanvas({
                       className="canvas-shape"
                       opacity={isEditing ? 0 : ghost(el)}
                       fontSize={num(el.style.fontSize, 14)}
-                      fill={String(el.style.color ?? '#0f172a')}
+                      fill={inkColor(el.style.color, P)}
                       onMouseDown={(e) => onShapeMouseDown(e, el)}
                       onDoubleClick={() => startEditing(el)}
                       style={{ cursor: readOnly ? 'default' : 'move', userSelect: 'none' }}
@@ -520,9 +521,9 @@ export function DiagramCanvas({
                 if (el.type === 'group') {
                   return (
                     <g key={el.id} opacity={ghost(el)} className="canvas-shape" onMouseDown={(e) => onShapeMouseDown(e, el)} onDoubleClick={() => startEditing(el)} {...shapeProps(el, `Group: ${text}`)}>
-                      <rect x={x} y={y} width={w} height={h} fill="transparent" stroke={selected ? '#2563eb' : '#94a3b8'} strokeWidth={selected ? 2 : 1} strokeDasharray="6 4" rx={8} />
+                      <rect x={x} y={y} width={w} height={h} fill="transparent" stroke={selected ? P.accent : P.group} strokeWidth={selected ? 2 : 1} strokeDasharray="6 4" rx={8} />
                       {!isEditing && (
-                        <text x={x + 8} y={y + 16} fontSize={12} fill="#64748b">
+                        <text x={x + 8} y={y + 16} fontSize={12} fill={P.muted}>
                           {text}
                         </text>
                       )}
@@ -530,8 +531,9 @@ export function DiagramCanvas({
                   );
                 }
 
-                const fill = String(el.style.fill ?? '#fff');
-                const stroke = selected ? '#2563eb' : String(el.style.stroke ?? '#1f2937');
+                const colors = shapeColors(el.style.fill, el.style.stroke, P);
+                const fill = colors.fill;
+                const stroke = selected ? P.accent : colors.stroke;
                 const common = {
                   fill,
                   stroke,
@@ -553,9 +555,7 @@ export function DiagramCanvas({
                       <rect x={x} y={y} width={w} height={h} rx={6} {...common} />
                     )}
                     {!isEditing && (
-                      <text x={x + w / 2} y={y + h / 2} textAnchor="middle" dominantBaseline="central" fontSize={13} fill="#0f172a" style={{ pointerEvents: 'none', userSelect: 'none' }}>
-                        {text}
-                      </text>
+                      <ShapeLabel text={text} x={x} y={y} w={w} h={h} ellipse={el.type === 'ellipse'} fill={colors.text} />
                     )}
                     {hasLink && (
                       <g style={{ pointerEvents: 'none' }} stroke={stroke} strokeWidth={1.5} strokeLinecap="round" fill="none">
@@ -570,8 +570,8 @@ export function DiagramCanvas({
                         width={12}
                         height={12}
                         rx={2}
-                        fill="#2563eb"
-                        stroke="#fff"
+                        fill={P.accent}
+                        stroke={P.canvas}
                         style={{ cursor: 'nwse-resize' }}
                         onMouseDown={(e) => onResizeHandleMouseDown(e, el)}
                         aria-hidden="true"
@@ -601,9 +601,9 @@ export function DiagramCanvas({
                   >
                     {/* Wide invisible hit area so thin arrows are easy to click. */}
                     <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="transparent" strokeWidth={12} />
-                    <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={selected ? '#2563eb' : '#475569'} strokeWidth={selected ? 2.5 : 1.5} markerEnd="url(#arrow)" />
+                    <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={selected ? P.accent : inkColor(el.style.stroke, P, P.connector)} strokeWidth={selected ? 2.5 : 1.5} markerEnd="url(#arrow)" />
                     {Boolean(el.geometry.text) && editing?.id !== el.id && (
-                      <text x={(x1 + x2) / 2} y={(y1 + y2) / 2 - 4} fontSize={11} fill="#475569" textAnchor="middle" stroke="#ffffff" strokeWidth={3} paintOrder="stroke">
+                      <text x={(x1 + x2) / 2} y={(y1 + y2) / 2 - 4} fontSize={11} fill={P.connector} textAnchor="middle" stroke={P.halo} strokeWidth={3} paintOrder="stroke">
                         {String(el.geometry.text)}
                       </text>
                     )}
@@ -611,11 +611,11 @@ export function DiagramCanvas({
                 );
               })}
 
-            {marquee && <rect x={marquee.x} y={marquee.y} width={marquee.w} height={marquee.h} fill="#2563eb22" stroke="#2563eb" />}
+            {marquee && <rect x={marquee.x} y={marquee.y} width={marquee.w} height={marquee.h} fill="none" stroke={P.accent} strokeDasharray="4 3" />}
 
             {Object.entries(remoteCursors).map(([userId, c]) => (
               <g key={userId} style={{ pointerEvents: 'none' }} transform={`translate(${c.x},${c.y}) scale(${1 / zoom})`}>
-                <path d="M0 0l13 6.5-5.5 1.6L5 14z" fill={colorFor(userId)} stroke="#fff" strokeWidth={1.2} />
+                <path d="M0 0l13 6.5-5.5 1.6L5 14z" fill={colorFor(userId)} stroke={P.canvas} strokeWidth={1.2} />
                 <text x={12} y={22} fontSize={11} fontWeight={600} fill={colorFor(userId)}>
                   {c.email ?? userId.slice(0, 6)}
                 </text>
@@ -709,5 +709,20 @@ function InlineTextEditor({
         textAlign: centered ? 'center' : 'left',
       }}
     />
+  );
+}
+
+/** A shape's label, word-wrapped to the shape (and shrunk if it still doesn't fit). */
+export function ShapeLabel({ text, x, y, w, h, ellipse, fill }: { text: string; x: number; y: number; w: number; h: number; ellipse: boolean; fill: string }) {
+  if (!text) return null;
+  const wrap = wrapLabel(text, w, h, ellipse);
+  return (
+    <text textAnchor="middle" dominantBaseline="central" fontSize={wrap.fontSize} fill={fill} style={{ pointerEvents: 'none', userSelect: 'none' }}>
+      {wrap.lines.map((line, i) => (
+        <tspan key={i} x={x + w / 2} y={lineY(wrap, y + h / 2, i)}>
+          {line}
+        </tspan>
+      ))}
+    </text>
   );
 }

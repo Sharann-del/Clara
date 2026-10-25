@@ -40,9 +40,8 @@ export function LandingPage() {
       <section className="hero" aria-labelledby="hero-title">
         <div className="wrap">
           <div className="hero-copy">
-            <span className="eyebrow">edge docs -&gt; diagrams "stay in sync"</span>
             <h1 id="hero-title" className="display">
-              System design you can <em>type</em>, zoom into, and hand to Claude.
+              <mark className="hl">System design</mark> you can <em>type</em>, zoom into, and hand to Claude.
             </h1>
             <p className="lede">
               Clara keeps architecture docs and diagrams in one place. Write a diagram as code, drill from the whole system
@@ -66,7 +65,7 @@ export function LandingPage() {
       <section className="features wrap" aria-labelledby="features-title">
         <div className="features-intro">
           <h2 id="features-title" className="section-title">
-            One place for the doc, the diagram, and the decision.
+            <mark className="hl">One place</mark> for the doc, the diagram, and the decision.
           </h2>
           <p className="lede" style={{ marginBottom: 0 }}>
             Design docs rot when the diagram lives in one tool and the reasoning in another. Clara keeps them together and
@@ -158,7 +157,7 @@ export function LandingPage() {
 
         <article className="feature">
           <div>
-            <span className="eyebrow eyebrow-amber">status: pending_review</span>
+            <span className="eyebrow">status: pending_review</span>
             <h3>AI edits over MCP, with a human in the loop</h3>
             <p>
               Connect Claude Code or any MCP client with a personal access token. It can read what you can read, and when it
@@ -177,9 +176,9 @@ export function LandingPage() {
 
       <section className="review-section" aria-labelledby="review-title">
         <div className="wrap">
-          <span className="eyebrow eyebrow-amber">propose → review → apply</span>
+          <span className="eyebrow">propose → review → apply</span>
           <h2 id="review-title" className="section-title">
-            How MCP review works
+            How <mark className="hl">MCP review</mark> works
           </h2>
           <p className="lede" style={{ marginBottom: 0 }}>
             An assistant never writes to your workspace directly. Every change goes through the same four steps.
@@ -242,7 +241,7 @@ export function LandingPage() {
       <div className="wrap">
         <section className="closing" aria-labelledby="closing-title">
           <div>
-            <h2 id="closing-title">Write the system down once. Keep it true.</h2>
+            <h2 id="closing-title">Write the system down once. <mark className="hl">Keep it true.</mark></h2>
             <p>Free while Clara is in early access. No card needed.</p>
           </div>
           <div className="cta-row">

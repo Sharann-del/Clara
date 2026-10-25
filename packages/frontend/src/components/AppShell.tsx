@@ -3,7 +3,6 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Logo } from './site/Logo';
 import { Icon } from './ui/Icon';
 import { Menu } from './ui/Menu';
-import { ThemeMenu } from './ThemeMenu';
 import { useAppCommands } from './CommandPalette';
 import { useConfirm } from './ui/ConfirmProvider';
 import { useToast } from './ui/Toast';
@@ -25,14 +24,15 @@ interface Props {
   sidebarMode?: 'docked' | 'drawer';
   /** Pending-change count for the badge (editors and up). */
   pendingCount?: number;
-  onOpenPending?: () => void;
-  onOpenMembers?: () => void;
+  /** Sidebar links to the workspace's review queue and member list. */
+  showPending?: boolean;
+  showMembers?: boolean;
   /** Full-bleed content (canvas) instead of the padded scroll area. */
   bleed?: boolean;
   children: ReactNode;
 }
 
-export function AppShell({ workspace, sidebar, title, actions, sidebarMode = 'docked', pendingCount, onOpenPending, onOpenMembers, bleed, children }: Props) {
+export function AppShell({ workspace, sidebar, title, actions, sidebarMode = 'docked', pendingCount, showPending, showMembers, bleed, children }: Props) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
   useEffect(() => setDrawerOpen(false), [location.pathname]);
@@ -49,7 +49,7 @@ export function AppShell({ workspace, sidebar, title, actions, sidebarMode = 'do
         Skip to content
       </a>
       <aside className="shell-sidebar" id="app-sidebar" aria-label="Navigation">
-        <Sidebar workspace={workspace} pendingCount={pendingCount} onOpenPending={onOpenPending} onOpenMembers={onOpenMembers} onClose={() => setDrawerOpen(false)}>
+        <Sidebar workspace={workspace} pendingCount={pendingCount} showPending={showPending} showMembers={showMembers} onClose={() => setDrawerOpen(false)}>
           {sidebar}
         </Sidebar>
       </aside>
@@ -82,20 +82,20 @@ export function AppShell({ workspace, sidebar, title, actions, sidebarMode = 'do
 function Sidebar({
   workspace,
   pendingCount,
-  onOpenPending,
-  onOpenMembers,
+  showPending,
+  showMembers,
   onClose,
   children,
 }: {
   workspace?: (Workspace & { role?: string }) | null;
   pendingCount?: number;
-  onOpenPending?: () => void;
-  onOpenMembers?: () => void;
+  showPending?: boolean;
+  showMembers?: boolean;
   onClose: () => void;
   children?: ReactNode;
 }) {
   const { email, signOut } = useAuth();
-  const { openPalette, openShortcuts } = useAppCommands();
+  const { openPalette } = useAppCommands();
   const { workspaces, refresh } = useWorkspaces();
   const { prompt } = useConfirm();
   const toast = useToast();
@@ -116,7 +116,7 @@ function Sidebar({
   return (
     <div className="sidebar-inner">
       <div className="sidebar-top">
-        <Logo to="/app" />
+        <Logo to="/" />
         <button type="button" className="btn btn-ghost btn-icon btn-sm shell-close-btn" aria-label="Close navigation" onClick={onClose}>
           <Icon name="x" />
         </button>
@@ -157,20 +157,20 @@ function Sidebar({
             <NavLink to={`/workspaces/${workspace.id}`} end className="folder-tree-item">
               <Icon name="layers" /> All items
             </NavLink>
-            {onOpenPending && (
-              <button type="button" className="folder-tree-item" onClick={onOpenPending} data-tour="pending">
-                <Icon name="sparkles" /> Pending changes
+            {showPending && (
+              <NavLink to={`/workspaces/${workspace.id}/pending`} className="folder-tree-item" data-tour="pending">
+                <Icon name="review" /> Pending changes
                 {!!pendingCount && (
                   <span className="badge" style={{ marginLeft: 'auto' }} aria-label={`${pendingCount} waiting`}>
                     {pendingCount}
                   </span>
                 )}
-              </button>
+              </NavLink>
             )}
-            {onOpenMembers && (
-              <button type="button" className="folder-tree-item" onClick={onOpenMembers}>
+            {showMembers && (
+              <NavLink to={`/workspaces/${workspace.id}/members`} className="folder-tree-item">
                 <Icon name="users" /> Members
-              </button>
+              </NavLink>
             )}
           </>
         )}
@@ -196,9 +196,9 @@ function Sidebar({
               </>
             }
             items={[
-              { label: 'Profile and theme', icon: 'settings', onSelect: () => navigate('/settings') },
+              { label: 'Profile and settings', icon: 'settings', onSelect: () => navigate('/settings') },
               { label: 'Access tokens', icon: 'key', onSelect: () => navigate('/settings/tokens') },
-              { label: 'Keyboard shortcuts', icon: 'keyboard', hint: '?', onSelect: openShortcuts },
+              { label: 'Keyboard shortcuts', icon: 'keyboard', hint: '?', onSelect: () => navigate('/shortcuts') },
               { label: 'Documentation', icon: 'book', onSelect: () => navigate('/docs') },
               'separator',
               {
@@ -212,7 +212,6 @@ function Sidebar({
               },
             ]}
           />
-          <ThemeMenu />
         </div>
       </div>
     </div>

@@ -147,7 +147,7 @@ export function TokensPage() {
           ))}
 
           <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Icon name="sparkles" /> Connect Claude Code
+            <Icon name="code" /> Connect Claude Code
           </h3>
           <pre className="diff-text" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{command}</pre>
           <p className="muted">

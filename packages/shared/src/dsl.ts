@@ -1,4 +1,5 @@
 import dagre from 'dagre';
+import { wrapLabel } from './text.js';
 
 /** Canvas element as the API accepts it (PUT /diagrams/:id/elements). */
 export interface DiagramElement {
@@ -116,8 +117,15 @@ export function layoutToElements(graph: DslGraph): DiagramElement[] {
   g.setGraph({ rankdir: graph.direction ?? 'TB', nodesep: 40, ranksep: 60 });
   g.setDefaultEdgeLabel(() => ({}));
 
+  // Long labels get a wider box, and a taller one if they still wrap past two lines.
+  const sizeOf = (label: string) => {
+    const width = label.length > 28 ? NODE_W + 60 : NODE_W;
+    const wrap = wrapLabel(label, width, Infinity);
+    return { width, height: Math.max(NODE_H, Math.ceil(wrap.lines.length * wrap.lineHeight + 24)) };
+  };
+  const sizes = new Map(graph.nodes.map((n) => [n.id, sizeOf(n.label)]));
   for (const node of graph.nodes) {
-    g.setNode(node.id, { width: NODE_W, height: NODE_H });
+    g.setNode(node.id, sizes.get(node.id)!);
   }
   for (const edge of graph.edges) {
     // Labelled edges reserve room for their text so it doesn't land on a neighbouring node.
@@ -137,7 +145,7 @@ export function layoutToElements(graph: DslGraph): DiagramElement[] {
     elements.push({
       id: elId,
       type: 'rect',
-      geometry: { x: pos.x - NODE_W / 2, y: pos.y - NODE_H / 2, width: NODE_W, height: NODE_H, text: node.label },
+      geometry: { x: pos.x - pos.width / 2, y: pos.y - pos.height / 2, width: pos.width, height: pos.height, text: node.label },
       style: { fill: '#eff6ff', stroke: '#2563eb' },
       zIndex: 1,
     });

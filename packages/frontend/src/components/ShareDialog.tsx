@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Dialog } from './ui/Dialog';
+import { SubPage } from './ui/SubPage';
 import { Icon } from './ui/Icon';
 import { useToast } from './ui/Toast';
 import { useConfirm } from './ui/ConfirmProvider';
@@ -8,19 +8,20 @@ import { api, errorMessage, isMissingRoute, type Grant, type ShareLink } from '.
 
 interface Props {
   open: boolean;
-  onClose: () => void;
   kind: 'document' | 'diagram';
   id: string;
   name: string;
   workspaceName?: string;
   /** Editors can change sharing; viewers see who has access. */
   canManage: boolean;
+  /** Where "Back" falls back to. */
+  backTo: string;
 }
 
 export const publicUrl = (token: string) => `${window.location.origin}/s/${token}`;
 
 /** Per-item access for specific people, plus a revocable read-only public link. */
-export function ShareDialog({ open, onClose, kind, id, name, workspaceName, canManage }: Props) {
+export function ShareDialog({ open, kind, id, name, workspaceName, canManage, backTo }: Props) {
   const toast = useToast();
   const { confirm } = useConfirm();
   const [grants, setGrants] = useState<Grant[] | null>(null);
@@ -92,8 +93,9 @@ export function ShareDialog({ open, onClose, kind, id, name, workspaceName, canM
     }
   }
 
+  if (!open) return null;
   return (
-    <Dialog open={open} onClose={onClose} title={`Share “${name}”`} size="md">
+    <SubPage title={`Share “${name}”`} description="Who can open it, and whether there’s a public read-only link." backTo={backTo}>
       {unsupported ? (
         <p className="muted" style={{ fontSize: 14 }}>
           Sharing single items needs a newer Clara API than this one. Until it's deployed, invite people to the workspace from
@@ -162,7 +164,7 @@ export function ShareDialog({ open, onClose, kind, id, name, workspaceName, canM
               </div>
             ))}
             {canManage && (
-              <form onSubmit={add} className="invite-row" style={{ borderTop: 'none', paddingTop: 10 }}>
+              <form onSubmit={add} className="invite-row">
                 <label className="field" style={{ flex: 1 }}>
                   Add a person
                   <input className="input" type="email" placeholder="name@company.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
@@ -237,6 +239,6 @@ export function ShareDialog({ open, onClose, kind, id, name, workspaceName, canM
           {error}
         </div>
       )}
-    </Dialog>
+    </SubPage>
   );
 }

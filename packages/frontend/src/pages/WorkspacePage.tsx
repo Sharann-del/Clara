@@ -9,9 +9,8 @@ import { PendingChangesPanel } from '../components/PendingChangesPanel';
 import { MembersDialog } from '../components/MembersDialog';
 import { MoveDialog } from '../components/MoveDialog';
 import { TagEditor } from '../components/TagEditor';
-import { ShareDialog } from '../components/ShareDialog';
+import { SubPage } from '../components/ui/SubPage';
 import { ProductTour, tourDone } from '../components/ProductTour';
-import { Dialog } from '../components/ui/Dialog';
 import { Icon } from '../components/ui/Icon';
 import { Menu } from '../components/ui/Menu';
 import { useToast } from '../components/ui/Toast';
@@ -29,7 +28,8 @@ const DRAG_TYPE = 'application/x-clara-item';
 const atLeast = (role: Role | undefined, min: Role) => !!role && ['viewer', 'editor', 'admin', 'owner'].indexOf(role) >= ['viewer', 'editor', 'admin', 'owner'].indexOf(min);
 
 export function WorkspacePage() {
-  const { workspaceId } = useParams<{ workspaceId: string }>();
+  const { workspaceId, '*': sub } = useParams<{ workspaceId: string; '*': string }>();
+  const base = `/workspaces/${workspaceId}`;
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const toast = useToast();
@@ -44,11 +44,8 @@ export function WorkspacePage() {
   const [diagrams, setDiagrams] = useState<DiagramSummary[] | null>(null);
   const [loadError, setLoadError] = useState<ApiError | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
-  const [showPending, setShowPending] = useState(false);
-  const [showMembers, setShowMembers] = useState(false);
   const [moving, setMoving] = useState<ListItem | Folder | null>(null);
   const [tagging, setTagging] = useState<ListItem | null>(null);
-  const [sharing, setSharing] = useState<ListItem | null>(null);
   const [touring, setTouring] = useState(false);
   const [query, setQuery] = useState('');
   const [kind, setKind] = useState<Kind>('all');
@@ -366,7 +363,7 @@ export function WorkspacePage() {
             { label: 'Rename', icon: 'edit' as const, onSelect: () => renameItem(it) },
             { label: 'Edit tags', icon: 'tag' as const, onSelect: () => setTagging(it) },
             { label: 'Move to…', icon: 'move' as const, onSelect: () => setMoving(it) },
-            { label: 'Share…', icon: 'share' as const, onSelect: () => setSharing(it) },
+            { label: 'Share', icon: 'share' as const, onSelect: () => navigate(`/${it.kind}s/${it.id}/share`) },
             'separator' as const,
             { label: `Delete ${it.kind}`, icon: 'trash' as const, danger: true, onSelect: () => deleteItem(it) },
           ]
@@ -378,8 +375,8 @@ export function WorkspacePage() {
     <AppShell
       workspace={workspace}
       pendingCount={pendingCount}
-      onOpenPending={canEdit ? () => setShowPending(true) : undefined}
-      onOpenMembers={() => setShowMembers(true)}
+      showPending={canEdit}
+      showMembers
       title={
         <Crumbs
           items={[
@@ -390,24 +387,14 @@ export function WorkspacePage() {
       }
       actions={
         <>
-          {canEdit && (
-            <div className="btn-group" data-tour="create">
-              <button type="button" className="btn btn-primary" onClick={() => create('document')}>
-                <Icon name="plus" /> <span className="btn-label">Document</span>
-              </button>
-              <button type="button" className="btn btn-primary" onClick={() => create('diagram')}>
-                <Icon name="plus" /> <span className="btn-label">Diagram</span>
-              </button>
-            </div>
-          )}
           <Menu
             className="btn btn-ghost btn-icon"
             label="Workspace actions"
             trigger={<Icon name="more" />}
             items={[
               ...(canEdit ? [{ label: 'New folder', icon: 'folder' as const, onSelect: () => newFolder(currentFolder ?? null) }] : []),
-              { label: 'Members', icon: 'users' as const, onSelect: () => setShowMembers(true) },
-              ...(canEdit ? [{ label: `Pending changes${pendingCount ? ` (${pendingCount})` : ''}`, icon: 'sparkles' as const, onSelect: () => setShowPending(true) }] : []),
+              { label: 'Members', icon: 'users' as const, onSelect: () => navigate(`${base}/members`) },
+              ...(canEdit ? [{ label: `Pending changes${pendingCount ? ` (${pendingCount})` : ''}`, icon: 'review' as const, onSelect: () => navigate(`${base}/pending`) }] : []),
               { label: 'Show the tour again', icon: 'info' as const, onSelect: () => setTouring(true) },
               ...(atLeast(role, 'admin') ? ['separator' as const, { label: 'Rename workspace', icon: 'edit' as const, onSelect: renameWorkspace }] : []),
               ...(role === 'owner' ? [{ label: 'Delete workspace', icon: 'trash' as const, danger: true, onSelect: deleteWorkspace }] : []),
@@ -430,15 +417,27 @@ export function WorkspacePage() {
         />
       }
     >
+      {!sub && (
+      <>
       <div className="page-head">
         <div>
           <h1>{heading}</h1>
           {workspace && (
-            <p className="muted" style={{ margin: '4px 0 0', fontSize: 13.5 }}>
+            <p className="muted" style={{ margin: '8px 0 0', fontSize: 15 }}>
               {workspace.name} · you’re {role === 'admin' || role === 'owner' ? 'an' : 'a'} {role}
             </p>
           )}
         </div>
+        {canEdit && (
+          <div className="page-head-actions" data-tour="create">
+            <button type="button" className="btn" onClick={() => create('diagram')}>
+              <Icon name="diagram" /> New diagram
+            </button>
+            <button type="button" className="btn btn-primary" onClick={() => create('document')}>
+              <Icon name="plus" /> New document
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="filters" role="search">
@@ -540,12 +539,14 @@ export function WorkspacePage() {
           Tip: drag rows onto a folder in the sidebar, or use “Move to…” in a row’s menu.
         </p>
       )}
+      </>
+      )}
 
       {workspaceId && (
-        <MembersDialog open={showMembers} onClose={() => setShowMembers(false)} workspaceId={workspaceId} myRole={role} mySub={mySub ?? undefined} />
+        <MembersDialog open={sub === 'members'} backTo={base} workspaceId={workspaceId} myRole={role} mySub={mySub ?? undefined} />
       )}
-      <Dialog open={showPending} onClose={() => setShowPending(false)} title="Pending changes from AI assistants" size="lg">
-        {showPending && workspaceId && (
+      {sub === 'pending' && workspaceId && (
+        <SubPage title="Pending changes from AI assistants" backTo={base} size="lg">
           <PendingChangesPanel
             workspaceId={workspaceId}
             onChanged={() => {
@@ -553,8 +554,8 @@ export function WorkspacePage() {
               refreshPending();
             }}
           />
-        )}
-      </Dialog>
+        </SubPage>
+      )}
       {moving && (
         <MoveDialog
           open
@@ -584,17 +585,6 @@ export function WorkspacePage() {
           suggestions={allTags.map(([t]) => t)}
           onClose={() => setTagging(null)}
           onSave={(tags) => saveTags(tagging, tags)}
-        />
-      )}
-      {sharing && sharing.kind !== 'folder' && (
-        <ShareDialog
-          open
-          onClose={() => setSharing(null)}
-          kind={sharing.kind}
-          id={sharing.id}
-          name={sharing.name}
-          workspaceName={workspace?.name}
-          canManage={canEdit}
         />
       )}
       {touring && (

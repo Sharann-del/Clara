@@ -72,7 +72,7 @@ export function PricingPage() {
           </section>
         </div>
 
-        <section style={{ marginTop: 56, maxWidth: 760 }} aria-labelledby="limits-title">
+        <section style={{ marginTop: 56 }} aria-labelledby="limits-title">
           <h2 id="limits-title" className="section-title" style={{ fontSize: '1.6rem' }}>
             Fair-use limits
           </h2>

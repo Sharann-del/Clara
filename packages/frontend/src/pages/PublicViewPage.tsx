@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Logo } from '../components/site/Logo';
-import { ThemeMenu } from '../components/ThemeMenu';
 import { DiagramViewer } from '../components/DiagramViewer';
 import { MarkdownView } from '../components/MarkdownView';
 import { PresentMode } from '../components/PresentMode';
@@ -55,7 +54,6 @@ export function PublicViewPage() {
           <Icon name="eye" size={14} /> Shared read-only
         </span>
         <span style={{ flex: 1 }} />
-        <ThemeMenu />
         <Link to="/editor" className="btn btn-ghost hide-mobile">
           Try the playground
         </Link>

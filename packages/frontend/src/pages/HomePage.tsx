@@ -133,7 +133,7 @@ export function HomePage() {
 
   return (
     <AppShell title={<strong>Home</strong>}>
-      <div className="content-narrow" style={{ maxWidth: 960 }}>
+      <div className="content-narrow">
         <div className="page-head">
           <div>
             <h1>{first ? `Welcome back, ${first}` : 'Welcome back'}</h1>

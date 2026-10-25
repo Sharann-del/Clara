@@ -1,7 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { Logo } from './Logo';
-import { ThemeMenu } from '../ThemeMenu';
 import { Icon } from '../ui/Icon';
 import { useAuth } from '../../context/AuthContext';
 
@@ -40,7 +39,6 @@ export function SiteHeader() {
           </div>
         </nav>
         <div className="site-header-actions">
-          <ThemeMenu />
           {idToken ? (
             <Link to="/app" className="btn btn-primary hide-mobile">
               Open Clara <Icon name="arrowRight" size={14} />

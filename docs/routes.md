@@ -29,11 +29,14 @@ page updates title/description at runtime (`src/lib/seo.ts`).
 | Path | Page | Notes |
 | --- | --- | --- |
 | `/app` | Home | Favorites, recently updated (all workspaces), shared with you, workspaces. Runs first-run setup the first time an account arrives with no workspaces. |
-| `/workspaces/:id` | Workspace | Folder tree (rename, move, delete, drag-and-drop, subfolders), filter by name/#tag/kind, sort, tag chips. Row menu: open, favorite, rename, tags, move, share, delete. Members and Pending changes open as dialogs. `?folder=<id>` or `?folder=root` filters; `?tag=` repeats; `?tour=1` starts the tour. |
+| `/workspaces/:id` | Workspace | Folder tree (rename, move, delete, drag-and-drop, subfolders), filter by name/#tag/kind, sort, tag chips. Row menu: open, favorite, rename, tags, move, share, delete. Members and Pending changes are sub-pages: `/workspaces/:id/members`, `/workspaces/:id/pending`. `?folder=<id>` or `?folder=root` filters; `?tag=` repeats; `?tour=1` starts the tour. |
 | `/documents/:id` | Document | Markdown or rich-text editing with a toolbar (headings, bold/italic/code, lists, quote, link, code block, table, image, divider, **Insert diagram**). Saves 600 ms after typing, on `⌘S`, and when leaving. History (diff/preview before restore), Share, tags, favorite, export `.md`. Read-only for viewers and on phones (editors can tap Edit). |
 | `/diagrams/:id` | Diagram | Canvas (tools, inline text editing, inspector with colours and drill-down links), Code tab (DSL/Mermaid with live preview, Apply to canvas, Load from canvas), states bar, present mode, Share, Export, History. Read-only viewer for viewers and on phones. |
 | `/settings` | Settings | Profile, theme (system/light/dark), password change, sign out. |
+| `/documents/:id/share` · `/diagrams/:id/share` | Share | Direct grants and the public link, as a page. |
+| `/documents/:id/history` · `/diagrams/:id/history` | Version history | Version list, diff/preview, restore. |
 | `/settings/tokens` | Access tokens | Personal access tokens for MCP clients. |
+| `/shortcuts` | Keyboard shortcuts | Also opened with `?`. |
 
 Global: **⌘K / Ctrl+K** opens the command palette (search titles and #tags across everything you
 can read, plus commands); **?** shows keyboard shortcuts. The full list is in

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { diffLines } from 'diff';
 import { describeElement, diffElements } from '@clara/shared/diff';
-import { Dialog } from './ui/Dialog';
+import { SubPage } from './ui/SubPage';
 import { Icon } from './ui/Icon';
 import { useToast } from './ui/Toast';
 import { useConfirm } from './ui/ConfirmProvider';
@@ -20,10 +20,12 @@ interface Props {
   current: { contentMd?: string; title?: string; elements?: DiagramElement[] };
   canRestore: boolean;
   onRestored: () => void;
+  /** Where "Back" falls back to. */
+  backTo: string;
 }
 
 /** Version list with a preview and a diff against the current state before restoring. */
-export function VersionHistoryPanel({ open, onClose, resourceKind, resourceId, current, canRestore, onRestored }: Props) {
+export function VersionHistoryPanel({ open, onClose, resourceKind, resourceId, current, canRestore, onRestored, backTo }: Props) {
   const toast = useToast();
   const { confirm } = useConfirm();
   const [versions, setVersions] = useState<VersionSummary[] | null>(null);
@@ -76,8 +78,9 @@ export function VersionHistoryPanel({ open, onClose, resourceKind, resourceId, c
     }
   }
 
+  if (!open) return null;
   return (
-    <Dialog open={open} onClose={onClose} title="Version history" description="Every save keeps the previous version. Preview one, then restore it if you need to." size="lg">
+    <SubPage title="Version history" description="Every save keeps the previous version. Preview one, then restore it if you need to." backTo={backTo} size="lg">
       {error && <div className="error-text">{error}</div>}
       {versions === null ? (
         <SkeletonRows rows={4} />
@@ -137,7 +140,7 @@ export function VersionHistoryPanel({ open, onClose, resourceKind, resourceId, c
           </div>
         </div>
       )}
-    </Dialog>
+    </SubPage>
   );
 }
 

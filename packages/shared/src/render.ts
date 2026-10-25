@@ -1,4 +1,7 @@
 import type { DiagramElement } from './dsl.js';
+import { lineY, wrapLabel } from './text.js';
+
+export { lineY, wrapLabel, type WrappedLabel } from './text.js';
 
 /**
  * Framework-free diagram geometry + a static SVG renderer. One implementation shared by
@@ -165,6 +168,88 @@ function color(v: unknown, fallback: string): string {
   return typeof v === 'string' && /^(#[0-9a-f]{3,8}|[a-z]+|rgba?\([\d\s.,%]+\)|none)$/i.test(v.trim()) ? v.trim() : fallback;
 }
 
+/** Colours a diagram is drawn with. Stored element colours are light-sheet values; the dark palette remaps them. */
+export interface DiagramPalette {
+  canvas: string;
+  dot: string;
+  ink: string;
+  muted: string;
+  connector: string;
+  group: string;
+  accent: string;
+  /** Halo behind connector labels so they read over lines; matches the canvas. */
+  halo: string;
+}
+
+export const LIGHT_PALETTE: DiagramPalette = {
+  canvas: '#ffffff',
+  dot: '#c7cedb',
+  ink: '#0f172a',
+  muted: '#64748b',
+  connector: '#475569',
+  group: '#94a3b8',
+  accent: '#2563eb',
+  halo: '#ffffff',
+};
+
+export const DARK_PALETTE: DiagramPalette = {
+  canvas: '#0d0d0f',
+  dot: '#26262b',
+  ink: '#ededef',
+  muted: '#85858e',
+  connector: '#8a8a94',
+  group: '#55555e',
+  accent: '#8e98ff',
+  halo: '#0d0d0f',
+};
+
+// The swatches the editor offers (and the defaults), redrawn as tinted dark fills / brighter strokes.
+const DARK_FILLS: Record<string, string> = {
+  '#ffffff': '#1c1c20',
+  '#fff': '#1c1c20',
+  '#eff6ff': '#1a2040',
+  '#f0fdf4': '#12291f',
+  '#fef2f2': '#331a1c',
+  '#faf5ff': '#261d3d',
+  '#f8fafc': '#202024',
+};
+const DARK_STROKES: Record<string, string> = {
+  '#2563eb': '#8e98ff',
+  '#2b50e8': '#8e98ff',
+  '#16a34a': '#4cc79d',
+  '#dc2626': '#f2786d',
+  '#7c3aed': '#b197fc',
+  '#475569': '#8a8a94',
+  '#1f2937': '#6b6b75',
+  '#0f172a': '#9a9aa4',
+};
+
+function isLight(hex: string): boolean {
+  const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex);
+  if (!m) return true;
+  const h = m[1].length === 3 ? m[1].replace(/./g, (c) => c + c) : m[1];
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
+  return 0.299 * r + 0.587 * g + 0.114 * b > 150;
+}
+
+/** Fill, stroke and label colour for a shape under a palette. Unknown custom fills keep their colour and get a readable label. */
+export function shapeColors(fill: unknown, stroke: unknown, palette: DiagramPalette = LIGHT_PALETTE): { fill: string; stroke: string; text: string } {
+  const f = color(fill, '#ffffff').toLowerCase();
+  const s = color(stroke, '#1f2937').toLowerCase();
+  if (palette === LIGHT_PALETTE) return { fill: f, stroke: s, text: LIGHT_PALETTE.ink };
+  const darkFill = DARK_FILLS[f];
+  if (darkFill) return { fill: darkFill, stroke: DARK_STROKES[s] ?? s, text: palette.ink };
+  return { fill: f, stroke: DARK_STROKES[s] ?? s, text: isLight(f) ? LIGHT_PALETTE.ink : palette.ink };
+}
+
+/** Colour for a free text element or connector under a palette. */
+export function inkColor(v: unknown, palette: DiagramPalette = LIGHT_PALETTE, fallback = palette.ink): string {
+  const c = color(v, fallback).toLowerCase();
+  if (palette === LIGHT_PALETTE) return c;
+  if (c === '#0f172a' || c === '#1f2937') return palette.ink;
+  return DARK_STROKES[c] ?? c;
+}
+
 export interface SvgRenderOptions {
   /** Page background; `null` for transparent. Default white. */
   background?: string | null;
@@ -175,6 +260,8 @@ export interface SvgRenderOptions {
   dataAttributes?: boolean;
   /** Outline colour per element id, e.g. to mark the elements a proposed change adds. */
   highlights?: Record<string, string>;
+  /** Colour scheme; exports default to the light sheet. */
+  palette?: DiagramPalette;
 }
 
 export interface RenderedSvg {
@@ -192,6 +279,7 @@ const FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, A
  */
 export function renderDiagramSvg(all: RenderableElement[], opts: SvgRenderOptions = {}): RenderedSvg {
   const padding = opts.padding ?? 32;
+  const pal = opts.palette ?? LIGHT_PALETTE;
   const background = opts.background === undefined ? '#ffffff' : opts.background;
   const elements = visibleElements(all.map((e) => (e.style?.baseHidden === true && e.hidden === undefined ? { ...e, hidden: true } : e)));
   const byId = new Map(elements.filter((e) => e.id).map((e) => [e.id as string, e as DiagramElement]));
@@ -227,16 +315,15 @@ export function renderDiagramSvg(all: RenderableElement[], opts: SvgRenderOption
     const { x, y, width: w, height: h } = elementBox(el);
     if (el.type === 'text') {
       parts.push(
-        `<text x="${num(g.x)}" y="${num(g.y)}" font-size="${num(s.fontSize, 14)}" fill="${color(s.color, '#0f172a')}">${text}</text>`,
+        `<text x="${num(g.x)}" y="${num(g.y)}" font-size="${num(s.fontSize, 14)}" fill="${inkColor(s.color, pal)}">${text}</text>`,
       );
     } else if (el.type === 'group') {
       parts.push(
-        `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="none" stroke="#94a3b8" stroke-dasharray="6 4" />`,
-        `<text x="${x + 8}" y="${y + 16}" font-size="12" fill="#64748b">${text}</text>`,
+        `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="none" stroke="${pal.group}" stroke-dasharray="6 4" />`,
+        `<text x="${x + 8}" y="${y + 16}" font-size="12" fill="${pal.muted}">${text}</text>`,
       );
     } else {
-      const fill = color(s.fill, '#ffffff');
-      const stroke = color(s.stroke, '#1f2937');
+      const { fill, stroke, text: label } = shapeColors(s.fill, s.stroke, pal);
       parts.push(
         el.type === 'ellipse'
           ? `<ellipse cx="${x + w / 2}" cy="${y + h / 2}" rx="${w / 2}" ry="${h / 2}" fill="${fill}" stroke="${stroke}" stroke-width="1.5" />`
@@ -244,7 +331,11 @@ export function renderDiagramSvg(all: RenderableElement[], opts: SvgRenderOption
       );
       if (text) {
         parts.push(
-          `<text x="${x + w / 2}" y="${y + h / 2}" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#0f172a">${text}</text>`,
+          (() => {
+            const wrap = wrapLabel(String(g.text ?? ''), w, h, el.type === 'ellipse');
+            const spans = wrap.lines.map((l, i) => `<tspan x="${x + w / 2}" y="${num(lineY(wrap, y + h / 2, i))}">${escapeXml(l)}</tspan>`).join('');
+            return `<text text-anchor="middle" dominant-baseline="central" font-size="${wrap.fontSize}" fill="${label}">${spans}</text>`;
+          })(),
         );
       }
       if (el.linkedDiagramId) {
@@ -260,14 +351,14 @@ export function renderDiagramSvg(all: RenderableElement[], opts: SvgRenderOption
     if (el.type !== 'connector') continue;
     const seg = connectorSegment(el, byId);
     if (!seg) continue;
-    const stroke = color(opts.highlights?.[el.id ?? ''] ?? el.style.stroke, '#475569');
+    const stroke = color(opts.highlights?.[el.id ?? ''] ?? inkColor(el.style.stroke, pal, pal.connector), pal.connector);
     parts.push(
       `<line x1="${seg.x1}" y1="${seg.y1}" x2="${seg.x2}" y2="${seg.y2}" stroke="${stroke}" stroke-width="1.5" marker-end="url(#clara-arrow)" />`,
     );
     const label = String(el.geometry.text ?? '');
     if (label) {
       parts.push(
-        `<text x="${(seg.x1 + seg.x2) / 2}" y="${(seg.y1 + seg.y2) / 2 - 4}" text-anchor="middle" font-size="11" fill="#475569" stroke="#ffffff" stroke-width="3" paint-order="stroke">${escapeXml(label)}</text>`,
+        `<text x="${(seg.x1 + seg.x2) / 2}" y="${(seg.y1 + seg.y2) / 2 - 4}" text-anchor="middle" font-size="11" fill="${pal.connector}" stroke="${pal.halo}" stroke-width="3" paint-order="stroke">${escapeXml(label)}</text>`,
       );
     }
   }
@@ -275,7 +366,7 @@ export function renderDiagramSvg(all: RenderableElement[], opts: SvgRenderOption
   const svg = `${opts.xmlProlog ? '<?xml version="1.0" encoding="UTF-8"?>\n' : ''}<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${vx} ${vy} ${width} ${height}" font-family="${escapeXml(FONT)}">
   <defs>
     <marker id="clara-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#475569" />
+      <path d="M0,0 L10,5 L0,10 z" fill="${pal.connector}" />
     </marker>
   </defs>
 ${background ? `  <rect x="${vx}" y="${vy}" width="${width}" height="${height}" fill="${color(background, '#ffffff')}" />\n` : ''}  ${parts.join('\n  ')}

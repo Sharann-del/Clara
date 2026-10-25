@@ -25,12 +25,11 @@ const WorkspacePage = lazy(() => import('./pages/WorkspacePage').then((m) => ({ 
 const DocumentPage = lazy(() => import('./pages/DocumentPage').then((m) => ({ default: m.DocumentPage })));
 const DiagramPage = lazy(() => import('./pages/DiagramPage').then((m) => ({ default: m.DiagramPage })));
 const TokensPage = lazy(() => import('./pages/TokensPage').then((m) => ({ default: m.TokensPage })));
+const ShortcutsPage = lazy(() => import('./pages/ShortcutsPage').then((m) => ({ default: m.ShortcutsPage })));
 
-/** `/` is the landing page for visitors and the app home for signed-in users. */
+/** `/` is always the landing page; signed-in visitors get "Open Clara" in its header. */
 function RootRoute() {
-  const { loading, idToken } = useAuth();
-  if (loading) return <PageLoading />;
-  return idToken ? <Navigate to="/app" replace /> : <LandingPage />;
+  return <LandingPage />;
 }
 
 /** Move focus to the new page's main region on navigation, so screen readers announce it. */
@@ -73,10 +72,12 @@ export default function App() {
         <Route element={<AppArea />}>
           <Route path="/app" element={<HomePage />} />
           <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/workspaces/:workspaceId" element={<WorkspacePage />} />
-          <Route path="/documents/:documentId" element={<DocumentPage />} />
-          <Route path="/diagrams/:diagramId" element={<DiagramPage />} />
+          {/* Sub-pages (/share, /history, /members, /pending) render inside these so editor state survives. */}
+          <Route path="/workspaces/:workspaceId/*" element={<WorkspacePage />} />
+          <Route path="/documents/:documentId/*" element={<DocumentPage />} />
+          <Route path="/diagrams/:diagramId/*" element={<DiagramPage />} />
           <Route path="/settings/tokens" element={<TokensPage />} />
+          <Route path="/shortcuts" element={<ShortcutsPage />} />
         </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

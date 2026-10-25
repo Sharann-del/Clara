@@ -1,0 +1,136 @@
+{
+ "docs": [
+  {
+   "slug": "getting-started",
+   "title": "Getting started",
+   "description": "",
+   "markdown": "Clara organizes everything into **workspaces**. A workspace holds folders, markdown documents and diagrams, and has members with roles. When you sign up, Clara creates a first workspace with a welcome document and a sample diagram so you have something to poke at.\n\n## Try it without an account\n\nThe [playground](/editor) renders Clara DSL or Mermaid as you type, exports SVG, PNG and PDF, and makes share links that contain the whole diagram. *Save to Clara* copies it into a workspace once you sign in.\n\n## Documents\n\nDocuments are markdown. Use the Source view for raw markdown or the Rich view to edit formatted text; the toolbar handles headings, lists, links, code, tables and images. Clara saves as you type and keeps a version for every save, so you can preview and restore any earlier state from *History*.\n\n### Embedding a diagram\n\nChoose *Insert diagram* in the editor toolbar and pick a diagram from the workspace. Clara adds a block like this, which renders the live diagram in the Rich view and in shared links:\n\n````\n```clara-diagram\nid: 3f0c8f8e-5f0a-4a3b-9e57-0d7a2a1f1c42\nheight: 360\n```\n````\n\n`height` is optional (in pixels). The embed always shows the diagram's current version.\n\n## Diagrams\n\nDraw on the canvas with the toolbar (rectangle, ellipse, text, connector) or write code on the *Code* tab and apply it. Connectors attach to shapes, so they follow when you move things. Double-click a shape to edit its text.\n\n### Drill-down (C4)\n\nSelect a shape and choose *Link to diagram* to point it at an existing diagram, or *Create child* to make a new one. Linked shapes show a corner badge; double-click to open the child. The breadcrumb shows the path back up. There's no depth limit.\n\n### States and present mode\n\nAdd named states (for example \"Today\", \"Migrating\", \"Target\") above the canvas. While a state is selected, moves, style changes, hides and new shapes apply only to that state. *Present* steps through Base and each state with animated transitions; press Space for auto-play.\n\n## Working with others\n\n-   **Workspace members**: owners and admins invite people by email as admin, editor or viewer.\n-   **Share one item**: the *Share* button on a document or diagram grants a specific person access to just that item.\n-   **Public link**: create a read-only link anyone can open without signing in. Revoke it any time from the same dialog.\n\n| Role | Can |\n| --- | --- |\n| Viewer | Read, export, present |\n| Editor | Everything a viewer can, plus create, edit, delete, and review AI changes |\n| Admin | Everything an editor can, plus manage members |\n| Owner | Everything, including deleting the workspace |"
+  },
+  {
+   "slug": "dsl",
+   "title": "Clara DSL reference",
+   "description": "",
+   "markdown": "Clara DSL is one statement per line. Clara lays the result out automatically (with Dagre), so you only describe what connects to what.\n\n```\n# Lines starting with # are comments\ndirection LR\n\nnode browser \"Browser\"\nnode api \"Orders API\"\nnode db \"Postgres\"\n\nedge browser -> api \"HTTPS\"\nedge api -> db \"SQL\"\n\ngroup backend \"Backend\" { api db }\n```\n\n## Statements\n\n| Statement | Meaning |\n| --- | --- |\n| `node <id> [\"Label\"]` | A box. The id is any text without spaces; the label defaults to the id. |\n| `edge <from> -> <to> [\"Label\"]` | An arrow between two declared nodes, with an optional label. |\n| `group <id> \"Label\" { a b c }` | A dashed frame drawn around the listed nodes. |\n| `direction TB\\|LR\\|BT\\|RL` | Layout direction: top-to-bottom (default), left-to-right, and so on. |\n\n## Errors\n\nLines Clara can't read are listed under the editor with their line numbers, and so are edges that name a node that was never declared. Nothing is silently dropped.\n\n## Code and canvas\n\nApplying code replaces the diagram's shapes with a fresh layout (the previous version goes to history). After that, adjust freely on the canvas. To get code back out, use *Export → Mermaid*."
+  },
+  {
+   "slug": "mermaid",
+   "title": "Mermaid support",
+   "description": "",
+   "markdown": "Clara imports Mermaid **flowcharts** into editable canvas diagrams and exports any diagram back to a Mermaid flowchart.\n\n## Supported on import\n\n```\nflowchart LR\n  A[Box] --> B(Rounded)\n  B -->|label| C([Stadium])\n  C --> D[(Database)]; D --> E\n  F[\"Quoted label\"]\n```\n\n-   `flowchart` or `graph` headers, with direction `TD`, `TB`, `LR`, `BT` or `RL`\n-   Node labels in `[ ]`, `( )`, `{ }`, `([ ])` and `[( )]`, quoted or not\n-   Arrows `-->`, `--->`, with optional `|label|`\n-   Standalone node declarations, one statement per line or separated by semicolons\n-   `%%` comments\n\n## Not supported yet\n\nSubgraphs, `classDef`/`style`, click handlers, chained edges (`A --> B --> C`), and non-flowchart diagram types. The editor lists these lines as skipped so you can see what was left out.\n\n## Export\n\n*Export → Mermaid source* writes a `flowchart TD` with one declaration per shape (ellipses become stadiums) and one edge per connector. Connectors that point at text or groups have no Mermaid equivalent and are left out."
+  },
+  {
+   "slug": "mcp",
+   "title": "MCP setup guide",
+   "description": "",
+   "markdown": "Clara runs a Model Context Protocol server, so an AI assistant can read your documents and diagrams and propose changes. Proposals wait for a person to review them under *Pending changes*; nothing is applied automatically.\n\n## 1\\. Create a token\n\nSign in, open [Settings → Access tokens](/settings/tokens), name the token (for example \"Claude Code on my laptop\") and choose an expiry. Copy it right away; Clara only stores a hash and can't show it again.\n\n## 2\\. Add the server to Claude Code\n\n```\nclaude mcp add --transport http clara https://a1b2c3d4e5.execute-api.eu-north-1.amazonaws.com/mcp \\\n  --header \"Authorization: Bearer clara_pat_YOUR_TOKEN\"\n```\n\nRun `claude mcp list` to check it connected. Any MCP client that speaks streamable HTTP and can send an `Authorization` header works the same way. The server is stateless and answers JSON over `POST`.\n\nclaude.ai's custom connectors expect OAuth, which Clara doesn't offer yet. Use Claude Code or another client that supports a bearer token header.\n\n## 3\\. Ask for something\n\n```\n> List my Clara workspaces\n> Read the \"Checkout\" diagram and add a CDN in front of the storefront\n> Import this Mermaid as a new diagram called \"Payments\" in the Platform workspace\n```\n\n## 4\\. Review\n\nOpen the workspace in Clara and choose *Pending changes* (the badge shows how many are waiting). Each change shows a line diff for documents, or added, changed and removed shapes for diagrams. *Accept* applies it as you and saves the previous version to history; *Reject* discards it. If the item changed since the proposal, Clara warns you and shows the diff against the current version first.\n\n## Tools\n\n| Tool | What it does |\n| --- | --- |\n| `list_workspaces` | Workspaces you belong to, with your role |\n| `list_documents / read_document` | Document titles, tags, folders; full markdown |\n| `create_document / update_document` | Propose a new document or an edit (full body or find/replace edits) |\n| `list_diagrams / read_diagram` | Diagram list; elements, source code and child diagrams |\n| `create_diagram / update_diagram` | Propose a new diagram, or add/modify/remove elements |\n| `import_mermaid` | Propose a diagram built from Mermaid source |\n| `traverse_diagram_hierarchy` | Walk the C4 drill-down tree up and down |\n| `list_my_proposals` | Whether your proposals are pending, accepted or rejected |\n\n## Permissions\n\nA token acts as you, with your current roles. It can read whatever you can read; it can propose changes only where you are an editor; and if your access changes, the token's does too. Revoke tokens from the same settings page."
+  },
+  {
+   "slug": "shortcuts",
+   "title": "Keyboard shortcuts",
+   "description": "",
+   "markdown": "Press ? anywhere in the app to see these without leaving the page.\n\n## Anywhere in the app\n\n| ⌘K | Open the command palette: search documents and diagrams, run commands |\n| --- | --- |\n| ? | Show keyboard shortcuts |\n\n## Diagram canvas\n\n| V | Select tool |\n| --- | --- |\n| R | Rectangle tool |\n| O | Ellipse tool |\n| T | Text tool |\n| C | Connector tool (click two shapes) |\n| Enter | Edit the selected shape’s text |\n| Delete | Delete the selection (in a state: hide it there) |\n| Esc | Clear selection / cancel the current tool |\n| ←↑→↓ | Nudge the selection 1px (hold Shift for 10px) |\n| ⌘A | Select all |\n| ⌘D | Duplicate the selection |\n| +− | Zoom in / out |\n| 0 | Zoom to fit |\n| Altdrag | Pan (or use the scroll wheel) |\n\n## Markdown editor\n\n| ⌘B | Bold |\n| --- | --- |\n| ⌘I | Italic |\n| ⌘E | Inline code |\n| ⌘S | Save now (Clara also saves as you type) |\n\n## Present mode\n\n| ←→ | Previous / next state |\n| --- | --- |\n| Space | Play or pause auto-advance |\n| Esc | Exit |\n\n## Playground\n\n| ⌘S | Copy a share link to this diagram |\n| --- | --- |\n| Tab | Indent in the code editor (Esc, then Tab, to move focus on) |"
+  }
+ ],
+ "about": {
+  "title": "Design docs should be as easy to change as the system they describe.",
+  "subtitle": "",
+  "markdown": "Most architecture documentation goes stale the week after it's written. The diagram lives in a drawing tool, the reasoning in a doc, the latest decision in a chat thread, and nobody wants to redraw boxes to keep them in step.\n\nClara puts the doc and the diagram in one place and makes the diagram editable as text, so updating it is as quick as editing a paragraph. Diagrams nest, so one overview can lead to as much detail as a reader needs. And because the whole model is available to AI assistants over the Model Context Protocol, Claude can do the tedious updates for you, with a person approving every change.\n\n## Who builds it\n\nClara is built by Sharann and Dhriti as a cloud architecture course project. The goal was a real product rather than a demo: something we would use for our own design docs, deployed on a genuinely multi-service AWS setup.\n\n## How it runs\n\nEverything runs in one AWS region (Stockholm). The diagram below is Clara's own architecture, written in Mermaid and rendered by Clara. You can open it in the [playground](/editor) from the examples menu.\n\n```clara-example\nclara-aws\n```\n\n-   **CloudFront and S3** serve this site.\n-   **Amazon Cognito** handles accounts and sign-in.\n-   **API Gateway and Lambda** run the REST API, the MCP server and the real-time WebSocket handlers.\n-   **RDS for PostgreSQL** stores workspaces, documents, diagrams, versions and pending AI changes.\n-   **DynamoDB** tracks who is connected to which document, so live updates reach the right people.\n\n## What we care about\n\n-   **Text first.** Every diagram can be written, diffed and exported as text.\n-   **People approve.** AI assistants propose; humans decide. Nothing is applied behind your back.\n-   **No lock-in.** Markdown out, Mermaid out, SVG, PNG and PDF out."
+ },
+ "privacy": {
+  "title": "Privacy",
+  "subtitle": "Last updated 24 October 2026",
+  "markdown": "This page explains what Clara stores when you use it and why. Clara is an early-access project; it does not sell data, show ads or use third-party analytics.\n\n## The playground\n\nDiagrams you write at [/editor](/editor) stay in your browser. A share link carries the diagram inside the part of the URL after `#`, which browsers never send to a server. Nothing reaches Clara's servers unless you choose *Save to Clara*.\n\n## Your account\n\n-   **Email address and password**, managed by Amazon Cognito. Clara's own database never sees your password. Your email is used to sign you in, to send verification codes, and to show teammates who is in a workspace.\n-   **Sign-in tokens** are kept in your browser's local storage so you stay signed in. Signing out removes them.\n\n## What you create\n\nWorkspaces, folders, documents, diagrams, version history, sharing settings and pending AI changes are stored in a PostgreSQL database on AWS in Stockholm (eu-north-1). Each saved edit keeps the previous version so it can be restored. Personal access tokens are stored only as a one-way hash.\n\n## Live collaboration\n\nWhile a document or diagram is open, a connection record (your user id, email and the item you're viewing) is kept in DynamoDB so updates reach other viewers. It is deleted when you leave and expires automatically within a few hours.\n\n## Logs\n\nAWS keeps operational logs of API requests (for example, timestamps, paths and error messages) in CloudWatch for troubleshooting.\n\n## Third parties\n\n-   **Amazon Web Services** hosts everything above.\n-   **Google Fonts** serves the typefaces this site uses, so your browser requests font files from Google.\n-   **AI assistants you connect** (such as Claude) receive whatever content they read through your personal access token, under that provider's own terms. You can revoke a token at any time in Settings.\n\n## Your choices\n\n-   Export your documents as markdown and your diagrams as Mermaid, SVG, PNG or PDF at any time.\n-   Delete documents, diagrams and workspaces you own; revoke public links and tokens.\n-   To delete your account and everything only you own, contact the project team."
+ },
+ "terms": {
+  "title": "Terms of use",
+  "subtitle": "Last updated 24 October 2026",
+  "markdown": "By creating an account or using Clara you agree to these terms.\n\n## Early access\n\nClara is provided free of charge, as is, during early access. Features may change, and the service may be unavailable at times. Keep your own exports of anything you can't afford to lose.\n\n## Your content\n\nYou own what you create. You give Clara permission to store, process and display it only as needed to run the service for you and the people you share it with, including through public links you create.\n\n## Acceptable use\n\n-   Don't use Clara to store or share content that is illegal or that you don't have the right to share.\n-   Don't try to access workspaces, documents or accounts that aren't yours.\n-   Don't overload the service, including through automated clients or AI assistants.\n\n## AI assistants\n\nA personal access token lets an assistant act as you, with your roles. You are responsible for the assistants you connect and for the changes you accept. Changes proposed by an assistant are not applied until someone accepts them.\n\n## Accounts\n\nKeep your password and tokens private. We may suspend accounts that break these terms or put the service at risk.\n\n## Liability\n\nTo the extent the law allows, Clara and its builders are not liable for lost data, lost profits or indirect damages arising from use of the service.\n\n## Changes\n\nWe'll update this page when the terms change. Continuing to use Clara after an update means you accept it."
+ },
+ "pricing": {
+  "title": "Free while Clara is in early access.",
+  "subtitle": "Every feature is included for everyone. The few limits below exist to keep the service healthy, not to push you to an upgrade.",
+  "plan": "Early access",
+  "price": "$0",
+  "per": "per person, per month",
+  "included": [
+   "Unlimited workspaces, documents and diagrams",
+   "Diagram-as-code (Clara DSL) and Mermaid import/export",
+   "C4 drill-down with unlimited depth",
+   "Named states and present mode",
+   "Real-time editing, cursors and presence",
+   "MCP access for Claude, with change review",
+   "Version history and restore",
+   "SVG, PNG, PDF and markdown export",
+   "Workspace roles, per-item sharing and public links"
+  ],
+  "laterTitle": "If that changes",
+  "later": "If paid plans are ever introduced, they'll be announced well in advance on this page, and you'll always be able to export your documents as markdown and your diagrams as Mermaid, SVG, PNG or PDF.\n\nClara is built as a cloud architecture project and runs on a small AWS footprint. The [about page](/about) explains how.",
+  "limitsTitle": "Fair-use limits",
+  "limits": [
+   [
+    "Open AI proposals",
+    "50 awaiting review per person, per workspace"
+   ],
+   [
+    "Personal access tokens",
+    "20 active per person; expire after 30, 90 or 365 days, or never"
+   ],
+   [
+    "Diagram size via MCP",
+    "1,000 elements per proposal"
+   ],
+   [
+    "Document size via MCP",
+    "500,000 characters per proposal"
+   ],
+   [
+    "Playground",
+    "No limits; nothing is stored on our servers"
+   ]
+  ]
+ },
+ "examples": [
+  {
+   "id": "web-app",
+   "title": "Three-tier web app",
+   "blurb": "Browser, CDN, API and database",
+   "format": "clara",
+   "code": "# A classic three-tier app. Edit me — the diagram follows.\ndirection LR\nnode browser \"Browser\"\nnode cdn \"CDN\"\nnode api \"API service\"\nnode db \"Postgres\"\nnode cache \"Redis cache\"\nedge browser -> cdn \"static assets\"\nedge browser -> api \"REST\"\nedge api -> cache \"read-through\"\nedge api -> db \"SQL\"\ngroup data \"Data tier\" { db cache }"
+  },
+  {
+   "id": "clara-aws",
+   "title": "Clara on AWS",
+   "blurb": "How this site is deployed",
+   "format": "mermaid",
+   "code": "flowchart LR\n  Browser[Browser - React SPA] --> CloudFront[CloudFront]\n  CloudFront -->|OAC| S3[S3 site bucket]\n  Browser -->|sign in| Cognito[Cognito User Pool]\n  Browser -->|REST + ID token| HttpApi[API Gateway HTTP API]\n  Browser -->|WSS| WsApi[API Gateway WebSocket]\n  Claude[Claude via MCP] -->|POST /mcp + token| HttpApi\n  HttpApi --> ApiFn[Lambda - REST API]\n  HttpApi -->|/mcp| McpFn[Lambda - MCP server]\n  WsApi --> WsFn[Lambda - realtime]\n  ApiFn --> RDS[RDS PostgreSQL]\n  McpFn --> RDS\n  WsFn --> RDS\n  WsFn --> DynamoDB[DynamoDB connections]"
+  },
+  {
+   "id": "event-driven",
+   "title": "Event-driven orders",
+   "blurb": "Queue fan-out to workers",
+   "format": "clara",
+   "code": "node checkout \"Checkout API\"\nnode bus \"Order events\"\nnode pay \"Payments worker\"\nnode stock \"Inventory worker\"\nnode mail \"Email worker\"\nnode ledger \"Ledger DB\"\nedge checkout -> bus \"OrderPlaced\"\nedge bus -> pay\nedge bus -> stock\nedge bus -> mail\nedge pay -> ledger \"write\"\ngroup workers \"Consumers\" { pay stock mail }"
+  },
+  {
+   "id": "auth-flow",
+   "title": "Login flow",
+   "blurb": "OAuth-style sign in, top to bottom",
+   "format": "mermaid",
+   "code": "flowchart TD\n  User([User]) --> App[Web app]\n  App -->|redirect| IdP[Identity provider]\n  IdP -->|code| App\n  App -->|code + secret| Token[Token endpoint]\n  Token -->|ID + access token| App\n  App -->|Bearer token| API[Resource API]"
+  },
+  {
+   "id": "c4-context",
+   "title": "C4 system context",
+   "blurb": "Level 1: people and systems",
+   "format": "clara",
+   "code": "# C4 level 1. In a workspace, link each box to its level-2 diagram.\nnode customer \"Customer\"\nnode support \"Support agent\"\nnode shop \"Online shop\"\nnode erp \"ERP system\"\nnode email \"Email provider\"\nedge customer -> shop \"browses, orders\"\nedge support -> shop \"manages orders\"\nedge shop -> erp \"syncs stock\"\nedge shop -> email \"sends receipts\""
+  },
+  {
+   "id": "ci-pipeline",
+   "title": "CI/CD pipeline",
+   "blurb": "Commit to production",
+   "format": "clara",
+   "code": "direction LR\nnode push \"git push\"\nnode ci \"Build + test\"\nnode img \"Container image\"\nnode stage \"Staging\"\nnode prod \"Production\"\nedge push -> ci\nedge ci -> img \"on green\"\nedge img -> stage \"deploy\"\nedge stage -> prod \"manual approve\""
+  }
+ ]
+}

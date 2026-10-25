@@ -16,7 +16,7 @@ export function Logo({ to = '/' }: { to?: string }) {
   return (
     <Link to={to} className="logo" aria-label="Clara home">
       <LogoGlyph />
-      <span className="logo-word">clara</span>
+      <span className="logo-word">Clara</span>
     </Link>
   );
 }

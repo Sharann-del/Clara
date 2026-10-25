@@ -25,13 +25,13 @@ const PROPOSAL = {
 
 type Phase = 'waiting' | 'pending' | 'stale' | 'accepted' | 'rejected';
 
-// Amber = proposed and waiting for a human; green = accepted.
-const AMBER = '#d48806';
-const GREEN = '#0f7a56';
+// Accent = proposed and waiting for a human; green = accepted.
+const ACCENT = '#8e98ff';
+const GREEN = '#4cc79d';
 
 /**
  * The landing hero: a real editor (same parser, layout and renderer as the app). A simulated
- * Claude proposal previews in amber and only lands in the code when the visitor accepts it,
+ * Claude proposal previews in the accent colour and only lands in the code when the visitor accepts it,
  * which is exactly how MCP edits work in Clara.
  */
 export function HeroDemo() {
@@ -67,7 +67,7 @@ export function HeroDemo() {
 
   const highlights = useMemo(() => {
     if (!showPreview && !flash) return undefined;
-    const color = flash ? GREEN : AMBER;
+    const color = flash ? GREEN : ACCENT;
     const added = new Set(
       compiled.elements.filter((e) => e.type !== 'connector' && PROPOSAL.addedLabels.has(String(e.geometry.text))).map((e) => e.id!),
     );
@@ -168,7 +168,7 @@ function ProposalCard({
   return (
     <div className="proposal" role="group" aria-label="Change proposed by Claude, waiting for your review">
       <div className="proposal-who">
-        <Icon name="sparkles" size={14} /> Claude proposes
+        <Icon name="review" size={14} /> Claude proposes
       </div>
       <div className="proposal-title">{PROPOSAL.title}</div>
       <pre className="proposal-diff" aria-label="Proposed additions">
@@ -178,7 +178,7 @@ function ProposalCard({
       </pre>
       {phase === 'stale' ? (
         <div className="proposal-stale">
-          <p className="muted" style={{ margin: '0 0 8px', color: 'var(--amber)', maxWidth: 240 }}>
+          <p className="muted" style={{ margin: '0 0 8px', color: 'var(--cobalt-ink)', maxWidth: 240 }}>
             You edited the diagram after this was proposed. Accept anyway?
           </p>
           <div className="proposal-actions">

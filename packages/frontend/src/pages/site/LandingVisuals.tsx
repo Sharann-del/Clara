@@ -244,7 +244,7 @@ export function CollabVisual() {
 function CursorArrow({ color }: { color: string }) {
   return (
     <svg width="16" height="18" viewBox="0 0 16 18" aria-hidden="true">
-      <path d="M1 1l13 6.5-5.5 1.6L6 15z" fill={color} stroke="#fff" strokeWidth="1.2" strokeLinejoin="round" />
+      <path d="M1 1l13 6.5-5.5 1.6L6 15z" fill={color} stroke="var(--canvas)" strokeWidth="1.2" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -254,7 +254,7 @@ export function McpVisual({ mcpUrl }: { mcpUrl: string }) {
   return (
     <div className="feature-visual">
       <div className="visual-bar">
-        <Icon name="sparkles" size={14} /> Terminal
+        <Icon name="code" size={14} /> Terminal
       </div>
       <pre className="terminal">
         <span className="prompt">$</span> claude mcp add --transport http clara {mcpUrl} \{'\n'}
@@ -268,7 +268,7 @@ export function McpVisual({ mcpUrl }: { mcpUrl: string }) {
         <div className="change-card" style={{ marginTop: 0 }}>
           <div className="change-head" style={{ marginBottom: 2 }}>
             <span>
-              <span className="tag tag-amber">edit diagram</span> <strong>Online shop</strong>
+              <span className="tag">edit diagram</span> <strong>Online shop</strong>
             </span>
             <span className="muted">just now</span>
           </div>

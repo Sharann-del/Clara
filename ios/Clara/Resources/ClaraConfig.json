@@ -1,0 +1,8 @@
+{
+  "apiUrl": "https://a1b2c3d4e5.execute-api.eu-north-1.amazonaws.com",
+  "wsUrl": "wss://f6g7h8i9j0.execute-api.eu-north-1.amazonaws.com/prod",
+  "userPoolId": "eu-north-1_ExamplePool",
+  "userPoolClientId": "1example23clientid456abcde",
+  "region": "eu-north-1",
+  "siteUrl": "https://d1example2cdn3.cloudfront.net"
+}

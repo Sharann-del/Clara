@@ -65,7 +65,7 @@ export function PendingChangesPanel({ workspaceId, onChanged }: Props) {
       {error && <div className="error-text">{error}</div>}
       {changes === null && !error && <SkeletonRows rows={2} height={80} />}
       {changes?.length === 0 && (
-        <EmptyState icon="sparkles" title="Nothing waiting for review" compact>
+        <EmptyState icon="review" title="Nothing waiting for review" compact>
           When an assistant connected over MCP proposes a change, it appears here. <Link to="/docs/mcp">Connect Claude</Link>
         </EmptyState>
       )}
