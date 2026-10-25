@@ -1,4 +1,6 @@
-# Clara
+<p align="center">
+  <img src="docs/assets/header.svg" alt="Clara: system design you can type, zoom into, and hand to Claude" width="100%">
+</p>
 
 [![CI](https://github.com/Sharann-del/Clara/actions/workflows/ci.yml/badge.svg)](https://github.com/Sharann-del/Clara/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
