@@ -2,7 +2,7 @@ import { CognitoJwtVerifier } from 'aws-jwt-verify';
 import { config } from '../config.js';
 import { query } from '../db.js';
 import { effectiveResourceRole } from '../lib/authz.js';
-import { putConnection, roomKey } from './dynamo.js';
+import { countRoomConnections, countUserConnections, putConnection, roomKey } from './dynamo.js';
 import { broadcastToRoom } from './broadcast.js';
 
 const verifier = CognitoJwtVerifier.create({
@@ -64,6 +64,17 @@ export async function handler(event: WsConnectEvent) {
   if (!role) return { statusCode: 403, body: 'Forbidden' };
 
   const room = roomKey(resourceType, resourceId);
+
+  // Abuse control: cap open sockets per user and per item. A rejected
+  // $connect makes the browser's WebSocket fail and back off; 429 is what
+  // API Gateway hands back to the client.
+  const [userConnections, roomConnections] = await Promise.all([countUserConnections(sub), countRoomConnections(room)]);
+  if (userConnections >= config.wsMaxConnectionsPerUser) {
+    return { statusCode: 429, body: 'Too many open connections for this user' };
+  }
+  if (roomConnections >= config.wsMaxConnectionsPerRoom) {
+    return { statusCode: 429, body: 'Too many people connected to this item' };
+  }
 
   await putConnection({
     connectionId,

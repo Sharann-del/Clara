@@ -20,4 +20,8 @@ export const config = {
   // Realtime (milestone 2) — only set in the WebSocket Lambdas.
   connectionsTable: process.env.CONNECTIONS_TABLE ?? '',
   wsManagementEndpoint: process.env.WS_MANAGEMENT_ENDPOINT,
+
+  // Abuse control, enforced by the $connect Lambda (set from CDK context).
+  wsMaxConnectionsPerUser: Number(process.env.WS_MAX_CONNECTIONS_PER_USER ?? 10),
+  wsMaxConnectionsPerRoom: Number(process.env.WS_MAX_CONNECTIONS_PER_ROOM ?? 25),
 };

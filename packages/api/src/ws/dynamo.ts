@@ -52,6 +52,36 @@ export async function listRoomConnections(room: string): Promise<ConnectionItem[
   return (Items ?? []) as ConnectionItem[];
 }
 
+/**
+ * Live connections for a user or a room, for the $connect limits. Rows whose
+ * $disconnect never ran linger until the TTL sweep, so expired ones are
+ * filtered out rather than counted.
+ */
+async function countLive(indexName: 'UserIndex' | 'RoomIndex', key: 'userId' | 'room', value: string): Promise<number> {
+  let count = 0;
+  let start: Record<string, unknown> | undefined;
+  do {
+    const page = await ddb.send(
+      new QueryCommand({
+        TableName: config.connectionsTable,
+        IndexName: indexName,
+        KeyConditionExpression: '#k = :v',
+        FilterExpression: 'expiresAt > :now',
+        ExpressionAttributeNames: { '#k': key },
+        ExpressionAttributeValues: { ':v': value, ':now': Math.floor(Date.now() / 1000) },
+        Select: 'COUNT',
+        ExclusiveStartKey: start,
+      }),
+    );
+    count += page.Count ?? 0;
+    start = page.LastEvaluatedKey;
+  } while (start);
+  return count;
+}
+
+export const countUserConnections = (userId: string) => countLive('UserIndex', 'userId', userId);
+export const countRoomConnections = (room: string) => countLive('RoomIndex', 'room', room);
+
 export function dedupeUsers(conns: { userId: string; email?: string }[]): { userId: string; email?: string }[] {
   const map = new Map<string, { userId: string; email?: string }>();
   for (const c of conns) map.set(c.userId, { userId: c.userId, email: c.email });
