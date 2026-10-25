@@ -34,7 +34,7 @@
   "dependencies": {
     "@clara/shared": "*",
     "@modelcontextprotocol/sdk": "^1.31.0",
-    "zod": "^3.23.8"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.1145.0",
