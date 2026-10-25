@@ -11,7 +11,7 @@ design trade-offs, security review, costs and scaling limits are in the
 
 | Construct | Resources |
 | --- | --- |
-| `Network` (`lib/network.ts`) | One VPC (`10.0.0.0/16`), 2 AZs, public and private subnets, and **one `t4g.micro` NAT instance** (IMDSv2, no SSH key, VPC-only ingress, standard CPU credits). `natMode=gateway` uses a managed NAT gateway instead |
+| `Network` (`lib/network.ts`) | One VPC (`10.0.0.0/16`), 2 AZs, public and private subnets, and **one `t4g.micro` NAT instance** (IMDSv2, no SSH key, VPC-only ingress, standard CPU credits). It's configured by Clara's own user data and must signal CloudFormation that NAT works before the private routes switch to it. `natMode=gateway` uses a managed NAT gateway instead |
 | `Frontend` (`lib/frontend.ts`) | Private S3 bucket and a CloudFront distribution (Origin Access Control, HTTPS redirect, SPA error routing, `PriceClass_100`) |
 | `Compute` (`lib/compute.ts`) | An empty ECS cluster left from the original Fargate plan. No services, no cost |
 | `Database` (`lib/database.ts`) | RDS PostgreSQL 16, single-AZ `db.t4g.micro`, 20 GB gp3, private, encrypted, credentials generated into Secrets Manager |
