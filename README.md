@@ -1,9 +1,33 @@
 <p align="center">
-  <img src="docs/assets/header.svg" alt="Clara: system design you can type, zoom into, and hand to Claude" width="100%">
+  <img src="docs/assets/header.svg" alt="Clara" width="100%">
 </p>
 
-[![CI](https://github.com/Sharann-del/Clara/actions/workflows/ci.yml/badge.svg)](https://github.com/Sharann-del/Clara/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+<p align="center">
+  <a href="https://github.com/Sharann-del/Clara/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/Sharann-del/Clara/ci.yml?branch=main&style=flat-square&labelColor=19191c&label=CI&logo=githubactions&logoColor=white"></a>
+  <a href="https://github.com/Sharann-del/Clara/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/Sharann-del/Clara?style=flat-square&labelColor=19191c&color=8e98ff&label=release"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-8e98ff?style=flat-square&labelColor=19191c"></a>
+  <img alt="Node.js 22+" src="https://img.shields.io/badge/node-%E2%89%A522-4cc79d?style=flat-square&labelColor=19191c&logo=nodedotjs&logoColor=white">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-3178c6?style=flat-square&labelColor=19191c&logo=typescript&logoColor=white">
+  <br>
+  <img alt="AWS CDK" src="https://img.shields.io/badge/AWS-CDK-f3b65a?style=flat-square&labelColor=19191c&logo=amazonwebservices&logoColor=white">
+  <img alt="React 18" src="https://img.shields.io/badge/React-18-61dafb?style=flat-square&labelColor=19191c&logo=react&logoColor=white">
+  <img alt="PostgreSQL 16" src="https://img.shields.io/badge/PostgreSQL-16-4169e1?style=flat-square&labelColor=19191c&logo=postgresql&logoColor=white">
+  <img alt="MCP server" src="https://img.shields.io/badge/MCP-server-ededef?style=flat-square&labelColor=19191c&logo=modelcontextprotocol&logoColor=white">
+  <img alt="iOS SwiftUI" src="https://img.shields.io/badge/iOS-SwiftUI-f05138?style=flat-square&labelColor=19191c&logo=swift&logoColor=white">
+  <a href="CONTRIBUTING.md"><img alt="PRs welcome" src="https://img.shields.io/badge/PRs-welcome-4cc79d?style=flat-square&labelColor=19191c"></a>
+</p>
+
+<p align="center">
+  <b>System design you can type, zoom into, and hand to Claude.</b>
+</p>
+
+<p align="center">
+  <a href="docs/getting-started.md">Getting started</a> ·
+  <a href="docs/self-hosting-aws.md">Self-host on AWS</a> ·
+  <a href="docs/mcp-setup.md">MCP setup</a> ·
+  <a href="docs/architecture.md">Architecture</a> ·
+  <a href="CHANGELOG.md">Changelog</a>
+</p>
 
 System design documentation that stays in step with the system. Clara keeps markdown documents
 and architecture diagrams in one place. You can write diagrams as code (Clara DSL or Mermaid),
